@@ -336,7 +336,7 @@
     /* —— User portal (employee / student / teacher UI) —— */
     .user-portal {
         @apply text-slate-800 antialiased;
-        background-color: #f8fafc;
+        background-color: #f1f5f9;
     }
 
     .user-topbar {
@@ -347,8 +347,9 @@
         @apply text-slate-900 tracking-tight;
     }
 
+    [data-user-sidebar],
     .user-sidebar {
-        @apply bg-slate-900;
+        background-color: #111827;
     }
 
     .user-sidebar nav {
@@ -392,7 +393,7 @@
     }
 
     .user-page-header {
-        @apply flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between rounded-xl border border-slate-200/90 bg-white px-4 py-4 sm:px-5 sm:py-5 shadow-sm;
+        @apply flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between rounded-xl border border-indigo-700/30 bg-gradient-to-r from-indigo-600 to-indigo-700 px-4 py-4 sm:px-5 sm:py-5 shadow-md;
     }
 
     .user-page-header__main {
@@ -400,7 +401,7 @@
     }
 
     .user-page-header__icon {
-        @apply flex h-11 w-11 shrink-0 items-center justify-center rounded-lg bg-indigo-50 text-indigo-600;
+        @apply flex h-11 w-11 shrink-0 items-center justify-center rounded-lg bg-white/15 text-white;
     }
 
     .user-page-header__icon svg {
@@ -408,11 +409,11 @@
     }
 
     .user-page-header__title {
-        @apply text-lg sm:text-xl font-semibold text-slate-900 tracking-tight truncate;
+        @apply text-lg sm:text-xl font-semibold text-white tracking-tight truncate;
     }
 
     .user-page-header__subtitle {
-        @apply mt-0.5 text-sm text-slate-500;
+        @apply mt-0.5 text-sm text-indigo-100;
     }
 
     .user-page-header__actions {
@@ -507,42 +508,12 @@
         @apply inline-flex items-center justify-center gap-2 rounded-lg border border-slate-300 bg-white px-4 py-2.5 text-sm font-medium text-slate-700 shadow-sm transition hover:bg-slate-50 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2;
     }
 
-    /* Legacy in-page gradient heroes → clean page intro (applies across existing views) */
-    .user-portal [class*='from-indigo-500'][class*='to-indigo-600'] {
-        background-image: none !important;
-        background-color: #fff;
-        border-radius: 0.75rem;
-        border: 1px solid rgb(226 232 240 / 0.9);
-        box-shadow: 0 1px 2px 0 rgb(15 23 42 / 0.06);
+    .user-page-header .user-btn-primary {
+        @apply bg-white text-indigo-700 hover:bg-indigo-50 focus:ring-white;
     }
 
-    .user-portal [class*='from-indigo-500'][class*='to-indigo-600'] [class*='text-white'] {
-        color: #0f172a !important;
-    }
-
-    .user-portal [class*='from-indigo-500'][class*='to-indigo-600'] [class*='text-indigo-100'] {
-        color: #64748b !important;
-    }
-
-    .user-portal [class*='from-indigo-500'][class*='to-indigo-600'] svg[class*='text-white'] {
-        color: #4f46e5 !important;
-    }
-
-    .user-portal [class*='from-indigo-500'][class*='to-indigo-600'] a[class*='bg-white'] {
-        border-color: transparent !important;
-        background-color: #4f46e5 !important;
-        color: #fff !important;
-        backdrop-filter: none;
-    }
-
-    .user-portal [class*='from-indigo-500'][class*='to-indigo-600'] a[class*='bg-white']:hover {
-        background-color: #4338ca !important;
-    }
-
-    .user-portal .user-legacy-card {
-        border-radius: 0.75rem;
-        border: 1px solid rgb(226 232 240 / 0.9);
-        box-shadow: 0 1px 2px 0 rgb(15 23 42 / 0.06);
+    .user-page-header .user-btn-secondary {
+        @apply border-white/40 bg-white/10 text-white hover:bg-white/20;
     }
 
     .user-portal table thead th {

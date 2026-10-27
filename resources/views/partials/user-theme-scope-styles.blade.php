@@ -76,4 +76,8 @@
     .{{ $scopeClass }} .from-indigo-600.to-indigo-700.bg-gradient-to-r {
         background-image: linear-gradient(to right, var(--{{ $cssPrefix }}), var(--{{ $cssPrefix }}-dark)) !important;
     }
+
+    .{{ $scopeClass }} [data-sidebar-brand-root].bg-indigo-600 {
+        background-color: var(--{{ $cssPrefix }}) !important;
+    }
 </style>

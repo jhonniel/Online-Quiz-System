@@ -3,8 +3,7 @@
 @section('page-title', 'Dashboard')
 
 @section('content')
-<x-user-page-shell wide class="min-h-full">
-<div class="min-h-full flex flex-col">
+<div class="min-h-full flex flex-col -mx-3 sm:-mx-4 lg:-mx-6">
     <!-- Search and Filter Bar -->
     @if(($canViewAssignedQuizzes ?? auth()->user()->canViewAssignedQuizzes()))
     <div class="bg-white shadow-sm border-b border-gray-200 p-4 flex-shrink-0">
@@ -763,7 +762,6 @@
         </div>
     </div>
 </div>
-</x-user-page-shell>
 
 <script>
 function openQuizCodeModal() {

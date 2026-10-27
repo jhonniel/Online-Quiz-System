@@ -220,7 +220,7 @@
     >
         <!-- Sidebar -->
         <div class="hidden lg:flex lg:flex-shrink-0">
-            <div class="flex flex-col transition-all duration-300" :class="sidebarCollapsed ? 'w-16' : 'w-64'">
+            <div class="flex flex-col transition-all duration-300 bg-gray-900" :class="sidebarCollapsed ? 'w-16' : 'w-64'" data-user-sidebar>
                 <!-- Sidebar Header -->
                 <div class="flex items-center h-16 flex-shrink-0 px-4 bg-indigo-600 min-w-0" data-sidebar-brand-root>
                     <div class="flex items-center min-w-0 flex-1 gap-2 overflow-hidden" :class="sidebarCollapsed ? 'justify-center' : ''">
@@ -241,8 +241,8 @@
                 </div>
 
                 <!-- Navigation -->
-                <div class="flex-1 flex flex-col overflow-y-auto user-sidebar">
-                    <nav class="flex-1 space-y-1">
+                <div class="flex-1 flex flex-col overflow-y-auto bg-gray-900 user-sidebar">
+                    <nav class="flex-1 px-2 py-4 space-y-1">
                         @include('components.nav.partial-admin-sidebar')
 
 
@@ -330,8 +330,8 @@
                  x-transition:leave="transition ease-in-out duration-300 transform"
                  x-transition:leave-start="translate-x-0"
                  x-transition:leave-end="-translate-x-full"
-                 class="fixed inset-y-0 left-0 z-50 w-64 user-sidebar">
-                <div class="flex flex-col h-full">
+                 class="fixed inset-y-0 left-0 z-50 w-64 bg-gray-900 user-sidebar" data-user-sidebar>
+                <div class="flex flex-col h-full bg-gray-900">
                     <!-- Mobile sidebar header -->
                     <div class="flex items-center justify-between h-16 px-4 bg-indigo-600 min-w-0 gap-2" data-sidebar-brand-root>
                         <div class="flex items-center min-w-0 flex-1 gap-2 overflow-hidden">
@@ -861,7 +861,7 @@
             </div>
 
             <!-- Page content -->
-            <main class="user-portal flex-1 min-h-0 min-w-0 overflow-y-auto overflow-x-hidden px-3 sm:px-4 lg:px-6 py-4 sm:py-5 safe-bottom">
+            <main class="flex-1 min-h-0 min-w-0 overflow-y-auto overflow-x-hidden bg-gray-50 px-3 sm:px-4 lg:px-6 py-3 sm:py-4 safe-bottom">
                 <div class="min-h-full flex flex-col gap-4">
                     @include('partials.user-flash')
                     @yield('content')
