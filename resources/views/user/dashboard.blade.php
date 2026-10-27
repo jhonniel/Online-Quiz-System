@@ -6,7 +6,7 @@
 @php
     $canQuizzes = ($canViewAssignedQuizzes ?? auth()->user()->canViewAssignedQuizzes());
 @endphp
-<x-user-page-shell wide class="pb-6">
+<x-user-page-shell fluid class="pb-6 -mx-3 px-3 sm:-mx-4 sm:px-4 lg:-mx-6 lg:px-6">
     <x-user-page-header title="My Dashboard">
         <x-slot:subtitle>
             Welcome back, <x-user-name :user="auth()->user()" class="inline font-medium text-white" /> · Rank {{ auth()->user()->getRankText() }} · {{ auth()->user()->getTotalScore() }} pts
@@ -179,7 +179,7 @@
             $possibleExitConferenceDate = \Carbon\Carbon::parse($possibleExitConferenceDate);
         }
     @endphp
-    <x-user-dashboard-section title="Training &amp; progress" description="OJT hours, absence balance, and merit summary.">
+    <x-user-dashboard-section title="Training & progress" description="OJT hours, absence balance, and merit summary.">
         <div class="rounded-xl border border-indigo-100 bg-indigo-50/80 px-4 py-4">
             <div class="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
                 <div class="min-w-0 flex-1">
@@ -309,7 +309,7 @@
     @endif
 
     @if(auth()->user()->isStaffMember() && !empty($employeeLeaveSummary))
-    <x-user-dashboard-section title="Leave &amp; attendance" description="Request status, leave credits, and overtime at a glance.">
+    <x-user-dashboard-section title="Leave & attendance" description="Request status, leave credits, and overtime at a glance.">
         <div class="grid grid-cols-2 gap-3 sm:grid-cols-3 xl:grid-cols-5">
             <x-user-stat-card size="compact" label="Total requests" :value="number_format((int) ($employeeLeaveSummary['total_requests'] ?? 0))" tone="default" />
             <x-user-stat-card size="compact" label="Pending" :value="number_format((int) ($employeeLeaveSummary['pending_requests'] ?? 0))" tone="amber" />
