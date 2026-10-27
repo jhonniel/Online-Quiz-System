@@ -3,10 +3,33 @@
 @section('page-title', 'Dashboard')
 
 @section('content')
-<div class="user-dashboard min-h-full flex flex-col -mx-3 sm:-mx-4 lg:-mx-6">
-    @include('user.dashboard.partials.hero', ['canViewAssignedQuizzes' => $canViewAssignedQuizzes ?? null])
-
-    <div class="max-w-[88rem] mx-auto w-full flex-1 px-4 sm:px-6 lg:px-8 py-6 space-y-6">
+@php
+    $canQuizzes = ($canViewAssignedQuizzes ?? auth()->user()->canViewAssignedQuizzes());
+@endphp
+<x-user-page-shell wide class="pb-6">
+    <x-user-page-header title="My Dashboard">
+        <x-slot:subtitle>
+            Welcome back, <x-user-name :user="auth()->user()" class="inline font-medium text-white" /> · Rank {{ auth()->user()->getRankText() }} · {{ auth()->user()->getTotalScore() }} pts
+            @if(auth()->user()->role === 'student' && !empty($studentMeritDetails['breakdown']['total']))
+                · Merits: <span class="font-semibold tabular-nums">{{ (int) $studentMeritDetails['breakdown']['total'] }}</span>
+            @endif
+        </x-slot:subtitle>
+        <x-slot:icon>
+            <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2H5a2 2 0 00-2-2z"></path>
+            </svg>
+        </x-slot:icon>
+        @if(auth()->user()->isStaffMember())
+            <x-slot:actions>
+                <a href="{{ url('/leave-requests') }}" class="inline-flex items-center rounded-lg border border-white/30 bg-white/10 px-3 py-2 text-sm font-medium text-white hover:bg-white/20">
+                    Leave requests
+                </a>
+                <a href="{{ url('/dtr') }}" class="inline-flex items-center rounded-lg border border-white/30 bg-white/10 px-3 py-2 text-sm font-medium text-white hover:bg-white/20">
+                    Time records
+                </a>
+            </x-slot:actions>
+        @endif
+    </x-user-page-header>
 
     @if(auth()->user()->role === 'student' && !empty($studentLeaveBalanceSummary))
     <div class="user-dashboard-alert bg-sky-50 border-sky-200" role="region" aria-label="Absent request allowance">
@@ -156,12 +179,8 @@
             $possibleExitConferenceDate = \Carbon\Carbon::parse($possibleExitConferenceDate);
         }
     @endphp
-    <section class="space-y-4" aria-labelledby="student-training-heading">
-        <div>
-            <h2 id="student-training-heading" class="user-dashboard__section-title">Training &amp; progress</h2>
-            <p class="user-dashboard__section-desc">OJT hours, absence balance, and merit summary.</p>
-        </div>
-        <div class="user-dashboard-alert bg-indigo-50 border-indigo-200">
+    <x-user-dashboard-section title="Training &amp; progress" description="OJT hours, absence balance, and merit summary.">
+        <div class="rounded-xl border border-indigo-100 bg-indigo-50/80 px-4 py-4">
             <div class="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
                 <div class="min-w-0 flex-1">
                     <h3 class="text-sm font-semibold text-indigo-900">Training Progress</h3>
@@ -253,8 +272,7 @@
                     <canvas id="studentMonthlyHoursChart"></canvas>
                 </div>
             </x-user-panel>
-        </div>
-    </section>
+    </x-user-dashboard-section>
     @endif
 
     @if(auth()->user()->role === 'student' && isset($studentResubmissionRequests) && $studentResubmissionRequests->isNotEmpty())
@@ -291,27 +309,13 @@
     @endif
 
     @if(auth()->user()->isStaffMember() && !empty($employeeLeaveSummary))
-    <section class="space-y-4" aria-labelledby="employee-leave-heading">
-        <div>
-            <h2 id="employee-leave-heading" class="user-dashboard__section-title">Leave &amp; attendance</h2>
-            <p class="user-dashboard__section-desc">Request status, leave credits, and overtime at a glance.</p>
-        </div>
-        <div class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-5 gap-4">
-            <x-user-stat-card label="Total requests" :value="number_format((int) ($employeeLeaveSummary['total_requests'] ?? 0))" tone="indigo">
-                <x-slot:icon><svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg></x-slot:icon>
-            </x-user-stat-card>
-            <x-user-stat-card label="Pending" :value="number_format((int) ($employeeLeaveSummary['pending_requests'] ?? 0))" tone="amber">
-                <x-slot:icon><svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg></x-slot:icon>
-            </x-user-stat-card>
-            <x-user-stat-card label="Approved" :value="number_format((int) ($employeeLeaveSummary['approved_requests'] ?? 0))" tone="emerald">
-                <x-slot:icon><svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg></x-slot:icon>
-            </x-user-stat-card>
-            <x-user-stat-card label="Rejected" :value="number_format((int) ($employeeLeaveSummary['rejected_requests'] ?? 0))" tone="rose">
-                <x-slot:icon><svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg></x-slot:icon>
-            </x-user-stat-card>
-            <x-user-stat-card label="For resubmission" :value="number_format((int) ($employeeLeaveSummary['resubmission_requests'] ?? 0))" tone="rose">
-                <x-slot:icon><svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path></svg></x-slot:icon>
-            </x-user-stat-card>
+    <x-user-dashboard-section title="Leave &amp; attendance" description="Request status, leave credits, and overtime at a glance.">
+        <div class="grid grid-cols-2 gap-3 sm:grid-cols-3 xl:grid-cols-5">
+            <x-user-stat-card size="compact" label="Total requests" :value="number_format((int) ($employeeLeaveSummary['total_requests'] ?? 0))" tone="default" />
+            <x-user-stat-card size="compact" label="Pending" :value="number_format((int) ($employeeLeaveSummary['pending_requests'] ?? 0))" tone="amber" />
+            <x-user-stat-card size="compact" label="Approved" :value="number_format((int) ($employeeLeaveSummary['approved_requests'] ?? 0))" tone="emerald" />
+            <x-user-stat-card size="compact" label="Rejected" :value="number_format((int) ($employeeLeaveSummary['rejected_requests'] ?? 0))" tone="rose" />
+            <x-user-stat-card size="compact" label="For resubmission" :value="number_format((int) ($employeeLeaveSummary['resubmission_requests'] ?? 0))" tone="rose" class="col-span-2 sm:col-span-1" />
         </div>
         <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <x-user-stat-card
@@ -332,19 +336,19 @@
             </x-user-stat-card>
         </div>
 
-        <div class="grid grid-cols-1 xl:grid-cols-2 gap-4">
+        <div class="grid grid-cols-1 gap-4 xl:grid-cols-2">
             <x-user-panel title="Leave request status" subtitle="Current year breakdown">
-                <div class="h-60">
+                <div class="h-64 sm:h-72">
                     <canvas id="employeeLeaveStatusChart"></canvas>
                 </div>
             </x-user-panel>
             <x-user-panel title="Requests filed" subtitle="Last 6 months">
-                <div class="h-60">
+                <div class="h-64 sm:h-72">
                     <canvas id="employeeMonthlyLeaveChart"></canvas>
                 </div>
             </x-user-panel>
         </div>
-    </section>
+    </x-user-dashboard-section>
     @endif
 
     @if(auth()->user()->isStaffMember() && isset($employeeResubmissionRequests) && $employeeResubmissionRequests->isNotEmpty())
@@ -380,13 +384,12 @@
         </div>
     @endif
 
-    @if(($canViewAssignedQuizzes ?? auth()->user()->canViewAssignedQuizzes()))
-    <section class="space-y-4" aria-labelledby="quizzes-heading">
-        <div>
-            <h2 id="quizzes-heading" class="user-dashboard__section-title">Quizzes</h2>
-            <p class="user-dashboard__section-desc">Assigned assessments and your progress.</p>
-        </div>
-        <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+    @if($canQuizzes)
+    <x-user-dashboard-section title="Quizzes" description="Assigned assessments and your progress.">
+        <x-slot:actions>
+            @include('user.dashboard.partials.quiz-toolbar')
+        </x-slot:actions>
+        <div class="grid grid-cols-1 gap-4 sm:grid-cols-3">
             <x-user-stat-card label="Total quizzes" :value="$totalQuizzes" tone="indigo">
                 <x-slot:icon><svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg></x-slot:icon>
             </x-user-stat-card>
@@ -398,7 +401,7 @@
             </x-user-stat-card>
         </div>
 
-        <x-user-panel title="Your quizzes" subtitle="Search using the bar above to filter this list." :padding="false" class="overflow-visible">
+        <x-user-panel title="Your quizzes" subtitle="Filter the list with search or join with a quiz code." :padding="false" class="overflow-visible">
 
         @if($allQuizzes->count() > 0)
             {{-- Mobile card list --}}
@@ -444,13 +447,13 @@
             {{-- Desktop table --}}
             <div class="hidden md:block overflow-x-auto overflow-y-visible mobile-table-scroll">
                 <table class="min-w-full divide-y divide-gray-200">
-                    <thead class="bg-gray-50 sticky top-0 z-10">
+                    <thead class="sticky top-0 z-10 bg-slate-50/95 backdrop-blur-sm">
                         <tr>
-                            <th scope="col" class="px-3 sm:px-4 lg:px-6 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                            <th scope="col" class="px-3 sm:px-4 lg:px-6 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">
                                 <span class="hidden sm:inline">Quiz ID</span>
                                 <span class="sm:hidden">ID</span>
                             </th>
-                            <th scope="col" class="px-3 sm:px-4 lg:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider min-w-[200px]">
+                            <th scope="col" class="min-w-[200px] px-3 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-500 sm:px-4 lg:px-6">
                                 Quiz
                             </th>
                             <th scope="col" class="px-3 sm:px-4 lg:px-6 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
@@ -582,11 +585,10 @@
                 </div>
             @endif
         </x-user-panel>
-    </section>
+    </x-user-dashboard-section>
     @endif
 
-    </div>{{-- /dashboard content container --}}
-</div>
+</x-user-page-shell>
 
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script type="application/json" id="student-training-charts-data">
@@ -828,16 +830,21 @@ document.addEventListener('DOMContentLoaded', function() {
                 labels: employeeChartData.status.labels,
                 datasets: [{
                     data: employeeChartData.status.values,
-                    backgroundColor: ['#f59e0b', '#10b981', '#ef4444', '#f43f5e'],
+                    backgroundColor: ['#f59e0b', '#059669', '#dc2626', '#e11d48'],
                     borderColor: '#ffffff',
                     borderWidth: 2,
+                    hoverOffset: 4,
                 }],
             },
             options: {
                 responsive: true,
                 maintainAspectRatio: false,
+                cutout: '62%',
                 plugins: {
-                    legend: { position: 'bottom' },
+                    legend: {
+                        position: 'bottom',
+                        labels: { boxWidth: 10, padding: 14, font: { size: 11 } },
+                    },
                 },
             },
         });
@@ -851,9 +858,9 @@ document.addEventListener('DOMContentLoaded', function() {
                 labels: employeeChartData.monthly.labels,
                 datasets: [{
                     data: employeeChartData.monthly.values,
-                    backgroundColor: '#6366f1',
-                    borderRadius: 6,
-                    maxBarThickness: 36,
+                    backgroundColor: 'rgba(79, 70, 229, 0.85)',
+                    borderRadius: 4,
+                    maxBarThickness: 32,
                 }],
             },
             options: commonBarOptions,

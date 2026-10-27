@@ -3,6 +3,7 @@
     'value' => null,
     'hint' => null,
     'tone' => 'default',
+    'size' => 'default',
     'class' => '',
 ])
 
@@ -10,7 +11,18 @@
     $borderClass = match ($tone) {
         'indigo' => 'border-indigo-100',
         'emerald' => 'border-emerald-100',
-        default => 'border-slate-200',
+        'amber' => 'border-amber-100',
+        'rose' => 'border-rose-100',
+        'sky' => 'border-sky-100',
+        default => 'border-slate-200/90',
+    };
+    $compactSurface = match ($tone) {
+        'amber' => 'bg-amber-50/90',
+        'emerald' => 'bg-emerald-50/90',
+        'rose' => 'bg-rose-50/90',
+        'sky' => 'bg-sky-50/90',
+        'indigo' => 'bg-indigo-50/90',
+        default => 'bg-slate-50/90',
     };
     $iconClass = match ($tone) {
         'indigo' => 'bg-indigo-50 text-indigo-600',
@@ -22,21 +34,36 @@
     };
 @endphp
 
+@php
+    $isCompact = $size === 'compact';
+@endphp
+
 <div {{ $attributes->merge([
-    'class' => trim('flex items-center gap-4 rounded-xl border bg-white p-4 shadow-sm transition-shadow hover:shadow-md '.$borderClass.' '.$class),
+    'class' => trim(($isCompact
+        ? 'rounded-lg border p-3.5 '.$compactSurface.' '
+        : 'flex items-center gap-4 rounded-xl border bg-white p-4 shadow-sm transition-shadow hover:shadow-md '
+    ).$borderClass.' '.$class),
 ]) }}>
-    @isset($icon)
-        <div @class([
-            'flex h-11 w-11 shrink-0 items-center justify-center rounded-lg',
-            '[&>svg]:h-6 [&>svg]:w-6 [&>svg]:max-h-6 [&>svg]:max-w-6 [&>svg]:shrink-0',
-            $iconClass,
+    @if(! $isCompact)
+        @isset($icon)
+            <div @class([
+                'flex h-11 w-11 shrink-0 items-center justify-center rounded-lg',
+                '[&>svg]:h-6 [&>svg]:w-6 [&>svg]:max-h-6 [&>svg]:max-w-6 [&>svg]:shrink-0',
+                $iconClass,
+            ])>
+                {{ $icon }}
+            </div>
+        @endisset
+    @endif
+    <div @class(['min-w-0 flex-1', $isCompact ? '' : ''])>
+        <p @class([
+            'font-medium text-slate-500',
+            $isCompact ? 'text-[11px] uppercase tracking-wide' : 'text-xs uppercase tracking-wide',
+        ])>{{ $label }}</p>
+        <p @class([
+            'font-semibold tabular-nums text-slate-900',
+            $isCompact ? 'mt-0.5 text-xl' : 'mt-1 text-2xl',
         ])>
-            {{ $icon }}
-        </div>
-    @endisset
-    <div class="min-w-0 flex-1">
-        <p class="text-xs font-medium uppercase tracking-wide text-slate-500">{{ $label }}</p>
-        <p class="mt-1 text-2xl font-semibold tabular-nums text-slate-900">
             @if(isset($valueSlot))
                 {{ $valueSlot }}
             @elseif($value !== null)
