@@ -9,6 +9,7 @@ use App\Models\Department;
 use App\Models\LeaveRequest;
 use App\Support\DtrEmployeeAttendance;
 use App\Support\DtrRecordHours;
+use App\Support\RequestQueryInteger;
 use Illuminate\Http\Request;
 use Carbon\Carbon;
 use Carbon\CarbonPeriod;
@@ -83,7 +84,7 @@ class TimeReportController extends Controller
         $departments = $departmentsQuery->orderBy('name')->get();
 
         // Get selected employee (if any)
-        $selectedEmployeeId = $request->get('employee_id');
+        $selectedEmployeeId = RequestQueryInteger::positiveInt($request, 'employee_id');
 
         // Calculate weekly statistics for each employee
         $today = Carbon::today();

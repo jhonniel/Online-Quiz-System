@@ -922,6 +922,12 @@ document.getElementById('reject-dtr-remarks-modal')?.addEventListener('click', f
         const query = Object.assign({}, baseQuery, {
             exclude_weekends: checkbox.checked ? '1' : '0',
         });
+        Object.keys(query).forEach(function (key) {
+            const value = query[key];
+            if (value === null || value === undefined || value === '' || value === 'null') {
+                delete query[key];
+            }
+        });
         link.href = baseUrl + '?' + new URLSearchParams(query).toString();
     }
 

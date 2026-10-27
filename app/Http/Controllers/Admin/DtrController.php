@@ -15,6 +15,7 @@ use App\Services\StudentOjtPostCompletionService;
 use App\Support\DtrAddedTimeFromRemarks;
 use App\Support\DtrHolidayCalendar;
 use App\Support\DtrRecordHours;
+use App\Support\RequestQueryInteger;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\DB;
@@ -72,8 +73,9 @@ class DtrController extends Controller
         }
 
         // Filter by employee
-        if ($request->filled('employee_id')) {
-            $query->where('user_id', $request->employee_id);
+        $filterEmployeeId = RequestQueryInteger::positiveInt($request, 'employee_id');
+        if ($filterEmployeeId !== null) {
+            $query->where('user_id', $filterEmployeeId);
         }
 
         // Filter by date range
@@ -117,8 +119,8 @@ class DtrController extends Controller
                 $employeesQuery->where('department_id', $selectedDeptId);
             }
         }
-        if ($request->filled('employee_id')) {
-            $employeesQuery->where('id', $request->employee_id);
+        if ($filterEmployeeId !== null) {
+            $employeesQuery->where('id', $filterEmployeeId);
         }
 
         $employees = $employeesQuery->orderBy('name')->get();
@@ -1703,8 +1705,9 @@ class DtrController extends Controller
             });
 
         // Filter by student
-        if ($request->filled('student_id')) {
-            $query->where('user_id', $request->student_id);
+        $filterStudentId = RequestQueryInteger::positiveInt($request, 'student_id');
+        if ($filterStudentId !== null) {
+            $query->where('user_id', $filterStudentId);
         }
 
         // Filter by date range
@@ -1771,7 +1774,7 @@ class DtrController extends Controller
             }
         }
 
-        $studentFilterApplied = $request->filled('student_id');
+        $studentFilterApplied = $filterStudentId !== null;
         if (! $searchProvided && ! $studentFilterApplied) {
             if (! empty($studentsWithRemainingTime)) {
                 $query->whereIn('user_id', $studentsWithRemainingTime);
@@ -2576,8 +2579,9 @@ class DtrController extends Controller
 
         // Filter by student
         $selectedStudent = null;
-        if ($request->filled('student_id')) {
-            $selectedStudentQuery = User::where('id', $request->student_id)
+        $exportStudentId = RequestQueryInteger::positiveInt($request, 'student_id');
+        if ($exportStudentId !== null) {
+            $selectedStudentQuery = User::where('id', $exportStudentId)
                 ->where('role', 'student')
                 ->where('is_active', true);
             if ($allowedDepartmentIds !== null) {
@@ -2766,8 +2770,9 @@ class DtrController extends Controller
 
         // Filter by employee
         $selectedEmployee = null;
-        if ($request->filled('employee_id')) {
-            $selectedEmployee = User::where('id', $request->employee_id)
+        $exportEmployeeId = RequestQueryInteger::positiveInt($request, 'employee_id');
+        if ($exportEmployeeId !== null) {
+            $selectedEmployee = User::where('id', $exportEmployeeId)
                 ->where('role', 'employee')
                 ->where('is_active', true)
                 ->first();
@@ -2821,8 +2826,8 @@ class DtrController extends Controller
             }
         }
 
-        if ($request->filled('employee_id')) {
-            $employeesQuery->where('id', $request->employee_id);
+        if ($exportEmployeeId !== null) {
+            $employeesQuery->where('id', $exportEmployeeId);
         }
 
         $employeesForPdf = $employeesQuery->with('department')->orderBy('name')->get();
