@@ -3,70 +3,13 @@
 @section('page-title', 'Dashboard')
 
 @section('content')
-<div class="min-h-full flex flex-col -mx-3 sm:-mx-4 lg:-mx-6">
-    <!-- Search and Filter Bar -->
-    @if(($canViewAssignedQuizzes ?? auth()->user()->canViewAssignedQuizzes()))
-    <div class="bg-white shadow-sm border-b border-gray-200 p-4 flex-shrink-0">
-        <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
-            <!-- Search -->
-            <div class="flex-1 max-w-md">
-                <div class="relative">
-                    <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                        <svg class="h-4 w-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
-                        </svg>
-                    </div>
-                    <input type="text"
-                           id="search-input"
-                           placeholder="Search quizzes..."
-                           class="block w-full pl-9 pr-3 py-2 border border-gray-300 rounded-md leading-5 bg-white placeholder-gray-500 focus:outline-none focus:placeholder-gray-400 focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500 text-sm">
-                </div>
-            </div>
+<div class="user-dashboard min-h-full flex flex-col -mx-3 sm:-mx-4 lg:-mx-6">
+    @include('user.dashboard.partials.hero', ['canViewAssignedQuizzes' => $canViewAssignedQuizzes ?? null])
 
-            <!-- Action Buttons -->
-            <div class="flex items-center space-x-2">
-                <button class="inline-flex items-center px-3 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
-                    <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z"></path>
-                    </svg>
-                    <span class="hidden sm:inline">Filter</span>
-                </button>
-                <button onclick="openQuizCodeModal()" class="inline-flex items-center px-3 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
-                    <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z"></path>
-                    </svg>
-                    <span class="hidden sm:inline">Enter Quiz Code</span>
-                </button>
-            </div>
-        </div>
-    </div>
-    @endif
-
-    <!-- Page Header -->
-    <div class="bg-gradient-to-r from-indigo-500 to-indigo-600 shadow-sm p-4 flex-shrink-0">
-        <div class="flex items-center">
-            <div class="flex-shrink-0">
-                <svg class="h-6 w-6 sm:h-8 sm:w-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2H5a2 2 0 00-2-2z"></path>
-                </svg>
-            </div>
-            <div class="ml-3">
-                <h1 class="text-lg sm:text-xl lg:text-2xl font-bold text-white">My Dashboard</h1>
-                <p class="text-indigo-100 text-sm">
-                    Welcome back, <x-user-name :user="auth()->user()" class="inline text-indigo-100" />! Your rank: {{ auth()->user()->getRankText() }} ({{ auth()->user()->getTotalScore() }} pts)
-                    @if(auth()->user()->role === 'student' && !empty($studentMeritDetails['breakdown']['total']))
-                        · Merits:
-                        <span class="font-semibold tabular-nums {{ (int) $studentMeritDetails['breakdown']['total'] >= 3 ? 'text-red-200' : '' }}">
-                            {{ (int) $studentMeritDetails['breakdown']['total'] }}
-                        </span>
-                    @endif
-                </p>
-            </div>
-        </div>
-    </div>
+    <div class="max-w-[88rem] mx-auto w-full flex-1 px-4 sm:px-6 lg:px-8 py-6 space-y-6">
 
     @if(auth()->user()->role === 'student' && !empty($studentLeaveBalanceSummary))
-    <div class="bg-sky-50 border-b border-sky-200 px-4 py-3 flex-shrink-0" role="region" aria-label="Absent request allowance">
+    <div class="user-dashboard-alert bg-sky-50 border-sky-200" role="region" aria-label="Absent request allowance">
         <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
             <div class="flex items-start gap-2 min-w-0">
                 <svg class="h-5 w-5 text-sky-600 flex-shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
@@ -97,7 +40,7 @@
 
     <!-- Ongoing Quiz Alert -->
     @if(($canViewAssignedQuizzes ?? auth()->user()->canViewAssignedQuizzes()) && $ongoingQuiz && $ongoingQuiz->isOngoing())
-    <div class="bg-blue-50 border-b border-blue-200 p-4 flex-shrink-0">
+    <div class="user-dashboard-alert bg-blue-50 border-blue-200">
         <div class="flex items-start">
             <div class="flex-shrink-0">
                 <svg class="h-5 w-5 text-blue-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -134,7 +77,7 @@
     @endif
 
     @if(auth()->user()->role === 'student' && ($evaluationAvailable ?? false))
-    <div class="bg-emerald-50 border-b border-emerald-200 p-4 flex-shrink-0">
+    <div class="user-dashboard-alert bg-emerald-50 border-emerald-200">
         <div class="flex items-start">
             <div class="flex-shrink-0">
                 <svg class="h-5 w-5 text-emerald-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -163,7 +106,7 @@
         $ojtDaysLeft = (int) ($studentOjtAccessCountdown['days_remaining'] ?? 0);
         $ojtAccessEnd = $studentOjtAccessCountdown['access_end_date'] ?? null;
     @endphp
-    <div class="bg-amber-50 border-b border-amber-200 p-4 flex-shrink-0" role="status">
+    <div class="user-dashboard-alert bg-amber-50 border-amber-200" role="status">
         <div class="flex items-start gap-3">
             <div class="flex-shrink-0 mt-0.5">
                 <svg class="h-5 w-5 text-amber-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
@@ -213,8 +156,12 @@
             $possibleExitConferenceDate = \Carbon\Carbon::parse($possibleExitConferenceDate);
         }
     @endphp
-    <div class="p-4 pt-0 flex-shrink-0 space-y-3">
-        <div class="bg-indigo-50 border border-indigo-200 rounded-lg p-4">
+    <section class="space-y-4" aria-labelledby="student-training-heading">
+        <div>
+            <h2 id="student-training-heading" class="user-dashboard__section-title">Training &amp; progress</h2>
+            <p class="user-dashboard__section-desc">OJT hours, absence balance, and merit summary.</p>
+        </div>
+        <div class="user-dashboard-alert bg-indigo-50 border-indigo-200">
             <div class="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
                 <div class="min-w-0 flex-1">
                     <h3 class="text-sm font-semibold text-indigo-900">Training Progress</h3>
@@ -295,26 +242,23 @@
             @include('partials.student-merit-dashboard-summary', ['studentMeritDetails' => $studentMeritDetails])
         @endif
 
-        <div class="grid grid-cols-1 xl:grid-cols-2 gap-3">
-            <div class="bg-white border border-gray-200 rounded-lg p-4 shadow-sm">
-                <h3 class="text-sm font-semibold text-gray-900 mb-2">Required vs Logged vs Remaining</h3>
+        <div class="grid grid-cols-1 xl:grid-cols-2 gap-4">
+            <x-user-panel title="Required vs logged vs remaining" subtitle="Training hour breakdown">
                 <div class="h-60">
                     <canvas id="studentTrainingProgressChart"></canvas>
                 </div>
-            </div>
-            <div class="bg-white border border-gray-200 rounded-lg p-4 shadow-sm">
-                <h3 class="text-sm font-semibold text-gray-900 mb-2">Logged Hours (Last 6 Months)</h3>
+            </x-user-panel>
+            <x-user-panel title="Logged hours" subtitle="Last 6 months">
                 <div class="h-60">
                     <canvas id="studentMonthlyHoursChart"></canvas>
                 </div>
-            </div>
+            </x-user-panel>
         </div>
-    </div>
+    </section>
     @endif
 
     @if(auth()->user()->role === 'student' && isset($studentResubmissionRequests) && $studentResubmissionRequests->isNotEmpty())
-    <div class="p-4 pt-0 flex-shrink-0">
-        <div class="bg-rose-50 border border-rose-200 rounded-lg p-4" role="status">
+        <div class="user-dashboard-alert bg-rose-50 border-rose-200" role="status">
             <div class="flex items-start justify-between gap-3">
                 <div>
                     <h3 class="text-sm font-semibold text-rose-900">Leave Requests For Resubmission</h3>
@@ -344,74 +288,67 @@
                 @endforeach
             </div>
         </div>
-    </div>
     @endif
 
     @if(auth()->user()->isStaffMember() && !empty($employeeLeaveSummary))
-    <div class="p-4 pt-2 flex-shrink-0 space-y-4">
+    <section class="space-y-4" aria-labelledby="employee-leave-heading">
+        <div>
+            <h2 id="employee-leave-heading" class="user-dashboard__section-title">Leave &amp; attendance</h2>
+            <p class="user-dashboard__section-desc">Request status, leave credits, and overtime at a glance.</p>
+        </div>
         <div class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-5 gap-4">
-            <div class="bg-white border border-gray-200 rounded-lg p-4 shadow-sm">
-                <p class="text-xs font-medium uppercase tracking-wide text-gray-500">Total Leave Requests</p>
-                <p class="mt-1 text-2xl font-bold text-gray-900">{{ number_format((int) ($employeeLeaveSummary['total_requests'] ?? 0)) }}</p>
-            </div>
-            <div class="bg-amber-50 border border-amber-200 rounded-lg p-4 shadow-sm">
-                <p class="text-xs font-medium uppercase tracking-wide text-amber-700">Pending</p>
-                <p class="mt-1 text-2xl font-bold text-amber-900">{{ number_format((int) ($employeeLeaveSummary['pending_requests'] ?? 0)) }}</p>
-            </div>
-            <div class="bg-emerald-50 border border-emerald-200 rounded-lg p-4 shadow-sm">
-                <p class="text-xs font-medium uppercase tracking-wide text-emerald-700">Approved</p>
-                <p class="mt-1 text-2xl font-bold text-emerald-900">{{ number_format((int) ($employeeLeaveSummary['approved_requests'] ?? 0)) }}</p>
-            </div>
-            <div class="bg-red-50 border border-red-200 rounded-lg p-4 shadow-sm">
-                <p class="text-xs font-medium uppercase tracking-wide text-red-700">Rejected</p>
-                <p class="mt-1 text-2xl font-bold text-red-900">{{ number_format((int) ($employeeLeaveSummary['rejected_requests'] ?? 0)) }}</p>
-            </div>
-            <div class="bg-rose-50 border border-rose-200 rounded-lg p-4 shadow-sm">
-                <p class="text-xs font-medium uppercase tracking-wide text-rose-700">For Resubmission</p>
-                <p class="mt-1 text-2xl font-bold text-rose-900">{{ number_format((int) ($employeeLeaveSummary['resubmission_requests'] ?? 0)) }}</p>
-            </div>
+            <x-user-stat-card label="Total requests" :value="number_format((int) ($employeeLeaveSummary['total_requests'] ?? 0))" tone="indigo">
+                <x-slot:icon><svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg></x-slot:icon>
+            </x-user-stat-card>
+            <x-user-stat-card label="Pending" :value="number_format((int) ($employeeLeaveSummary['pending_requests'] ?? 0))" tone="amber">
+                <x-slot:icon><svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg></x-slot:icon>
+            </x-user-stat-card>
+            <x-user-stat-card label="Approved" :value="number_format((int) ($employeeLeaveSummary['approved_requests'] ?? 0))" tone="emerald">
+                <x-slot:icon><svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg></x-slot:icon>
+            </x-user-stat-card>
+            <x-user-stat-card label="Rejected" :value="number_format((int) ($employeeLeaveSummary['rejected_requests'] ?? 0))" tone="rose">
+                <x-slot:icon><svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg></x-slot:icon>
+            </x-user-stat-card>
+            <x-user-stat-card label="For resubmission" :value="number_format((int) ($employeeLeaveSummary['resubmission_requests'] ?? 0))" tone="rose">
+                <x-slot:icon><svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path></svg></x-slot:icon>
+            </x-user-stat-card>
         </div>
         <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <div class="bg-blue-50 border border-blue-200 rounded-lg p-4 shadow-sm">
-                <p class="text-xs font-medium uppercase tracking-wide text-blue-700">Leave Credits Remaining</p>
-                <p class="mt-1 text-2xl font-bold text-blue-900">{{ number_format((float) ($employeeLeaveSummary['leave_credits_remaining'] ?? 0), 2) }}</p>
-                <p class="text-[11px] mt-1 text-blue-700">
-                    {{ (int) ($employeeLeaveSummary['leave_credits_year'] ?? now()->year) }} pool:
-                    <span class="tabular-nums">{{ number_format((float) ($employeeLeaveSummary['leave_credits_used'] ?? 0), 2) }}</span>
-                    day(s) used
-                    <span class="text-blue-600">·</span>
-                    <span class="tabular-nums">{{ number_format((float) ($employeeLeaveSummary['leave_credits_allowance'] ?? 0), 2) }}</span>
-                    day(s) allowance
-                </p>
-                <p class="text-[11px] mt-0.5 text-blue-700">Usable for Vacation Leave / Sick Leave (approved requests this year)</p>
-            </div>
-            <div class="bg-violet-50 border border-violet-200 rounded-lg p-4 shadow-sm">
-                <p class="text-xs font-medium uppercase tracking-wide text-violet-700">Overtime Balance</p>
-                <p class="mt-1 text-2xl font-bold text-violet-900 tabular-nums">{{ $employeeLeaveSummary['overtime_balance_formatted'] ?? '00:00' }}</p>
-                <p class="text-[11px] mt-1 text-violet-700">Available hours that can be used for Offset</p>
-            </div>
+            <x-user-stat-card
+                label="Leave credits remaining"
+                tone="sky"
+                :value="number_format((float) ($employeeLeaveSummary['leave_credits_remaining'] ?? 0), 2)"
+                :hint="((int) ($employeeLeaveSummary['leave_credits_year'] ?? now()->year)).' pool: '.number_format((float) ($employeeLeaveSummary['leave_credits_used'] ?? 0), 2).' used · '.number_format((float) ($employeeLeaveSummary['leave_credits_allowance'] ?? 0), 2).' allowance'"
+            >
+                <x-slot:icon><svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg></x-slot:icon>
+            </x-user-stat-card>
+            <x-user-stat-card
+                label="Overtime balance"
+                tone="indigo"
+                :value="$employeeLeaveSummary['overtime_balance_formatted'] ?? '00:00'"
+                hint="Available hours for offset requests"
+            >
+                <x-slot:icon><svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg></x-slot:icon>
+            </x-user-stat-card>
         </div>
 
-        <div class="grid grid-cols-1 xl:grid-cols-2 gap-3">
-            <div class="bg-white border border-gray-200 rounded-lg p-4 shadow-sm">
-                <h3 class="text-sm font-semibold text-gray-900 mb-2">Leave Request Status Breakdown</h3>
+        <div class="grid grid-cols-1 xl:grid-cols-2 gap-4">
+            <x-user-panel title="Leave request status" subtitle="Current year breakdown">
                 <div class="h-60">
                     <canvas id="employeeLeaveStatusChart"></canvas>
                 </div>
-            </div>
-            <div class="bg-white border border-gray-200 rounded-lg p-4 shadow-sm">
-                <h3 class="text-sm font-semibold text-gray-900 mb-2">Leave Requests Filed (Last 6 Months)</h3>
+            </x-user-panel>
+            <x-user-panel title="Requests filed" subtitle="Last 6 months">
                 <div class="h-60">
                     <canvas id="employeeMonthlyLeaveChart"></canvas>
                 </div>
-            </div>
+            </x-user-panel>
         </div>
-    </div>
+    </section>
     @endif
 
     @if(auth()->user()->isStaffMember() && isset($employeeResubmissionRequests) && $employeeResubmissionRequests->isNotEmpty())
-    <div class="p-4 pt-0 flex-shrink-0">
-        <div class="bg-rose-50 border border-rose-200 rounded-lg p-4" role="status">
+        <div class="user-dashboard-alert bg-rose-50 border-rose-200" role="status">
             <div class="flex items-start justify-between gap-3">
                 <div>
                     <h3 class="text-sm font-semibold text-rose-900">Leave Requests For Resubmission</h3>
@@ -441,74 +378,27 @@
                 @endforeach
             </div>
         </div>
-    </div>
     @endif
 
-    <!-- Stats Cards -->
     @if(($canViewAssignedQuizzes ?? auth()->user()->canViewAssignedQuizzes()))
-    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2 sm:gap-3 lg:gap-4 flex-shrink-0 p-4">
-        <!-- Total Quizzes -->
-        <div class="bg-white overflow-hidden shadow-sm rounded-lg border border-gray-200">
-            <div class="p-3 sm:p-4">
-                <div class="flex items-center">
-                    <div class="flex-shrink-0">
-                        <svg class="h-6 w-6 text-indigo-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                        </svg>
-                    </div>
-                    <div class="ml-3 sm:ml-4 w-0 flex-1">
-                        <dl>
-                            <dt class="text-sm font-medium text-gray-500 truncate">Total Quizzes</dt>
-                            <dd class="text-lg sm:text-xl font-semibold text-gray-900">{{ $totalQuizzes }}</dd>
-                        </dl>
-                    </div>
-                </div>
-            </div>
+    <section class="space-y-4" aria-labelledby="quizzes-heading">
+        <div>
+            <h2 id="quizzes-heading" class="user-dashboard__section-title">Quizzes</h2>
+            <p class="user-dashboard__section-desc">Assigned assessments and your progress.</p>
+        </div>
+        <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+            <x-user-stat-card label="Total quizzes" :value="$totalQuizzes" tone="indigo">
+                <x-slot:icon><svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg></x-slot:icon>
+            </x-user-stat-card>
+            <x-user-stat-card label="Completed" :value="$completedQuizzes" tone="emerald">
+                <x-slot:icon><svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg></x-slot:icon>
+            </x-user-stat-card>
+            <x-user-stat-card label="Pending" :value="$pendingQuizzes" tone="amber">
+                <x-slot:icon><svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg></x-slot:icon>
+            </x-user-stat-card>
         </div>
 
-        <!-- Completed Quizzes -->
-        <div class="bg-white overflow-hidden shadow-sm rounded-lg border border-gray-200">
-            <div class="p-3 sm:p-4">
-                <div class="flex items-center">
-                    <div class="flex-shrink-0">
-                        <svg class="h-6 w-6 text-green-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-                        </svg>
-                    </div>
-                    <div class="ml-3 sm:ml-4 w-0 flex-1">
-                        <dl>
-                            <dt class="text-sm font-medium text-gray-500 truncate">Completed</dt>
-                            <dd class="text-lg sm:text-xl font-semibold text-gray-900">{{ $completedQuizzes }}</dd>
-                        </dl>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <!-- Pending Quizzes -->
-        <div class="bg-white overflow-hidden shadow-sm rounded-lg border border-gray-200 sm:col-span-2 lg:col-span-1">
-            <div class="p-3 sm:p-4">
-                <div class="flex items-center">
-                    <div class="flex-shrink-0">
-                        <svg class="h-6 w-6 text-yellow-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-                        </svg>
-                    </div>
-                    <div class="ml-3 sm:ml-4 w-0 flex-1">
-                        <dl>
-                            <dt class="text-sm font-medium text-gray-500 truncate">Pending</dt>
-                            <dd class="text-lg sm:text-xl font-semibold text-gray-900">{{ $pendingQuizzes }}</dd>
-                        </dl>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-    @endif
-
-    <!-- Available Quizzes -->
-    @if(($canViewAssignedQuizzes ?? auth()->user()->canViewAssignedQuizzes()))
-    <div class="bg-white shadow-sm border-t border-gray-200 overflow-visible flex flex-col">
+        <x-user-panel title="Your quizzes" subtitle="Search using the bar above to filter this list." :padding="false" class="overflow-visible">
 
         @if($allQuizzes->count() > 0)
             {{-- Mobile card list --}}
@@ -691,9 +581,11 @@
                     </p>
                 </div>
             @endif
-        </div>
-    </div>
+        </x-user-panel>
+    </section>
     @endif
+
+    </div>{{-- /dashboard content container --}}
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>

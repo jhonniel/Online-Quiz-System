@@ -516,6 +516,26 @@
         @apply border-white/40 bg-white/10 text-white hover:bg-white/20;
     }
 
+    .user-dashboard-hero__search {
+        background-color: rgb(255 255 255 / 0.12);
+    }
+
+    .user-dashboard-hero__chip {
+        @apply inline-flex items-center rounded-md px-2.5 py-1 text-xs font-medium text-indigo-50 ring-1 ring-inset ring-white/25 transition hover:bg-white/10;
+    }
+
+    .user-dashboard__section-title {
+        @apply text-sm font-semibold text-slate-900 tracking-tight;
+    }
+
+    .user-dashboard__section-desc {
+        @apply mt-0.5 text-xs text-slate-500;
+    }
+
+    .user-dashboard-alert {
+        @apply rounded-xl border px-4 py-3 shadow-sm;
+    }
+
     .user-portal table thead th {
         @apply text-xs font-semibold uppercase tracking-wide text-slate-500;
     }
