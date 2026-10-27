@@ -5,19 +5,16 @@
 ])
 
 @php
-    $colClass = match ($col) {
-        'wide' => 'min-w-0 w-full lg:col-span-4',
-        'actions' => 'flex w-full min-w-0 flex-col gap-2 sm:col-span-2 sm:flex-row sm:flex-wrap lg:col-span-3 lg:justify-end',
-        default => 'min-w-0 w-full sm:col-span-1 lg:col-span-3',
-    };
+    $wrapperClass = $col === 'actions' ? 'user-portal-filter__actions' : 'user-portal-filter__field';
 @endphp
 
-<div {{ $attributes->merge(['class' => $colClass]) }}>
-    <label for="{{ $for }}" class="block text-xs font-semibold uppercase tracking-wide text-slate-500">{{ $label }}</label>
-    <div @class([
-        'mt-1.5',
-        'flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center' => $col === 'actions',
-    ])>
+<div {{ $attributes->merge(['class' => $wrapperClass]) }}>
+    @if($col !== 'actions')
+        <label for="{{ $for }}" class="user-portal-filter__label">{{ $label }}</label>
+    @else
+        <span class="sr-only">{{ $label }}</span>
+    @endif
+    <div>
         {{ $slot }}
     </div>
 </div>

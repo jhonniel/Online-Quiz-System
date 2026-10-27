@@ -19,9 +19,7 @@
 
     <!-- Scripts -->
     @vite(['resources/css/app.css', 'resources/js/app.js'])
-
-    <!-- Tailwind CDN fallback: keeps legacy/dynamic utility classes working if not in the Vite build -->
-    <script src="https://cdn.tailwindcss.com"></script>
+    @include('partials.user-portal-critical-layout')
     @include('partials.verified-badge-styles')
 
     <!-- Alpine.js -->
