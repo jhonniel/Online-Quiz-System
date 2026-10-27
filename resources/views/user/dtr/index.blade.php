@@ -3,7 +3,7 @@
 @section('page-title', 'Daily Time Record')
 
 @section('content')
-<x-user-page-shell fluid class="pb-6 -mx-3 px-3 sm:-mx-4 sm:px-4 lg:-mx-6 lg:px-6">
+<x-user-page-shell fluid>
     <x-user-page-header title="Daily Time Record (DTR)" subtitle="View attendance, filter by date, and manage time requests.">
         <x-slot:icon>
             <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -11,13 +11,12 @@
             </svg>
         </x-slot:icon>
         <x-slot:actions>
-            <a href="{{ route('user.dtr.export-pdf', request()->only(['date_from', 'date_to', 'status'])) }}"
-               class="inline-flex items-center gap-2 rounded-lg border border-white/30 bg-white/10 px-3 py-2 text-sm font-medium text-white hover:bg-white/20">
-                <svg class="h-4 w-4 opacity-90" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+            <x-user-header-btn-secondary href="{{ route('user.dtr.export-pdf', request()->only(['date_from', 'date_to', 'status'])) }}">
+                <svg class="h-4 w-4 shrink-0 opacity-90" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
                 </svg>
                 Export PDF
-            </a>
+            </x-user-header-btn-secondary>
         </x-slot:actions>
     </x-user-page-header>
 
@@ -47,43 +46,34 @@
         </x-user-notice>
     @endif
 
-    <x-user-dashboard-section title="Filters" description="Choose a date range and status to refine your records.">
-        <form method="GET" action="{{ route('user.dtr.index') }}" class="space-y-4">
-            <div class="grid grid-cols-1 gap-4 md:grid-cols-3">
-                <div>
-                    <label for="date_from" class="block text-sm font-medium text-slate-700">Date from</label>
-                    <input type="date" name="date_from" id="date_from" value="{{ request('date_from') }}"
-                           class="mt-1.5 block w-full rounded-lg border-slate-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500">
-                </div>
-                <div>
-                    <label for="date_to" class="block text-sm font-medium text-slate-700">Date to</label>
-                    <input type="date" name="date_to" id="date_to" value="{{ request('date_to') }}"
-                           class="mt-1.5 block w-full rounded-lg border-slate-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500">
-                </div>
-                <div>
-                    <label for="status" class="block text-sm font-medium text-slate-700">Status</label>
-                    <select name="status" id="status" class="mt-1.5 block w-full rounded-lg border-slate-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500">
-                        <option value="">All statuses</option>
-                        <option value="present" @selected(request('status') == 'present')>Present</option>
-                        <option value="absent" @selected(request('status') == 'absent')>Absent</option>
-                        <option value="holiday" @selected(request('status') == 'holiday')>Holiday</option>
-                        <option value="late" @selected(request('status') == 'late')>Late</option>
-                        <option value="half_day" @selected(request('status') == 'half_day')>Half day</option>
-                        <option value="on_leave" @selected(request('status') == 'on_leave')>On leave</option>
-                        <option value="travel" @selected(request('status') == 'travel')>Travel</option>
-                    </select>
-                </div>
-            </div>
-            <div class="flex flex-wrap items-center gap-2">
-                <button type="submit" class="inline-flex items-center gap-2 rounded-lg bg-indigo-600 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2">
-                    <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
+    <x-user-dashboard-section title="Filter records" description="Choose a date range and status to refine your DTR." eyebrow="Refine">
+        <x-user-filter-bar :action="route('user.dtr.index')" class="-mt-1">
+            <x-user-filter-field label="Date from" for="date_from">
+                <input type="date" name="date_from" id="date_from" value="{{ request('date_from') }}">
+            </x-user-filter-field>
+            <x-user-filter-field label="Date to" for="date_to">
+                <input type="date" name="date_to" id="date_to" value="{{ request('date_to') }}">
+            </x-user-filter-field>
+            <x-user-filter-field label="Status" for="status">
+                <select name="status" id="status">
+                    <option value="">All statuses</option>
+                    <option value="present" @selected(request('status') == 'present')>Present</option>
+                    <option value="absent" @selected(request('status') == 'absent')>Absent</option>
+                    <option value="holiday" @selected(request('status') == 'holiday')>Holiday</option>
+                    <option value="late" @selected(request('status') == 'late')>Late</option>
+                    <option value="half_day" @selected(request('status') == 'half_day')>Half day</option>
+                    <option value="on_leave" @selected(request('status') == 'on_leave')>On leave</option>
+                    <option value="travel" @selected(request('status') == 'travel')>Travel</option>
+                </select>
+            </x-user-filter-field>
+            <x-user-filter-field label="Filter actions" for="dtr-filter-apply" col="actions" class="[&_.user-filter-bar__label]:sr-only">
+                <x-user-btn-primary tag="button" type="submit" id="dtr-filter-apply" class="w-full sm:w-auto">
+                    <svg class="h-4 w-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
                     Apply filters
-                </button>
-                <a href="{{ route('user.dtr.index') }}" class="inline-flex items-center rounded-lg border border-slate-300 bg-white px-4 py-2 text-sm font-medium text-slate-700 shadow-sm hover:bg-slate-50">
-                    Reset
-                </a>
-            </div>
-        </form>
+                </x-user-btn-primary>
+                <x-user-btn-secondary href="{{ route('user.dtr.index') }}" class="w-full sm:w-auto">Reset</x-user-btn-secondary>
+            </x-user-filter-field>
+        </x-user-filter-bar>
     </x-user-dashboard-section>
 
     @if(auth()->user()->role === 'student' && !empty($incompleteOvertimeReminderItems))

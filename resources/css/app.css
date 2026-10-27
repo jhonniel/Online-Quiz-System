@@ -618,6 +618,37 @@
         @apply transition-colors hover:bg-slate-50/80;
     }
 
+    .user-filter-bar {
+        @apply rounded-xl border border-slate-200/90 bg-slate-50/80 p-3 ring-1 ring-slate-900/[0.03] sm:p-4;
+    }
+
+    .user-filter-bar__grid {
+        @apply grid grid-cols-1 items-end gap-3 sm:grid-cols-2 lg:grid-cols-12 lg:gap-4;
+    }
+
+    .user-filter-bar__field {
+        @apply min-w-0 lg:col-span-3;
+    }
+
+    .user-filter-bar__field--wide {
+        @apply min-w-0 lg:col-span-4;
+    }
+
+    .user-filter-bar__actions {
+        @apply flex min-w-0 flex-col gap-2 sm:flex-row sm:flex-wrap lg:col-span-3 lg:justify-end;
+    }
+
+    .user-filter-bar__label {
+        @apply block text-xs font-semibold uppercase tracking-wide text-slate-500;
+    }
+
+    .user-filter-bar input[type="date"],
+    .user-filter-bar input[type="search"],
+    .user-filter-bar input[type="text"],
+    .user-filter-bar select {
+        @apply block w-full rounded-lg border-slate-300 bg-white py-2.5 text-sm text-slate-900 shadow-sm focus:border-indigo-500 focus:ring-indigo-500/20;
+    }
+
     .user-portal table thead th {
         @apply text-xs font-semibold uppercase tracking-wide text-slate-500;
     }

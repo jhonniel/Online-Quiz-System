@@ -84,4 +84,14 @@
     .{{ $scopeClass }} [data-sidebar-brand-root].bg-indigo-600 {
         background-color: var(--{{ $cssPrefix }}) !important;
     }
+
+    /* Portal actions stay indigo for a consistent, professional UI */
+    .{{ $scopeClass }} .user-portal-btn-primary {
+        background-color: #4f46e5 !important;
+    }
+
+    .{{ $scopeClass }} .user-portal-btn-primary:hover,
+    .{{ $scopeClass }} .user-portal-btn-primary.hover\:bg-indigo-700:hover {
+        background-color: #4338ca !important;
+    }
 </style>
