@@ -16,13 +16,13 @@
         'sky' => 'border-sky-100',
         default => 'border-slate-200/90',
     };
-    $compactSurface = match ($tone) {
-        'amber' => 'bg-amber-50/90',
-        'emerald' => 'bg-emerald-50/90',
-        'rose' => 'bg-rose-50/90',
-        'sky' => 'bg-sky-50/90',
-        'indigo' => 'bg-indigo-50/90',
-        default => 'bg-slate-50/90',
+    $compactAccent = match ($tone) {
+        'amber' => 'border-l-amber-500',
+        'emerald' => 'border-l-emerald-500',
+        'rose' => 'border-l-rose-500',
+        'sky' => 'border-l-sky-500',
+        'indigo' => 'border-l-indigo-500',
+        default => 'border-l-slate-300',
     };
     $iconClass = match ($tone) {
         'indigo' => 'bg-indigo-50 text-indigo-600',
@@ -40,9 +40,9 @@
 
 <div {{ $attributes->merge([
     'class' => trim(($isCompact
-        ? 'rounded-lg border p-3.5 '.$compactSurface.' '
-        : 'flex items-center gap-4 rounded-xl border bg-white p-4 shadow-sm transition-shadow hover:shadow-md '
-    ).$borderClass.' '.$class),
+        ? 'border-l-4 bg-white p-3.5 shadow-sm '.$compactAccent.' '
+        : 'flex items-center gap-4 rounded-xl border bg-white p-4 shadow-sm ring-1 ring-slate-900/5 transition-shadow hover:shadow-md '
+    ).($isCompact ? 'border border-slate-200/90 ' : '').(!$isCompact ? $borderClass.' ' : '').$class),
 ]) }}>
     @if(! $isCompact)
         @isset($icon)

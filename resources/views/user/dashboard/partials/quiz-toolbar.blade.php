@@ -1,4 +1,6 @@
-<div class="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-end">
+<div class="flex flex-col gap-3 border-b border-slate-100 pb-5 sm:flex-row sm:items-center sm:justify-between">
+    <p class="text-sm text-slate-600">Find a quiz by title or enter a code from your instructor.</p>
+    <div class="flex flex-col gap-2 sm:flex-row sm:items-center">
     <label class="sr-only" for="search-input">Search quizzes</label>
     <div class="relative w-full sm:max-w-xs">
         <div class="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3">
@@ -19,4 +21,5 @@
         </svg>
         Enter quiz code
     </button>
+    </div>
 </div>

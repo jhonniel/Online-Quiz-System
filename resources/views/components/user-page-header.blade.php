@@ -3,7 +3,7 @@
     'subtitle' => null,
 ])
 
-<div {{ $attributes->merge(['class' => 'flex flex-col gap-4 rounded-xl border border-indigo-700/20 bg-gradient-to-r from-indigo-600 to-indigo-700 px-4 py-4 shadow-md sm:flex-row sm:items-center sm:justify-between sm:px-5 sm:py-5']) }}>
+<div {{ $attributes->merge(['class' => 'flex flex-col gap-4 rounded-xl border border-indigo-800/30 bg-gradient-to-br from-indigo-600 via-indigo-600 to-indigo-800 px-4 py-4 shadow-md ring-1 ring-black/10 sm:flex-row sm:items-center sm:justify-between sm:px-6 sm:py-5']) }}>
     <div class="flex min-w-0 items-start gap-3">
         @isset($icon)
             <div class="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg bg-white/15 text-white [&>svg]:h-6 [&>svg]:w-6 [&>svg]:max-h-6 [&>svg]:max-w-6" aria-hidden="true">

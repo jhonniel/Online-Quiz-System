@@ -21,10 +21,12 @@
         </x-slot:icon>
         @if(auth()->user()->isStaffMember())
             <x-slot:actions>
-                <a href="{{ url('/leave-requests') }}" class="inline-flex items-center rounded-lg border border-white/30 bg-white/10 px-3 py-2 text-sm font-medium text-white hover:bg-white/20">
+                <a href="{{ url('/leave-requests') }}" class="inline-flex items-center gap-2 rounded-lg border border-white/30 bg-white/10 px-3 py-2 text-sm font-medium text-white hover:bg-white/20">
+                    <svg class="h-4 w-4 opacity-90" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg>
                     Leave requests
                 </a>
-                <a href="{{ url('/dtr') }}" class="inline-flex items-center rounded-lg border border-white/30 bg-white/10 px-3 py-2 text-sm font-medium text-white hover:bg-white/20">
+                <a href="{{ url('/dtr') }}" class="inline-flex items-center gap-2 rounded-lg border border-white/30 bg-white/10 px-3 py-2 text-sm font-medium text-white hover:bg-white/20">
+                    <svg class="h-4 w-4 opacity-90" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
                     Time records
                 </a>
             </x-slot:actions>
@@ -63,40 +65,23 @@
 
     <!-- Ongoing Quiz Alert -->
     @if(($canViewAssignedQuizzes ?? auth()->user()->canViewAssignedQuizzes()) && $ongoingQuiz && $ongoingQuiz->isOngoing())
-    <div class="user-dashboard-alert bg-blue-50 border-blue-200">
-        <div class="flex items-start">
-            <div class="flex-shrink-0">
-                <svg class="h-5 w-5 text-blue-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-                </svg>
-            </div>
-            <div class="ml-3 flex-1">
-                <h3 class="text-sm font-medium text-blue-800">
-                    Quiz in Progress
-                </h3>
-                <div class="mt-2 text-sm text-blue-700">
-                    <p>You have an ongoing quiz: <strong>{{ $ongoingQuiz->quiz->title }}</strong></p>
-                    @if($ongoingQuiz->quiz->time_limit)
-                        <p class="mt-1">
-                            Time remaining:
-                            <span class="font-mono font-bold">
-                                {{ floor($ongoingQuiz->remaining_time / 60) }}:{{ str_pad($ongoingQuiz->remaining_time % 60, 2, '0', STR_PAD_LEFT) }}
-                            </span>
-                        </p>
-                    @endif
-                </div>
-                <div class="mt-3">
-                    <a href="{{ url('/quizzes/' . $ongoingQuiz->quiz->id . '/take') }}"
-                       class="inline-flex items-center px-3 py-2 border border-transparent text-sm leading-4 font-medium rounded-md text-blue-700 bg-blue-100 hover:bg-blue-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
-                        <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14.828 14.828a4 4 0 01-5.656 0M9 10h1m4 0h1m-6 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                        </svg>
-                        Continue Quiz
-                    </a>
-                </div>
-            </div>
-        </div>
-    </div>
+    <x-user-notice tone="warning" title="Quiz in progress">
+        <x-slot:icon>
+            <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+        </x-slot:icon>
+        <p>You have an ongoing quiz: <strong>{{ $ongoingQuiz->quiz->title }}</strong>
+            @if($ongoingQuiz->quiz->time_limit)
+                · Time left:
+                <span class="font-mono font-semibold">{{ floor($ongoingQuiz->remaining_time / 60) }}:{{ str_pad($ongoingQuiz->remaining_time % 60, 2, '0', STR_PAD_LEFT) }}</span>
+            @endif
+        </p>
+        <x-slot:actions>
+            <a href="{{ url('/quizzes/' . $ongoingQuiz->quiz->id . '/take') }}"
+               class="inline-flex items-center rounded-lg bg-amber-600 px-3 py-2 text-sm font-medium text-white shadow-sm hover:bg-amber-700">
+                Continue quiz
+            </a>
+        </x-slot:actions>
+    </x-user-notice>
     @endif
 
     @if(auth()->user()->role === 'student' && ($evaluationAvailable ?? false))
@@ -309,40 +294,48 @@
     @endif
 
     @if(auth()->user()->isStaffMember() && !empty($employeeLeaveSummary))
+    @php
+        $empPending = (int) ($employeeLeaveSummary['pending_requests'] ?? 0);
+        $empRejected = (int) ($employeeLeaveSummary['rejected_requests'] ?? 0);
+        $empResub = (int) ($employeeLeaveSummary['resubmission_requests'] ?? 0);
+        $empLeaveRemaining = (float) ($employeeLeaveSummary['leave_credits_remaining'] ?? 0);
+        $empLeaveAllowance = (float) ($employeeLeaveSummary['leave_credits_allowance'] ?? 0);
+        $empLeaveUsed = (float) ($employeeLeaveSummary['leave_credits_used'] ?? 0);
+        $empLeaveYear = (int) ($employeeLeaveSummary['leave_credits_year'] ?? now()->year);
+    @endphp
     <x-user-dashboard-section title="Leave & attendance" description="Request status, leave credits, and overtime at a glance.">
-        <div class="grid grid-cols-2 gap-3 sm:grid-cols-3 xl:grid-cols-5">
-            <x-user-stat-card size="compact" label="Total requests" :value="number_format((int) ($employeeLeaveSummary['total_requests'] ?? 0))" tone="default" />
-            <x-user-stat-card size="compact" label="Pending" :value="number_format((int) ($employeeLeaveSummary['pending_requests'] ?? 0))" tone="amber" />
-            <x-user-stat-card size="compact" label="Approved" :value="number_format((int) ($employeeLeaveSummary['approved_requests'] ?? 0))" tone="emerald" />
-            <x-user-stat-card size="compact" label="Rejected" :value="number_format((int) ($employeeLeaveSummary['rejected_requests'] ?? 0))" tone="rose" />
-            <x-user-stat-card size="compact" label="For resubmission" :value="number_format((int) ($employeeLeaveSummary['resubmission_requests'] ?? 0))" tone="rose" class="col-span-2 sm:col-span-1" />
-        </div>
-        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <x-user-kpi-grid>
+            <x-user-kpi-cell label="Total requests" :value="number_format((int) ($employeeLeaveSummary['total_requests'] ?? 0))" />
+            <x-user-kpi-cell label="Pending" :value="number_format($empPending)" :value-class="$empPending > 0 ? 'text-amber-600' : 'text-slate-900'" />
+            <x-user-kpi-cell label="Approved" :value="number_format((int) ($employeeLeaveSummary['approved_requests'] ?? 0))" value-class="text-emerald-700" />
+            <x-user-kpi-cell label="Rejected" :value="number_format($empRejected)" :value-class="$empRejected > 0 ? 'text-rose-600' : 'text-slate-900'" />
+            <x-user-kpi-cell label="For resubmission" :value="number_format($empResub)" :value-class="$empResub > 0 ? 'text-rose-600' : 'text-slate-900'" class="col-span-2 sm:col-span-1" />
+        </x-user-kpi-grid>
+
+        <div class="grid grid-cols-1 gap-4 lg:grid-cols-2">
             <x-user-stat-card
-                label="Leave credits remaining"
-                tone="sky"
-                :value="number_format((float) ($employeeLeaveSummary['leave_credits_remaining'] ?? 0), 2)"
-                :hint="((int) ($employeeLeaveSummary['leave_credits_year'] ?? now()->year)).' pool: '.number_format((float) ($employeeLeaveSummary['leave_credits_used'] ?? 0), 2).' used · '.number_format((float) ($employeeLeaveSummary['leave_credits_allowance'] ?? 0), 2).' allowance'"
+                label="Leave credits"
+                tone="indigo"
+                :hint="$empLeaveYear.' pool · '.number_format($empLeaveUsed, 2).' day(s) used this year'"
             >
                 <x-slot:icon><svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg></x-slot:icon>
+                <x-slot:valueSlot>
+                    <span class="tabular-nums">{{ number_format($empLeaveRemaining, 2) }}</span>
+                    <span class="text-lg font-medium text-slate-500"> / {{ number_format($empLeaveAllowance, 2) }} days</span>
+                </x-slot:valueSlot>
             </x-user-stat-card>
-            <x-user-stat-card
-                label="Overtime balance"
-                tone="indigo"
-                :value="$employeeLeaveSummary['overtime_balance_formatted'] ?? '00:00'"
-                hint="Available hours for offset requests"
-            >
+            <x-user-stat-card label="Overtime balance" tone="indigo" :value="$employeeLeaveSummary['overtime_balance_formatted'] ?? '00:00'" hint="Available for offset leave requests">
                 <x-slot:icon><svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg></x-slot:icon>
             </x-user-stat-card>
         </div>
 
         <div class="grid grid-cols-1 gap-4 xl:grid-cols-2">
-            <x-user-panel title="Leave request status" subtitle="Current year breakdown">
+            <x-user-panel embedded title="Leave request status" subtitle="Current year">
                 <div class="h-64 sm:h-72">
                     <canvas id="employeeLeaveStatusChart"></canvas>
                 </div>
             </x-user-panel>
-            <x-user-panel title="Requests filed" subtitle="Last 6 months">
+            <x-user-panel embedded title="Requests filed" subtitle="Last 6 months">
                 <div class="h-64 sm:h-72">
                     <canvas id="employeeMonthlyLeaveChart"></canvas>
                 </div>
@@ -386,22 +379,15 @@
 
     @if($canQuizzes)
     <x-user-dashboard-section title="Quizzes" description="Assigned assessments and your progress.">
-        <x-slot:actions>
-            @include('user.dashboard.partials.quiz-toolbar')
-        </x-slot:actions>
-        <div class="grid grid-cols-1 gap-4 sm:grid-cols-3">
-            <x-user-stat-card label="Total quizzes" :value="$totalQuizzes" tone="indigo">
-                <x-slot:icon><svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg></x-slot:icon>
-            </x-user-stat-card>
-            <x-user-stat-card label="Completed" :value="$completedQuizzes" tone="emerald">
-                <x-slot:icon><svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg></x-slot:icon>
-            </x-user-stat-card>
-            <x-user-stat-card label="Pending" :value="$pendingQuizzes" tone="amber">
-                <x-slot:icon><svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg></x-slot:icon>
-            </x-user-stat-card>
-        </div>
+        @include('user.dashboard.partials.quiz-toolbar')
 
-        <x-user-panel title="Your quizzes" subtitle="Filter the list with search or join with a quiz code." :padding="false" class="overflow-visible">
+        <x-user-kpi-grid columns="grid-cols-1 divide-y sm:grid-cols-3 sm:divide-x sm:divide-y-0">
+            <x-user-kpi-cell label="Total quizzes" :value="$totalQuizzes" />
+            <x-user-kpi-cell label="Completed" :value="$completedQuizzes" value-class="text-emerald-700" />
+            <x-user-kpi-cell label="Pending" :value="$pendingQuizzes" :value-class="$pendingQuizzes > 0 ? 'text-amber-600' : 'text-slate-900'" />
+        </x-user-kpi-grid>
+
+        <x-user-panel title="Assigned quizzes" subtitle="Browse, search, or open a quiz from the actions menu." :padding="false" embedded class="overflow-visible">
 
         @if($allQuizzes->count() > 0)
             {{-- Mobile card list --}}
@@ -446,7 +432,7 @@
 
             {{-- Desktop table --}}
             <div class="hidden md:block overflow-x-auto overflow-y-visible mobile-table-scroll">
-                <table class="min-w-full divide-y divide-gray-200">
+                <table class="min-w-full divide-y divide-slate-100">
                     <thead class="sticky top-0 z-10 bg-slate-50/95 backdrop-blur-sm">
                         <tr>
                             <th scope="col" class="px-3 sm:px-4 lg:px-6 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">
@@ -456,21 +442,21 @@
                             <th scope="col" class="min-w-[200px] px-3 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-500 sm:px-4 lg:px-6">
                                 Quiz
                             </th>
-                            <th scope="col" class="px-3 sm:px-4 lg:px-6 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                <span class="hidden md:inline">Topic</span>
+                            <th scope="col" class="hidden px-3 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-500 md:table-cell sm:px-4 lg:px-6">
+                                Topic
                             </th>
-                            <th scope="col" class="px-3 sm:px-4 lg:px-6 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                <span class="hidden lg:inline">Questions</span>
+                            <th scope="col" class="hidden px-3 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-500 lg:table-cell sm:px-4 lg:px-6">
+                                Questions
                             </th>
-                            <th scope="col" class="px-3 sm:px-4 lg:px-6 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                <span class="hidden md:inline">Status</span>
+                            <th scope="col" class="hidden px-3 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-500 md:table-cell sm:px-4 lg:px-6">
+                                Status
                             </th>
-                            <th scope="col" class="relative px-3 sm:px-4 lg:px-6 py-2 w-12">
+                            <th scope="col" class="relative w-12 px-3 py-3 sm:px-4 lg:px-6">
                                 <span class="sr-only">Actions</span>
                             </th>
                         </tr>
                     </thead>
-                    <tbody class="bg-white divide-y divide-gray-200">
+                    <tbody class="divide-y divide-slate-100 bg-white">
                         @foreach($allQuizzes as $quiz)
                             @php
                                 $assignment = $quiz->assignments->first();
@@ -478,14 +464,14 @@
                                 $isCompleted = $assignment ? $assignment->is_completed : false;
                                 $status = $assignment ? $assignment->status : 'available';
                             @endphp
-                            <tr class="hover:bg-gray-50 transition-colors duration-150">
-                                <td class="px-3 sm:px-4 lg:px-6 py-3 whitespace-nowrap text-sm font-medium text-gray-900">
+                            <tr class="transition-colors hover:bg-slate-50/80">
+                                <td class="whitespace-nowrap px-3 py-3.5 text-sm font-medium tabular-nums text-slate-600 sm:px-4 lg:px-6">
                                     #{{ str_pad($quiz->id, 4, '0', STR_PAD_LEFT) }}
                                 </td>
-                                <td class="px-3 sm:px-4 lg:px-6 py-3">
-                                    <div class="text-sm font-medium text-gray-900">{{ Str::limit($quiz->title, 40) }}</div>
+                                <td class="px-3 py-3.5 sm:px-4 lg:px-6">
+                                    <div class="text-sm font-semibold text-slate-900">{{ Str::limit($quiz->title, 40) }}</div>
                                     @if($quiz->description)
-                                        <div class="text-sm text-gray-500 truncate max-w-xs">{{ Str::limit($quiz->description, 60) }}</div>
+                                        <div class="mt-0.5 max-w-md truncate text-sm text-slate-500">{{ Str::limit($quiz->description, 60) }}</div>
                                     @endif
                                     <!-- Mobile: Show topic and status below title -->
                                     <div class="sm:hidden mt-2 flex flex-wrap gap-2">
@@ -508,7 +494,7 @@
                                         {{ $quiz->topic }}
                                     </span>
                                 </td>
-                                <td class="px-3 sm:px-4 lg:px-6 py-3 whitespace-nowrap text-sm text-gray-500 hidden lg:table-cell">
+                                <td class="hidden whitespace-nowrap px-3 py-3.5 text-sm tabular-nums text-slate-600 lg:table-cell sm:px-4 lg:px-6">
                                     {{ $quiz->total_questions }}
                                 </td>
                                 <td class="px-3 sm:px-4 lg:px-6 py-3 whitespace-nowrap hidden md:table-cell">
@@ -605,8 +591,8 @@
 </script>
 
 <!-- Quiz Code Modal -->
-<div id="quizCodeModal" class="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full hidden z-50">
-    <div class="relative top-10 sm:top-20 mx-auto p-4 sm:p-5 border w-11/12 sm:w-96 shadow-lg rounded-md bg-white">
+<div id="quizCodeModal" class="fixed inset-0 z-50 hidden h-full w-full overflow-y-auto bg-slate-900/50 backdrop-blur-[2px]">
+    <div class="relative top-10 mx-auto w-11/12 max-w-md rounded-xl border border-slate-200 bg-white p-5 shadow-xl sm:top-20 sm:p-6">
         <div class="mt-3">
             <div class="flex items-center justify-between mb-4">
                 <h3 class="text-base sm:text-lg font-medium text-gray-900">Enter Quiz Code</h3>
