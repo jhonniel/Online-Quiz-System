@@ -472,7 +472,7 @@
     color: #64748b;
 }
 
-/* Leave KPI row — icon stat cards (matches Leave Requests summary; no Tailwind grid) */
+/* Leave KPI row — icon stat cards; single row on web (768px+) */
 .user-leave-kpi-row {
     box-sizing: border-box;
     display: grid;
@@ -482,29 +482,38 @@
     max-width: 100%;
 }
 
-@media (min-width: 640px) {
+@media (min-width: 640px) and (max-width: 767px) {
     .user-leave-kpi-row {
         grid-template-columns: repeat(2, minmax(0, 1fr));
         gap: 1rem;
+    }
+
+    .user-leave-kpi-row__wide {
+        grid-column: 1 / -1;
+    }
+}
+
+@media (min-width: 768px) {
+    .user-leave-kpi-row {
+        display: flex !important;
+        flex-wrap: nowrap !important;
+        align-items: stretch;
+        gap: 0.75rem;
+    }
+
+    .user-leave-kpi-row > * {
+        flex: 1 1 0;
+        min-width: 0;
+        max-width: none;
+    }
+
+    .user-leave-kpi-row__wide {
+        grid-column: auto;
     }
 }
 
 @media (min-width: 1024px) {
     .user-leave-kpi-row {
-        grid-template-columns: repeat(4, minmax(0, 1fr));
-    }
-
-    .user-leave-kpi-row:has(.user-leave-kpi-row__wide) {
-        grid-template-columns: repeat(5, minmax(0, 1fr));
-    }
-}
-
-.user-leave-kpi-row > * {
-    min-width: 0;
-}
-
-@media (max-width: 1023px) {
-    .user-leave-kpi-row__wide {
-        grid-column: 1 / -1;
+        gap: 1rem;
     }
 }
