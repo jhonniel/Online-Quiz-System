@@ -4,12 +4,12 @@
     @endfor
 </div>
 
-<div class="login-left-panel__content login-left-panel__content--hohoho">
-    <div class="text-center text-white max-w-xl w-full mx-auto">
+<div class="login-left-panel__content login-left-panel__content--hohoho login-left-panel__content--stacked">
+    <div class="login-theme-art login-theme-art--hohoho">
         @include('partials.login-themes.partials.hohoho-scene')
-        @include('partials.login-themes.partials.welcome-heading', [
-            'tone' => 'hohoho',
-            'tagline' => 'Merry season — sign in to continue',
-        ])
     </div>
+    @include('partials.login-themes.partials.welcome-heading', [
+        'tone' => 'hohoho',
+        'tagline' => 'Merry season — sign in to continue',
+    ])
 </div>

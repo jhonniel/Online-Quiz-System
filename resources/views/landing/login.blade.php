@@ -4,7 +4,7 @@
 @section('description', 'Login to access your quiz dashboard')
 
 @section('styles')
-    <link rel="stylesheet" href="{{ asset('css/login-page-themes.css') }}?v=3">
+    <link rel="stylesheet" href="{{ asset('css/login-page-themes.css') }}?v=4">
     <link rel="stylesheet" href="{{ asset('css/login-witch.css') }}?v=1">
     <link rel="stylesheet" href="{{ asset('css/login-ghosto.css') }}?v=1">
     <link rel="stylesheet" href="{{ asset('css/login-hohoho.css') }}?v=1">

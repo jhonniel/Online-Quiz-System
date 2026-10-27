@@ -83,12 +83,22 @@
     }
 
     /*
-     * Avoid max-width:100% on all SVGs — it stretches icons to the full column width
-     * when a card/layout class fails to load. Size icons in components instead.
+     * Avoid max-width:100% on decorative SVGs in content — but never on header/control icons
+     * (max-width:100% inside a full-width button makes the icon huge and wraps the label).
      */
-    svg:not(.twetch-green-check):not(.ui-icon) {
+    svg:not(.twetch-green-check):not(.ui-icon):not(.user-header-btn__icon) {
         max-width: 100%;
         height: auto;
+    }
+
+    .user-header-btn-primary svg,
+    .user-header-btn-secondary svg,
+    svg.user-header-btn__icon {
+        width: 1.25rem;
+        height: 1.25rem;
+        max-width: 1.25rem;
+        max-height: 1.25rem;
+        flex-shrink: 0;
     }
 }
 

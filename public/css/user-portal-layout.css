@@ -32,8 +32,71 @@
     ) !important;
 }
 
+.user-page-header__actions {
+    display: flex !important;
+    flex-direction: column !important;
+    align-items: stretch !important;
+    gap: 0.625rem !important;
+    width: 100% !important;
+}
+
+@media (min-width: 640px) {
+    .user-page-header__actions {
+        flex-direction: row !important;
+        flex-wrap: wrap !important;
+        justify-content: flex-end !important;
+        width: auto !important;
+    }
+}
+
+.user-page-header__actions .user-header-btn-primary,
+.user-page-header__actions .user-header-btn-secondary {
+    box-sizing: border-box !important;
+    display: inline-flex !important;
+    flex-direction: row !important;
+    flex-wrap: nowrap !important;
+    align-items: center !important;
+    justify-content: center !important;
+    gap: 0.5rem !important;
+    width: 100% !important;
+    min-height: 3.25rem !important;
+    padding: 0.75rem 1.25rem !important;
+    border-radius: 0.75rem !important;
+    font-size: 1rem !important;
+    font-weight: 600 !important;
+    line-height: 1.25 !important;
+    white-space: nowrap !important;
+    text-decoration: none !important;
+}
+
 .user-page-header__actions .user-header-btn-primary {
-    width: 100%;
+    background: #fff !important;
+    color: #4338ca !important;
+    box-shadow: 0 2px 10px rgba(15, 23, 42, 0.12) !important;
+}
+
+.user-page-header__actions .user-header-btn-primary:hover {
+    background: #eef2ff !important;
+}
+
+.user-page-header__actions .user-header-btn-secondary {
+    border: 1px solid rgba(255, 255, 255, 0.35) !important;
+    background: rgba(255, 255, 255, 0.12) !important;
+    color: #fff !important;
+}
+
+.user-page-header__actions .user-header-btn-secondary:hover {
+    background: rgba(255, 255, 255, 0.22) !important;
+}
+
+.user-page-header__actions .user-header-btn-primary svg,
+.user-page-header__actions .user-header-btn-secondary svg,
+.user-page-header__actions svg.user-header-btn__icon {
+    width: 1.25rem !important;
+    height: 1.25rem !important;
+    max-width: 1.25rem !important;
+    max-height: 1.25rem !important;
+    flex-shrink: 0 !important;
 }
 
 .user-theme-custom .user-page-header__actions .user-header-btn-primary {
@@ -41,14 +104,16 @@
 }
 
 @media (min-width: 640px) {
-    .user-page-header__actions .user-header-btn-primary:only-child,
-    .user-page-header__actions .user-header-btn-secondary:only-child {
-        min-width: 11.5rem;
-    }
-
     .user-page-header__actions .user-header-btn-primary,
     .user-page-header__actions .user-header-btn-secondary {
-        width: auto;
+        width: auto !important;
+        min-height: 3.375rem !important;
+        padding: 0.875rem 1.5rem !important;
+    }
+
+    .user-page-header__actions .user-header-btn-primary:only-child,
+    .user-page-header__actions .user-header-btn-secondary:only-child {
+        min-width: 12rem !important;
     }
 }
 

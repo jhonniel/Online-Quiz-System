@@ -10,9 +10,9 @@
 <div class="absolute top-2/3 left-1/6 w-1 h-1 bg-yellow-300 rounded-full opacity-90 animate-twinkle"></div>
 <div class="absolute bottom-1/3 right-1/6 w-2 h-2 bg-white rounded-full opacity-70 animate-twinkle"></div>
 
-<div class="login-left-panel__content">
-    <div class="text-center text-white max-w-xl">
-        <div class="relative mb-8 animate-float-gentle">
+<div class="login-left-panel__content login-left-panel__content--stacked">
+    <div class="login-theme-art text-center text-white max-w-xl mx-auto">
+        <div class="relative animate-float-gentle">
             <div class="w-32 h-32 mx-auto relative animate-float-slow">
                 <div class="w-16 h-16 bg-pink-200 rounded-full mx-auto mb-2"></div>
                 <div class="w-20 h-16 bg-green-300 rounded-t-2xl mx-auto"></div>
@@ -36,11 +36,11 @@
                 <div class="w-6 h-12 bg-gray-600 rounded-full"></div>
             </div>
         </div>
-
-        @include('partials.login-themes.partials.welcome-heading', [
-            'variant' => 'default',
-            'tone' => 'default',
-            'tagline' => 'Your learning journey starts here',
-        ])
     </div>
+
+    @include('partials.login-themes.partials.welcome-heading', [
+        'variant' => 'default',
+        'tone' => 'default',
+        'tagline' => 'Your learning journey starts here',
+    ])
 </div>

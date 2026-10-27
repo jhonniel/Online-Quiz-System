@@ -2,22 +2,25 @@
     $tone = $tone ?? 'halloween';
 @endphp
 
-<h1 @class([
-    'font-black text-white drop-shadow-lg text-center',
-    'text-5xl xl:text-6xl mb-0 animate-float-gentle' => ($variant ?? '') === 'default',
-    'text-4xl xl:text-5xl mt-6 mb-0' => ($variant ?? '') !== 'default',
+<div @class([
+    'login-welcome-copy',
+    'login-welcome-copy--'.$tone,
 ])>
-    Welcome to {{ $settings['system_name'] }}
-</h1>
-
-@if(! empty($tagline))
-    <p @class([
-        'text-center drop-shadow-md mb-0',
-        'text-xl xl:text-2xl font-semibold text-white/95 mt-6 animate-float-slow' => $tone === 'default',
-        'text-lg xl:text-xl font-medium text-violet-100/95 mt-4' => $tone === 'halloween',
-        'text-xl xl:text-2xl font-medium text-sky-100/95 mt-5' => $tone === 'christmas',
-        'text-lg xl:text-xl font-medium text-red-50/95 mt-4' => $tone === 'hohoho',
+    <h1 @class([
+        'login-welcome-copy__title font-black text-white text-center break-words leading-tight',
+        'text-5xl xl:text-6xl mb-0 animate-float-gentle' => ($variant ?? '') === 'default',
+        'text-2xl sm:text-3xl xl:text-[2rem] mb-0' => ($variant ?? '') !== 'default',
     ])>
-        {{ $tagline }}
-    </p>
-@endif
+        Welcome to {{ $settings['system_name'] }}
+    </h1>
+
+    @if(! empty($tagline))
+        <p @class([
+            'login-welcome-copy__tagline text-center mb-0',
+            'text-xl xl:text-2xl font-semibold mt-4 animate-float-slow' => $tone === 'default',
+            'text-base sm:text-lg xl:text-xl font-medium mt-3' => $tone !== 'default',
+        ])>
+            {{ $tagline }}
+        </p>
+    @endif
+</div>

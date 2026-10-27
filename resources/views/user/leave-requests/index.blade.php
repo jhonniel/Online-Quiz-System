@@ -12,7 +12,7 @@
         </x-slot:icon>
         <x-slot:actions>
             <x-user-header-btn-primary href="{{ route('user.leave-requests.create') }}">
-                <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                <svg class="user-header-btn__icon" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path>
                 </svg>
                 New Request
