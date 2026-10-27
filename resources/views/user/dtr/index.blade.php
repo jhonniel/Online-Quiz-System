@@ -298,10 +298,23 @@
         </div>
 
         <div class="overflow-auto flex-1" id="dtr-groups-root">
-            @forelse($groupedDtrs as $monthKey => $month)
+            @forelse($groupedDtrsByYear as $yearKey => $year)
+                <div class="border-b border-gray-300" data-year-group>
+                    <button type="button"
+                            class="w-full flex items-center justify-between px-4 sm:px-6 py-3.5 bg-indigo-50 hover:bg-indigo-100 transition text-left"
+                            data-toggle="year">
+                        <h2 class="text-lg font-bold text-indigo-900">{{ $year['label'] }}</h2>
+                        <span class="ml-3 inline-flex items-center justify-center rounded-full bg-white/80 text-indigo-800 text-xs px-2 py-0.5">
+                            <span class="mr-1" data-year-chevron>+</span>
+                            Toggle
+                        </span>
+                    </button>
+
+                    <div class="border-t border-gray-200 hidden" data-year-content style="display: none;">
+                        @foreach($year['months'] as $monthKey => $month)
                 <div class="border-b border-gray-200" data-month-group>
                     <button type="button"
-                            class="w-full flex items-center justify-between px-4 sm:px-6 py-3 bg-gray-100 hover:bg-gray-200 transition text-left"
+                            class="w-full flex items-center justify-between px-4 sm:px-6 py-3 bg-gray-100 hover:bg-gray-200 transition text-left pl-8 sm:pl-10"
                             data-toggle="month">
                         <h3 class="text-md font-bold text-gray-900">{{ $month['label'] }}</h3>
                         <span class="ml-3 inline-flex items-center justify-center rounded-full bg-white/70 text-gray-700 text-xs px-2 py-0.5">
@@ -543,6 +556,9 @@
                         @endforeach
                     </div>
                 </div>
+                        @endforeach
+                    </div>
+                </div>
             @empty
                 <div class="text-center py-12 px-4">
                     <svg class="mx-auto h-16 w-16 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -558,6 +574,27 @@
 
 <script>
 document.addEventListener('DOMContentLoaded', function() {
+    document.querySelectorAll('[data-toggle="year"]').forEach(button => {
+        button.addEventListener('click', function() {
+            const yearGroup = this.closest('[data-year-group]');
+            const content = yearGroup.querySelector('[data-year-content]');
+            const chevron = yearGroup.querySelector('[data-year-chevron]');
+
+            if (!content) return;
+
+            const isHidden = content.classList.contains('hidden');
+            if (isHidden) {
+                content.classList.remove('hidden');
+                content.style.display = '';
+                if (chevron) chevron.textContent = '-';
+            } else {
+                content.classList.add('hidden');
+                content.style.display = 'none';
+                if (chevron) chevron.textContent = '+';
+            }
+        });
+    });
+
     // Month toggle functionality
     document.querySelectorAll('[data-toggle="month"]').forEach(button => {
         button.addEventListener('click', function() {

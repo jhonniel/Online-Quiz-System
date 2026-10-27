@@ -338,6 +338,28 @@ class DtrController extends Controller
             $groupedDtrs[$monthKey]['weeks'][$weekKey]['records'][] = $dtr;
         }
 
+        // Nest months under calendar year (newest first) for easier browsing.
+        $groupedDtrsByYear = [];
+        foreach ($groupedDtrs as $monthKey => $monthGroup) {
+            $yearKey = substr((string) $monthKey, 0, 4);
+            if (! isset($groupedDtrsByYear[$yearKey])) {
+                $groupedDtrsByYear[$yearKey] = [
+                    'label' => $yearKey,
+                    'months' => [],
+                ];
+            }
+            $groupedDtrsByYear[$yearKey]['months'][$monthKey] = $monthGroup;
+        }
+        krsort($groupedDtrsByYear);
+        foreach ($groupedDtrsByYear as &$yearGroup) {
+            krsort($yearGroup['months']);
+            foreach ($yearGroup['months'] as &$monthGroup) {
+                krsort($monthGroup['weeks']);
+            }
+            unset($monthGroup);
+        }
+        unset($yearGroup);
+
         // Get pending and rejected time requests (not approved) for students
         $pendingTimeRequests = collect();
         $pendingOvertimeLeaveRequests = collect();
@@ -423,7 +445,7 @@ class DtrController extends Controller
             : null;
 
         return view('user.dtr.index', compact(
-            'groupedDtrs',
+            'groupedDtrsByYear',
             'totalRecords',
             'totalHoursFormatted',
             'totalOvertimeFormatted',

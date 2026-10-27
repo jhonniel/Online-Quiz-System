@@ -2825,7 +2825,7 @@ class DtrController extends Controller
             $employeesQuery->where('id', $request->employee_id);
         }
 
-        $employeesForPdf = $employeesQuery->orderBy('name')->get();
+        $employeesForPdf = $employeesQuery->with('department')->orderBy('name')->get();
 
         // Build a concrete range for PDF row completion.
         // Priority:

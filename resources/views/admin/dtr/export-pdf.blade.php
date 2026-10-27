@@ -241,6 +241,9 @@
                     if ($leave->status !== 'approved') {
                         continue;
                     }
+                    if (! empty($excludeWeekends) && \Carbon\Carbon::parse($dateKey)->isWeekend()) {
+                        continue;
+                    }
                     $hasDtr = false;
                     $dtrRecord = null;
                     // Check if DTR exists for this date
@@ -273,6 +276,9 @@
                 foreach ($travelRequestMap[$employeeId] as $dateKey => $travel) {
                     // Only include approved travel requests
                     if ($travel->status !== 'approved') {
+                        continue;
+                    }
+                    if (! empty($excludeWeekends) && \Carbon\Carbon::parse($dateKey)->isWeekend()) {
                         continue;
                     }
                     $hasDtr = false;
@@ -349,18 +355,15 @@
                                     $addedTime = 0;
                                 }
                             }
-                            
-                        // For absent status, never show 8-hour defaults in PDF.
-                        if (($dtr->status ?? '') === 'absent') {
-                            $workedHours = 0;
-                            $extraMinutes = 0;
-                            $totalMinutes = 0;
-                            $workedFormatted = '00:00';
-                            $extraFormatted = '00:00';
-                            $totalFormatted = '00:00';
-                        }
 
-                        // Format worked hours
+                            // For absent status, never show 8-hour defaults in PDF.
+                            if ($isAbsentLeave || ($dtrRecord && ($dtrRecord->status ?? '') === 'absent')) {
+                                $leaveHours = 0;
+                                $workedHours = 0;
+                                $addedTime = 0;
+                            }
+
+                            // Format worked hours
                             $workedMinutes = (int) round($workedHours * 60);
                             $workedH = intdiv($workedMinutes, 60);
                             $workedM = $workedMinutes % 60;

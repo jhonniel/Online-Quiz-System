@@ -346,7 +346,7 @@
                                                         @else
                                                             TRAVEL
                                                         @endif
-                                                    @elseif($day['total_hours'] >= 8.0)
+                                                    @elseif($day['total_hours'] >= 8 - 0.001)
                                                         @if($day['has_leave_request'] ?? false)
                                                             Completed ({{ $day['leave_type_label'] ?? 'Leave' }})
                                                         @else
@@ -381,6 +381,13 @@
                                                 $dayOvertimeFormatted = sprintf('%02d:%02d', $dayOvertimeH, $dayOvertimeM);
                                             @endphp
                                             {{ $dayTotalFormatted }}
+                                            @if(($day['deficit_minutes'] ?? 0) > 0)
+                                                @php
+                                                    $dayDeficitM = (int) $day['deficit_minutes'];
+                                                    $dayDeficitFormatted = sprintf('%02d:%02d', intdiv($dayDeficitM, 60), $dayDeficitM % 60);
+                                                @endphp
+                                                <span class="text-red-500 text-[10px] ml-1">Deficit {{ $dayDeficitFormatted }}</span>
+                                            @endif
                                             @if($day['overtime_hours'] > 0)
                                                 <span class="text-yellow-600">(+{{ $dayOvertimeFormatted }})</span>
                                             @endif

@@ -130,7 +130,7 @@
                 <div class="flex items-center min-h-[4.5rem]">
                     <div class="flex-shrink-0 bg-emerald-100 rounded-lg p-3">
                         <svg class="h-6 w-6 text-emerald-600" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m3-4h-4a2 2 0 00-2 2v6a2 2 0 002 2h3l2 2 2-2h1a2 2 0 002-2v-3a8 8 0 10-4 0v1"></path>
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
                         </svg>
                     </div>
                     <div class="ml-4 min-w-0">
