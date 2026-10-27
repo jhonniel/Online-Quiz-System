@@ -4,17 +4,14 @@
     'col' => 'default',
 ])
 
-@php
-    $wrapperClass = $col === 'actions' ? 'user-portal-filter__actions' : 'user-portal-filter__field';
-@endphp
-
-<div {{ $attributes->merge(['class' => $wrapperClass]) }}>
-    @if($col !== 'actions')
-        <label for="{{ $for }}" class="user-portal-filter__label">{{ $label }}</label>
-    @else
+@if($col === 'actions')
+    <div {{ $attributes->merge(['class' => 'user-portal-filter__actions']) }}>
         <span class="sr-only">{{ $label }}</span>
-    @endif
-    <div>
         {{ $slot }}
     </div>
-</div>
+@else
+    <div {{ $attributes->merge(['class' => 'user-portal-filter__field']) }}>
+        <label for="{{ $for }}" class="user-portal-filter__label">{{ $label }}</label>
+        {{ $slot }}
+    </div>
+@endif

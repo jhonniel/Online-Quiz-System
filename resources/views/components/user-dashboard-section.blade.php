@@ -23,7 +23,7 @@
             @endif
         </div>
     </div>
-    <div class="space-y-4 p-3 sm:space-y-6 sm:p-6">
+    <div class="user-dashboard-section__body space-y-4 p-3 sm:space-y-6 sm:p-6">
         {{ $slot }}
     </div>
 </section>

@@ -1,0 +1,236 @@
+.sr-only {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+    border: 0;
+}
+
+.login-left-panel {
+    position: relative;
+}
+
+.login-left-panel__content {
+    position: relative;
+    z-index: 10;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+    height: 100%;
+    padding: 2rem 3rem;
+}
+
+.login-left-panel--default {
+    background: linear-gradient(to bottom right, #14b8a6, #0891b2);
+}
+
+.login-left-panel--halloween,
+.login-left-panel--boo,
+.login-left-panel--witch,
+.login-left-panel--ghosto {
+    background: linear-gradient(165deg, #8f3e64 0%, #3b1b2a 35%, #00034b 68%, #312e81 100%);
+}
+
+.login-left-panel__content--halloween {
+    padding-top: 1rem;
+    padding-bottom: 1.5rem;
+}
+
+.login-left-panel--christmas {
+    background: linear-gradient(145deg, #0f172a 0%, #1e3a8a 45%, #0369a1 100%);
+}
+
+/* —— Boo (Halloween login ghost) —— */
+.boo-scene {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    pointer-events: none;
+    user-select: none;
+}
+
+.boo-scene__figure {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+
+.boo-scene--sm {
+    transform: scale(0.48);
+    transform-origin: center top;
+}
+
+.boo-scene--lg {
+    transform: scale(1.15);
+    transform-origin: center top;
+}
+
+.boo-scene[data-boo-delay="1"] .boo-ghost {
+    animation-delay: 0.6s;
+}
+
+.boo-scene[data-boo-delay="1"] .boo-shadow {
+    animation-delay: 0.6s;
+}
+
+.boo-scene[data-boo-delay="2"] .boo-ghost {
+    animation-delay: 1.2s;
+}
+
+.boo-scene[data-boo-delay="2"] .boo-shadow {
+    animation-delay: 1.2s;
+}
+
+.boo-ghost {
+    position: relative;
+    width: 150px;
+    height: 225px;
+    background: #ffffff;
+    box-shadow: -17px 0 0 #dbdbdb inset, 0 0 50px #5939db;
+    border-radius: 100px 100px 0 0;
+    animation: boo-float 2s ease-in-out infinite;
+}
+
+.boo-ghost__eyes {
+    display: flex;
+    justify-content: space-around;
+    margin: 0 auto;
+    padding: 70px 0 0;
+    width: 90px;
+    height: 20px;
+}
+
+.boo-ghost__eyes::before,
+.boo-ghost__eyes::after {
+    content: "";
+    display: block;
+    width: 15px;
+    height: 25px;
+    background: #00034b;
+    border-radius: 50%;
+}
+
+.boo-ghost__dimples {
+    display: flex;
+    justify-content: space-around;
+    margin: 0 auto;
+    padding: 35px 0 0;
+    width: 130px;
+    height: 20px;
+}
+
+.boo-ghost__dimples::before,
+.boo-ghost__dimples::after {
+    content: "";
+    display: block;
+    width: 15px;
+    height: 15px;
+    background: #ffbeff;
+    border-radius: 50%;
+}
+
+.boo-ghost__feet {
+    width: 100%;
+    position: absolute;
+    bottom: -13px;
+    display: flex;
+    justify-content: space-between;
+}
+
+.boo-ghost__feet-foot {
+    width: 25%;
+    height: 26px;
+    border-radius: 50%;
+    background: #ffffff;
+}
+
+.boo-ghost__feet-foot:last-child {
+    background-image: linear-gradient(to right, #ffffff 55%, #dbdbdb 45%);
+}
+
+.boo-shadow {
+    background: #000232;
+    width: 150px;
+    height: 40px;
+    margin-top: 50px;
+    border-radius: 50%;
+    animation: boo-shadow 2s ease-in-out infinite;
+}
+
+@keyframes boo-float {
+    0%,
+    100% {
+        transform: translateY(0);
+    }
+    50% {
+        transform: translateY(-15px);
+    }
+}
+
+@keyframes boo-shadow {
+    0%,
+    100% {
+        transform: scale(1);
+    }
+    50% {
+        transform: scale(0.9);
+    }
+}
+
+.login-halloween-moon {
+    position: absolute;
+    top: 3rem;
+    right: 4rem;
+    width: 5.5rem;
+    height: 5.5rem;
+    border-radius: 9999px;
+    background: radial-gradient(circle at 35% 35%, #fef9c3, #fde047 55%, #facc15 100%);
+    box-shadow: 0 0 40px rgba(250, 204, 21, 0.45);
+    opacity: 0.95;
+}
+
+.login-halloween-fog {
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    height: 35%;
+    background: linear-gradient(to top, rgba(15, 23, 42, 0.55), transparent);
+    pointer-events: none;
+}
+
+.login-christmas-snow {
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    overflow: hidden;
+}
+
+.login-christmas-snow span {
+    position: absolute;
+    top: -10%;
+    width: 0.45rem;
+    height: 0.45rem;
+    border-radius: 9999px;
+    background: rgba(255, 255, 255, 0.85);
+    animation: login-snow-fall linear infinite;
+}
+
+@keyframes login-snow-fall {
+    0% {
+        transform: translateY(0);
+        opacity: 0;
+    }
+    10% {
+        opacity: 1;
+    }
+    100% {
+        transform: translateY(110vh);
+        opacity: 0.2;
+    }
+}

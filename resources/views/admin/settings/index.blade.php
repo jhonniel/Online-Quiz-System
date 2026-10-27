@@ -280,6 +280,8 @@
                             </div>
                     </div>
 
+                        @include('admin.settings.partials.login-page-theme')
+
                         <!-- Color Customization -->
                         <div class="form-section">
                             <div class="flex items-center space-x-3 mb-6">
@@ -371,7 +373,12 @@
                                     <option value="halloween_spidey" {{ ($settings['seasonal_effects'] ?? 'disabled') == 'halloween_spidey' ? 'selected' : '' }}>🕷️ Its Halloween Spidey (Hanging Spiders & Webs)</option>
                                     <option value="christmas" {{ ($settings['seasonal_effects'] ?? 'disabled') == 'christmas' ? 'selected' : '' }}>❄️ Christmas (Falling Snow)</option>
                                     </select>
-                                <p class="mt-2 text-xs text-gray-500">Add seasonal animations to the home page</p>
+                                <p class="mt-2 text-xs text-gray-500">Add seasonal animations to the home page only — not the login screen.</p>
+                                <p class="mt-2 text-xs text-gray-600">
+                                    For Boo, Witch, or Ghosto on login (separate choices), use
+                                    <a href="#login-page-theme" class="text-indigo-600 font-medium hover:text-indigo-800 underline">Login page (left panel)</a>
+                                    under Branding.
+                                </p>
                                 </div>
                             </div>
 

@@ -13,10 +13,73 @@
     }
 
     img,
-    video,
-    canvas {
+    video {
         max-width: 100%;
         height: auto;
+    }
+
+    /*
+     * Chart.js sets explicit canvas dimensions inside a fixed-height wrapper.
+     * Global height:auto on canvas breaks responsive charts and can overlap panel headers on mobile.
+     */
+    canvas:not(.user-panel-chart__canvas) {
+        max-width: 100%;
+    }
+
+    .user-panel-chart {
+        @apply relative z-0 w-full overflow-hidden;
+        height: 9.5rem;
+        contain: layout paint;
+    }
+
+    .user-panel-chart--doughnut {
+        height: 10rem;
+    }
+
+    .user-panel-chart--sm {
+        height: 9.5rem;
+    }
+
+    @media (min-width: 640px) {
+        .user-panel-chart {
+            height: 15rem;
+        }
+
+        .user-panel-chart--doughnut {
+            height: 13.5rem;
+        }
+
+        .user-panel-chart--sm {
+            height: 14rem;
+        }
+    }
+
+    @media (min-width: 1024px) {
+        .user-panel-chart {
+            height: 17rem;
+        }
+
+        .user-panel-chart--doughnut {
+            height: 15rem;
+        }
+    }
+
+    .user-panel-chart__canvas {
+        display: block !important;
+        width: 100% !important;
+        height: 100% !important;
+        max-width: none !important;
+        max-height: 100% !important;
+    }
+
+    .user-panel-chart-empty {
+        @apply px-4 py-6 text-center text-sm text-slate-500 sm:py-8;
+    }
+
+    .user-panel__body--flush {
+        padding: 0 !important;
+        margin: 0;
+        min-height: 0;
     }
 
     /*

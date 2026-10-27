@@ -3,6 +3,7 @@
 @section('page-title', 'Daily Time Record')
 
 @section('content')
+{{-- portal-ui-v4: if you do not see a full-width filter row, hard-refresh or restart php artisan serve --}}
 <x-user-page-shell fluid>
     <x-user-page-header title="Daily Time Record (DTR)" subtitle="View attendance, filter by date, and manage time requests.">
         <x-slot:icon>

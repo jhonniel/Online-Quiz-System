@@ -247,14 +247,14 @@
         @endif
 
         <div class="grid grid-cols-1 xl:grid-cols-2 gap-4">
-            <x-user-panel title="Required vs logged vs remaining" subtitle="Training hour breakdown">
-                <div class="h-60">
-                    <canvas id="studentTrainingProgressChart"></canvas>
+            <x-user-panel :padding="false" title="Required vs logged vs remaining" subtitle="Training hour breakdown">
+                <div class="user-panel-chart user-panel-chart--sm">
+                    <canvas id="studentTrainingProgressChart" class="user-panel-chart__canvas"></canvas>
                 </div>
             </x-user-panel>
-            <x-user-panel title="Logged hours" subtitle="Last 6 months">
-                <div class="h-60">
-                    <canvas id="studentMonthlyHoursChart"></canvas>
+            <x-user-panel :padding="false" title="Logged hours" subtitle="Last 6 months">
+                <div class="user-panel-chart user-panel-chart--sm">
+                    <canvas id="studentMonthlyHoursChart" class="user-panel-chart__canvas"></canvas>
                 </div>
             </x-user-panel>
     </x-user-dashboard-section>
@@ -329,15 +329,25 @@
             </x-user-stat-card>
         </div>
 
+        @php
+            $leaveStatusChartTotal = $empPending
+                + (int) ($employeeLeaveSummary['approved_requests'] ?? 0)
+                + $empRejected
+                + $empResub;
+        @endphp
         <div class="grid grid-cols-1 gap-4 xl:grid-cols-2">
-            <x-user-panel embedded title="Leave request status" subtitle="Current year">
-                <div class="h-64 sm:h-72">
-                    <canvas id="employeeLeaveStatusChart"></canvas>
-                </div>
+            <x-user-panel embedded :padding="false" title="Leave request status" subtitle="Current year">
+                @if($leaveStatusChartTotal > 0)
+                    <div class="user-panel-chart user-panel-chart--doughnut">
+                        <canvas id="employeeLeaveStatusChart" class="user-panel-chart__canvas"></canvas>
+                    </div>
+                @else
+                    <p class="user-panel-chart-empty">No leave requests yet for {{ $empLeaveYear }}.</p>
+                @endif
             </x-user-panel>
-            <x-user-panel embedded title="Requests filed" subtitle="Last 6 months">
-                <div class="h-64 sm:h-72">
-                    <canvas id="employeeMonthlyLeaveChart"></canvas>
+            <x-user-panel embedded :padding="false" title="Requests filed" subtitle="Last 6 months">
+                <div class="user-panel-chart">
+                    <canvas id="employeeMonthlyLeaveChart" class="user-panel-chart__canvas"></canvas>
                 </div>
             </x-user-panel>
         </div>
@@ -808,6 +818,8 @@ document.addEventListener('DOMContentLoaded', function() {
         monthly: { labels: [], values: [] },
     };
 
+    const chartIsMobile = window.matchMedia('(max-width: 639px)').matches;
+
     const employeeStatusCanvas = document.getElementById('employeeLeaveStatusChart');
     if (employeeStatusCanvas && employeeChartData.status?.labels?.length) {
         new Chart(employeeStatusCanvas, {
@@ -825,11 +837,19 @@ document.addEventListener('DOMContentLoaded', function() {
             options: {
                 responsive: true,
                 maintainAspectRatio: false,
-                cutout: '62%',
+                cutout: chartIsMobile ? '52%' : '60%',
+                layout: {
+                    padding: 0,
+                },
                 plugins: {
                     legend: {
                         position: 'bottom',
-                        labels: { boxWidth: 10, padding: 14, font: { size: 11 } },
+                        align: 'center',
+                        labels: {
+                            boxWidth: 8,
+                            padding: chartIsMobile ? 6 : 10,
+                            font: { size: chartIsMobile ? 9 : 11 },
+                        },
                     },
                 },
             },

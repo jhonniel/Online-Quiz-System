@@ -19,7 +19,6 @@
 
     <!-- Scripts -->
     @vite(['resources/css/app.css', 'resources/js/app.js'])
-    @include('partials.user-portal-critical-layout')
     @include('partials.verified-badge-styles')
 
     <!-- Alpine.js -->
@@ -113,6 +112,7 @@
             ])
         @endif
     @endauth
+    <link rel="stylesheet" href="{{ asset('css/user-portal-layout.css') }}?v=7">
 </head>
 
 @php

@@ -1,0 +1,298 @@
+/* Ghosto — hat ghost with pumpkin (scoped) */
+
+.ghosto-wrap {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    pointer-events: none;
+    user-select: none;
+}
+
+.ghosto-wrap--sm {
+    transform: scale(0.42);
+    transform-origin: center bottom;
+}
+
+.ghosto-wrap--lg {
+    transform: scale(0.88);
+    transform-origin: center top;
+}
+
+.ghosto-label {
+    margin: 0.35rem 0 0;
+    font-size: 1rem;
+    font-weight: 800;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: rgba(255, 255, 255, 0.92);
+    text-shadow: 0 2px 8px rgba(0, 0, 0, 0.35);
+}
+
+.ghosto-backg {
+    position: relative;
+    width: 350px;
+    height: 510px;
+}
+
+.ghosto-body {
+    background-color: #fff;
+    width: 140px;
+    height: 210px;
+    position: relative;
+    top: 150px;
+    left: 100px;
+    border-radius: 80px 80px 0 140px;
+    animation: ghosto-float 3.5s ease-in-out infinite;
+}
+
+.ghosto-hat {
+    background-color: #0b081b;
+    width: 170px;
+    height: 40px;
+    border-radius: 50%;
+    position: relative;
+    left: 15px;
+    bottom: 0;
+    transform: rotate(26deg);
+}
+
+.ghosto-hat1 {
+    width: 0;
+    height: 0;
+    border-left: 50px solid transparent;
+    border-right: 50px solid transparent;
+    border-bottom: 100px solid #0b081b;
+    position: relative;
+    bottom: 92px;
+    left: 40px;
+    transform: rotate(2deg);
+}
+
+.ghosto-s1 {
+    height: 0;
+    width: 70px;
+    border-bottom: 20px solid #ff9933;
+    border-left: 10px solid transparent;
+    border-right: 10px solid transparent;
+    position: relative;
+    top: 70px;
+    right: 45.5px;
+    transform: rotate(-2deg);
+}
+
+.ghosto-eye-l,
+.ghosto-eye-r {
+    height: 23px;
+    width: 23px;
+    background-color: #000;
+    border-radius: 50%;
+    position: relative;
+}
+
+.ghosto-eye-l {
+    top: 20px;
+    left: 15px;
+}
+
+.ghosto-eye-r {
+    bottom: 2px;
+    left: 70px;
+}
+
+.ghosto-dot1 {
+    background-color: #fff;
+    height: 10px;
+    width: 10px;
+    border-radius: 50%;
+    position: relative;
+    top: 3.5px;
+    left: 3.5px;
+}
+
+.ghosto-dot2 {
+    background-color: #fff;
+    height: 4px;
+    width: 4px;
+    border-radius: 50%;
+    position: relative;
+    top: 5px;
+    left: 13px;
+}
+
+.ghosto-blsh-l,
+.ghosto-blsh-r {
+    background-color: #ff99cc;
+    height: 18px;
+    width: 23px;
+    border-radius: 50%;
+    opacity: 0.4;
+}
+
+.ghosto-blsh-l {
+    transform: rotate(20deg);
+    position: relative;
+    left: 5px;
+    bottom: 2px;
+}
+
+.ghosto-blsh-r {
+    transform: rotate(-20deg);
+    position: relative;
+    left: 80px;
+    bottom: 19px;
+}
+
+.ghosto-mouth {
+    background-color: #000;
+    height: 20px;
+    width: 20px;
+    border-radius: 50%;
+    position: relative;
+    bottom: 30px;
+    left: 40px;
+}
+
+.ghosto-hand-l {
+    background-color: #fff;
+    height: 23px;
+    width: 40px;
+    border-radius: 15px;
+    position: relative;
+    bottom: 20px;
+    right: 15px;
+    transform: rotate(-15deg);
+}
+
+.ghosto-hand-r {
+    background-color: #fff;
+    height: 23px;
+    width: 40px;
+    border-radius: 15px;
+    position: relative;
+    bottom: 43px;
+    left: 115px;
+    transform: rotate(15deg);
+}
+
+.ghosto-pumpkin {
+    position: relative;
+    transform: rotate(10deg);
+    bottom: 35px;
+    right: 35px;
+}
+
+.ghosto-handle {
+    background-color: transparent;
+    height: 37px;
+    width: 20px;
+    position: relative;
+    border-radius: 20px 20px 0 0;
+    border: 4px solid #e69900;
+    top: 18px;
+    right: 5px;
+}
+
+.ghosto-p1,
+.ghosto-p4 {
+    background-color: #ff9933;
+    height: 40px;
+    width: 25px;
+    position: relative;
+    border-radius: 20px;
+}
+
+.ghosto-p2,
+.ghosto-p3 {
+    background-color: #ff9933;
+    height: 57px;
+    width: 25px;
+    position: relative;
+    border-radius: 20px;
+}
+
+.ghosto-p1 { right: 30px; top: 7px; }
+.ghosto-p2 { right: 13px; bottom: 40px; }
+.ghosto-p3 { bottom: 97px; left: 5px; }
+.ghosto-p4 { bottom: 145px; left: 22px; }
+
+.ghosto-e-l,
+.ghosto-e-r {
+    opacity: 0.6;
+    height: 0;
+    width: 0;
+    border-bottom: 15px solid #000;
+    border-left: 10px solid transparent;
+    border-right: 10px solid transparent;
+    position: relative;
+}
+
+.ghosto-e-l { bottom: 183px; right: 17px; }
+.ghosto-e-r { bottom: 198px; left: 16px; }
+
+.ghosto-nose {
+    opacity: 0.6;
+    height: 0;
+    width: 0;
+    border-bottom: 8px solid #000;
+    border-left: 5px solid transparent;
+    border-right: 5px solid transparent;
+    position: relative;
+    bottom: 200px;
+    left: 3.2px;
+}
+
+.ghosto-m {
+    background-color: #000;
+    opacity: 0.6;
+    height: 15px;
+    width: 30px;
+    border-radius: 0 0 15px 15px;
+    position: relative;
+    bottom: 196px;
+    right: 5.5px;
+}
+
+.ghosto-t1,
+.ghosto-t2 {
+    height: 0;
+    width: 0;
+    border-top: 6px solid #ff9933;
+    border-left: 3px solid transparent;
+    border-right: 3px solid transparent;
+    position: relative;
+}
+
+.ghosto-t1 { left: 2px; bottom: 0.5px; }
+.ghosto-t2 { bottom: 6.5px; left: 20px; }
+
+.ghosto-t3,
+.ghosto-t4 {
+    background-color: #ff9933;
+    height: 6px;
+    width: 5px;
+    position: relative;
+}
+
+.ghosto-t3 {
+    bottom: 4px;
+    left: 4.5px;
+    transform: rotate(10deg);
+}
+
+.ghosto-t4 {
+    bottom: 9.5px;
+    left: 20px;
+    transform: rotate(-10deg);
+}
+
+@keyframes ghosto-float {
+    50% {
+        transform: translateY(50px);
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .ghosto-body {
+        animation: none !important;
+    }
+}

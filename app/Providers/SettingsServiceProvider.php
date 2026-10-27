@@ -117,6 +117,7 @@ class SettingsServiceProvider extends ServiceProvider
             'contact_live_chat_days' => $get('contact_live_chat_days', 'Monday - Friday'),
             'contact_live_chat_time' => $get('contact_live_chat_time', '10:00 AM - 5:00 PM EST'),
             'student_rules_regulations_html' => $get('student_rules_regulations_html', ''),
+            'login_page_theme' => \App\Support\LoginPageTheme::normalize($get('login_page_theme', \App\Support\LoginPageTheme::DEFAULT)),
         ];
     }
 

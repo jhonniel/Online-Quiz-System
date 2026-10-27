@@ -1,0 +1,325 @@
+/* Ho Ho Ho — Santa login scene (scoped) */
+
+.login-left-panel--hohoho {
+    background-color: rgba(211, 47, 47, 0.92);
+    background-image: radial-gradient(ellipse 120% 80% at 50% 20%, rgba(255, 255, 255, 0.12), transparent 55%),
+        linear-gradient(165deg, #b71c1c 0%, #d32f2f 45%, #880e4f 100%);
+}
+
+.login-left-panel__content--hohoho {
+    flex-direction: column;
+    justify-content: center;
+    gap: 1.5rem;
+    padding: 1.5rem 1rem 2rem;
+}
+
+.login-christmas-snow--hohoho span {
+    background: rgba(255, 255, 255, 0.85);
+}
+
+.login-hohoho-scene {
+    color: #fff;
+    text-align: center;
+    width: 100%;
+    max-width: 820px;
+    margin: 0 auto;
+    flex-shrink: 0;
+}
+
+.login-hohoho-scene ul {
+    display: table;
+    list-style: none;
+    margin: 0 auto;
+    max-width: 800px;
+    padding: 0;
+}
+
+.login-hohoho-scene ul li {
+    display: inline-block;
+    float: left;
+}
+
+.login-hohoho-scene::after {
+    content: "";
+    display: table;
+    clear: both;
+}
+
+.login-hohoho-scene .santaclaus {
+    display: block;
+    margin: 0 auto;
+    max-width: 500px;
+}
+
+.login-hohoho-scene .santaclaus > div {
+    margin: 0 auto;
+    max-width: 400px;
+}
+
+.login-hohoho-scene .santaclaus .chapeu {
+    display: block;
+    position: relative;
+    width: 310px;
+    z-index: 99;
+}
+
+.login-hohoho-scene .santaclaus .chapeu .cone-1 {
+    width: 0;
+    height: 0;
+    border-left: 50px solid transparent;
+    border-right: 20px solid transparent;
+    border-bottom: 70px solid #d32f2f;
+}
+
+.login-hohoho-scene .santaclaus .chapeu .cone-2 {
+    background-color: #d32f2f;
+    border-top: 0 solid transparent;
+    border-right: 340px solid #d32f2f;
+    border-bottom: 100px solid transparent;
+    border-color: transparent;
+    box-shadow: -25px 15px 30px -5px rgba(1, 1, 1, 0.3);
+    position: relative;
+    left: -56px;
+    top: 49px;
+    transform: rotate(-15deg);
+    border-radius: 30% 100% 0 100%;
+}
+
+.login-hohoho-scene .santaclaus .chapeu::after,
+.login-hohoho-scene .santaclaus .chapeu::before {
+    background-color: #fff;
+    content: " ";
+    display: block;
+}
+
+.login-hohoho-scene .santaclaus .chapeu::after {
+    box-shadow: 0 -15px 40px -5px rgba(1, 1, 1, 0.4);
+    height: 80px;
+    margin-left: -15px;
+    position: relative;
+    width: 340px;
+    border-radius: 0.8em;
+}
+
+.login-hohoho-scene .santaclaus .chapeu::before {
+    box-shadow: 20px 20px 40px -5px rgba(1, 1, 1, 0.3);
+    height: 80px;
+    left: -120px;
+    position: absolute;
+    top: 80px;
+    width: 80px;
+    z-index: 111;
+    border-radius: 50%;
+}
+
+.login-hohoho-scene .santaclaus .face {
+    background-color: #ffccbc;
+    box-shadow: 0 0 30px 5px rgba(1, 1, 1, 0.3);
+    content: " ";
+    display: block;
+    height: 130px;
+    position: relative;
+    top: -10px;
+    width: 300px;
+}
+
+.login-hohoho-scene .santaclaus > .orelhas {
+    background-color: #eea2ad;
+    box-shadow: 0 0 30px 5px rgba(1, 1, 1, 0.3);
+    display: block;
+    height: 60px;
+    margin: 0 auto;
+    position: relative;
+    top: -125px;
+    width: 330px;
+    z-index: -1;
+    border-radius: 1em 1em 2em 2em;
+}
+
+.login-hohoho-scene .santaclaus .face > .eyes {
+    display: inline-block;
+    height: 0;
+    margin: 20px auto 0;
+    max-width: 160px;
+    width: 100%;
+}
+
+.login-hohoho-scene .santaclaus .face > .eyes::before,
+.login-hohoho-scene .santaclaus .face > .eyes::after {
+    background-color: #111;
+    content: " ";
+    display: inline-block;
+    float: left;
+    height: 20px;
+    width: 20px;
+    border-radius: 50%;
+}
+
+.login-hohoho-scene .santaclaus .face > .eyes::after {
+    float: right;
+}
+
+.login-hohoho-scene .santaclaus .face > .nariz {
+    background-color: #eea2ad;
+    height: 50px;
+    margin: 0 auto;
+    position: relative;
+    width: 70px;
+    z-index: 111;
+    border-radius: 50%;
+}
+
+.login-hohoho-scene .santaclaus .face > .barba {
+    background-color: #ecf0f1;
+    box-shadow: -10px 10px 10px -5px rgba(1, 1, 1, 0.3);
+    height: 240px;
+    margin: 0 auto;
+    position: relative;
+    top: -30px;
+    width: 340px;
+    left: -20px;
+    transform: rotate(-20deg);
+    border-radius: 0% 100% 70% 100%;
+    animation: login-hohoho-anima-barba 1.6s ease-in-out infinite alternate;
+}
+
+.login-hohoho-scene .santaclaus .face > .barba > .boca {
+    height: 50px;
+    left: 30px;
+    margin: 0 auto;
+    position: relative;
+    top: 20px;
+    width: 60px;
+    border-radius: 50%;
+    animation: login-hohoho-mouth 1.6s ease-in-out infinite alternate;
+}
+
+.login-hohoho-scene .hohoho {
+    height: 0;
+    padding-top: 200px;
+    width: 150px;
+    animation: login-hohoho-txt-fade 1.6s ease-in-out infinite alternate;
+}
+
+.login-hohoho-scene .hohoho h2 {
+    margin: 0;
+    font-size: 0;
+    line-height: 0;
+}
+
+.login-hohoho-scene .hohoho h2::before {
+    text-shadow: 0 10px 20px rgba(1, 1, 1, 0.4);
+    color: #fff;
+    content: "HO";
+    font-size: 62px;
+    line-height: 1.4em;
+    font-weight: 800;
+    font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
+}
+
+.login-hohoho-scene .hohoho:last-of-type h2 {
+    margin: 0 10px 30px;
+    text-align: right;
+}
+
+.login-hohoho-scene .hohoho:last-of-type h2:nth-child(2) {
+    margin-right: -50px;
+}
+
+.login-hohoho-scene .hohoho:last-of-type h2:first-child,
+.login-hohoho-scene .hohoho:last-of-type h2:last-child {
+    animation: login-hohoho-txt-right 1.6s ease-in-out infinite alternate;
+}
+
+.login-hohoho-scene .hohoho:first-of-type h2 {
+    margin: 0 50px 30px 0;
+    text-align: left;
+}
+
+.login-hohoho-scene .hohoho:first-of-type h2:nth-child(2) {
+    margin-left: -60px;
+}
+
+.login-hohoho-scene .hohoho:first-of-type h2:first-child,
+.login-hohoho-scene .hohoho:first-of-type h2:last-child {
+    animation: login-hohoho-txt-left 1.6s ease-in-out infinite alternate;
+}
+
+.login-hohoho-scene .hohoho h2:nth-child(2) {
+    animation: login-hohoho-txt-middle 1.6s ease-in-out infinite alternate;
+}
+
+.login-hohoho-caption {
+    position: relative;
+    z-index: 12;
+}
+
+@media (max-width: 1280px) {
+    .login-hohoho-scene {
+        transform: scale(0.82);
+        transform-origin: center top;
+    }
+}
+
+@keyframes login-hohoho-txt-fade {
+    from {
+        opacity: 0.2;
+    }
+    to {
+        opacity: 1;
+    }
+}
+
+@keyframes login-hohoho-txt-middle {
+    from {
+        transform: scale(1.5);
+    }
+    to {
+        transform: scale(1);
+    }
+}
+
+@keyframes login-hohoho-txt-left {
+    to {
+        transform: scale(1.5);
+    }
+}
+
+@keyframes login-hohoho-txt-right {
+    to {
+        transform: scale(1.5);
+    }
+}
+
+@keyframes login-hohoho-anima-barba {
+    to {
+        transform: rotate(-10deg);
+    }
+}
+
+@keyframes login-hohoho-mouth {
+    0% {
+        background-color: #ecf0f1;
+        box-shadow: 0 20px 0 0 #111;
+        height: 40px;
+        width: 60px;
+    }
+    60% {
+        background-color: #ecf0f1;
+        box-shadow: 0 60px 0 0 #111;
+        height: 60px;
+        width: 30px;
+    }
+    80% {
+        background-color: #ecf0f1;
+        box-shadow: 0 60px 0 0 #111;
+        height: 50px;
+        width: 40px;
+    }
+    100% {
+        background-color: #ecf0f1;
+        box-shadow: 0 60px 0 0 #111;
+        height: 60px;
+        width: 30px;
+    }
+}
