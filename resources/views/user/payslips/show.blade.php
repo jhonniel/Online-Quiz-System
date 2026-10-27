@@ -1,64 +1,69 @@
 @extends('layouts.user')
 
 @section('content')
-<div class="space-y-4 mx-2 sm:mx-3 lg:mx-4 xl:mx-6">
-    <a href="{{ route('user.payslips.index') }}" class="text-sm text-indigo-600 hover:text-indigo-800">&larr; Back to payslips</a>
+<x-user-page-shell fluid class="space-y-5 pb-6 -mx-3 px-3 sm:-mx-4 sm:px-4 lg:-mx-6 lg:px-6">
+    <x-user-page-header :title="$payslip->isSigned() ? 'Signed Payslip' : 'Payslip'" :subtitle="$payslip->periodLabel()">
+        <x-slot:icon>
+            <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z"/>
+            </svg>
+        </x-slot:icon>
+        <x-slot:subtitleSlot>
+            <a href="{{ route('user.payslips.index') }}" class="text-sm font-medium text-indigo-100/90 hover:text-white">&larr; Back to payslips</a>
+            @if($payslip->isSigned())
+                <p class="mt-1">Signed {{ $payslip->signed_at?->format('M j, Y h:i A') }}</p>
+            @else
+                <p class="mt-1">Generate and sign when you are ready.</p>
+            @endif
+        </x-slot:subtitleSlot>
+        @if($payslip->isSigned())
+            <x-slot:actions>
+                <button type="button"
+                        onclick="openPayslipSignModal({{ $payslip->id }}, @js($payslip->periodLabel()), true)"
+                        class="inline-flex items-center rounded-lg border border-white/30 bg-white/10 px-3 py-2 text-sm font-medium text-white hover:bg-white/20">
+                    Re-sign
+                </button>
+                <x-user-header-btn-primary href="{{ route('user.payslips.signed', $payslip) }}" target="_blank">Open PDF</x-user-header-btn-primary>
+                <x-user-header-btn-secondary href="{{ route('user.payslips.signed', ['payslip' => $payslip, 'download' => 1]) }}">Download</x-user-header-btn-secondary>
+            </x-slot:actions>
+        @endif
+    </x-user-page-header>
 
     @if(session('success'))
-        <div class="rounded-lg border border-green-200 bg-green-50 px-4 py-3 text-sm text-green-800">{{ session('success') }}</div>
+        <x-user-notice tone="success">{{ session('success') }}</x-user-notice>
     @endif
 
     @if($payslip->isSigned())
-        <div class="bg-white rounded-lg border border-gray-200 shadow-sm overflow-hidden">
-            <div class="flex flex-col gap-3 border-b border-gray-200 px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
-                <div>
-                    <h1 class="text-lg font-semibold text-gray-900">Signed Payslip</h1>
-                    <p class="text-sm text-gray-500">{{ $payslip->periodLabel() }} &middot; Signed {{ $payslip->signed_at?->format('M j, Y h:i A') }}</p>
-                </div>
-                <div class="flex flex-wrap gap-2">
-                    <button type="button"
-                            onclick="openPayslipSignModal({{ $payslip->id }}, @js($payslip->periodLabel()), true)"
-                            class="inline-flex items-center rounded-lg border border-indigo-300 bg-indigo-600 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-indigo-700">
-                        Re-sign
-                    </button>
-                    <a href="{{ route('user.payslips.signed', $payslip) }}"
-                       target="_blank"
-                       class="inline-flex items-center rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 shadow-sm hover:bg-gray-50">
-                        Open PDF
-                    </a>
-                    <a href="{{ route('user.payslips.signed', ['payslip' => $payslip, 'download' => 1]) }}"
-                       class="inline-flex items-center rounded-lg border border-indigo-300 bg-indigo-50 px-4 py-2 text-sm font-medium text-indigo-700 shadow-sm hover:bg-indigo-100">
-                        Download PDF
-                    </a>
-                </div>
-            </div>
-            <div class="bg-gray-100 p-4 flex justify-center">
+        <x-user-dashboard-section title="Signed PDF" description="Preview your signed payslip below.">
+            <div class="flex justify-center rounded-lg bg-slate-100 p-4 -mx-1 sm:mx-0">
                 <iframe src="{{ route('user.payslips.signed', $payslip) }}?v={{ $payslip->signed_at?->timestamp }}"
                         title="Signed payslip PDF"
                         class="w-full max-w-3xl border-0 bg-white shadow-sm"
-                        style="height: 1120px; max-height: 90vh;"></iframe>
+                        style="height: min(1120px, 75dvh); max-height: 75dvh;"></iframe>
             </div>
-        </div>
+        </x-user-dashboard-section>
     @else
         @include('admin.employee-management.payslip.partials.print-styles')
 
-        <div class="flex flex-col items-center gap-3 sm:flex-row sm:items-start sm:justify-center">
-            <div class="payslip-print-sheet payslip-print-sheet--single w-full max-w-3xl">
-                <div class="payslip-print-slot">
-                    <div id="payslip-print-area" class="payslip-print-area w-full">
-                        @include('admin.employee-management.payslip.partials.sheet', ['payslip' => $payslip])
+        <x-user-dashboard-section title="Payslip preview" description="Review your payslip, then generate and sign.">
+            <div class="flex flex-col items-center gap-3 sm:flex-row sm:items-start sm:justify-center">
+                <div class="payslip-print-sheet payslip-print-sheet--single w-full max-w-3xl">
+                    <div class="payslip-print-slot">
+                        <div id="payslip-print-area" class="payslip-print-area w-full">
+                            @include('admin.employee-management.payslip.partials.sheet', ['payslip' => $payslip])
+                        </div>
                     </div>
                 </div>
+                <div class="print:hidden shrink-0 space-y-2 sm:pt-2">
+                    <button type="button"
+                            onclick="openPayslipSignModal({{ $payslip->id }}, @js($payslip->periodLabel()))"
+                            class="inline-flex items-center gap-2 rounded-lg bg-indigo-600 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-indigo-700">
+                        Generate and Sign
+                    </button>
+                    @include('admin.employee-management.payslip.partials.print-toolbar')
+                </div>
             </div>
-            <div class="print:hidden shrink-0 sm:pt-2 space-y-2">
-                <button type="button"
-                        onclick="openPayslipSignModal({{ $payslip->id }}, @js($payslip->periodLabel()))"
-                        class="inline-flex items-center gap-2 rounded-lg border border-indigo-300 bg-indigo-600 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-indigo-700">
-                    Generate and Sign
-                </button>
-                @include('admin.employee-management.payslip.partials.print-toolbar')
-            </div>
-        </div>
+        </x-user-dashboard-section>
     @endif
 
     <div id="payslip-sign-modal" class="fixed inset-0 z-50 hidden" aria-hidden="true">
@@ -185,5 +190,5 @@
             });
         });
         </script>
-</div>
+</x-user-page-shell>
 @endsection

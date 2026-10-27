@@ -1,60 +1,43 @@
 @extends('layouts.user')
 
 @section('content')
-<div class="min-h-screen bg-gray-50 py-6 sm:py-8">
-    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div class="flex items-center justify-between mb-6">
-            <div>
-                <h1 class="text-2xl font-bold text-gray-900">My Files</h1>
-                <p class="mt-1 text-sm text-gray-600">View and manage your personal and shared files.</p>
-            </div>
-            <div class="flex space-x-3">
-                <button onclick="document.getElementById('user-create-folder-modal').classList.remove('hidden')"
-                        class="inline-flex items-center px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50">
-                    <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
-                    </svg>
-                    New Folder
-                </button>
-                <button onclick="document.getElementById('user-upload-file-modal').classList.remove('hidden')"
-                        class="inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700">
-                    <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
-                    </svg>
-                    Upload File
-                </button>
-            </div>
-        </div>
+<x-user-page-shell fluid class="space-y-4 sm:space-y-5">
+    <x-user-page-header title="My Files" subtitle="View and manage your personal and shared files.">
+        <x-slot:icon>
+            <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z"/>
+            </svg>
+        </x-slot:icon>
+        <x-slot:actions>
+            <button type="button" onclick="document.getElementById('user-create-folder-modal').classList.remove('hidden')"
+                    class="user-header-btn-secondary inline-flex min-h-[44px] w-full items-center justify-center gap-1.5 rounded-lg border border-white/30 bg-white/10 px-3 py-2 text-xs font-medium text-white hover:bg-white/20 touch-manipulation sm:w-auto sm:text-sm">
+                <svg class="h-4 w-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
+                New folder
+            </button>
+            <button type="button" onclick="document.getElementById('user-upload-file-modal').classList.remove('hidden')"
+                    class="user-header-btn-primary inline-flex min-h-[44px] w-full items-center justify-center gap-1.5 rounded-lg bg-white px-3 py-2.5 text-xs font-semibold text-indigo-700 shadow-sm hover:bg-indigo-50 touch-manipulation sm:w-auto sm:px-4 sm:text-sm">
+                <svg class="h-4 w-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"/></svg>
+                Upload file
+            </button>
+        </x-slot:actions>
+    </x-user-page-header>
 
-        @if(session('success'))
-            <div class="mb-4 bg-green-50 border-l-4 border-green-400 p-4 rounded-lg">
-                <p class="text-sm text-green-700">{{ session('success') }}</p>
-            </div>
-        @endif
+    @include('partials.user-flash')
 
-        @if($errors->any())
-            <div class="mb-4 bg-red-50 border-l-4 border-red-400 p-4 rounded-lg">
-                <ul class="list-disc list-inside text-sm text-red-700">
-                    @foreach($errors->all() as $error)
-                        <li>{{ $error }}</li>
-                    @endforeach
-                </ul>
-            </div>
-        @endif
+    @if(isset($breadcrumbs) && count($breadcrumbs) > 0)
+        <nav class="flex flex-wrap items-center gap-x-2 gap-y-1 text-sm text-slate-600" aria-label="Folder path">
+            <a href="{{ url('/files') }}" class="font-medium text-indigo-600 hover:text-indigo-800">Home</a>
+            @foreach($breadcrumbs as $breadcrumb)
+                <span class="text-slate-300" aria-hidden="true">/</span>
+                <a href="{{ url('/files?folder_id=' . $breadcrumb->id) }}" class="font-medium text-indigo-600 hover:text-indigo-800">{{ $breadcrumb->name }}</a>
+            @endforeach
+        </nav>
+    @endif
 
-        @if(isset($breadcrumbs) && count($breadcrumbs) > 0)
-            <div class="mb-4 flex items-center space-x-2 text-sm">
-                <a href="{{ url('/files') }}" class="text-indigo-600 hover:text-indigo-800">Home</a>
-                @foreach($breadcrumbs as $breadcrumb)
-                    <span class="text-gray-400">/</span>
-                    <a href="{{ url('/files?folder_id=' . $breadcrumb->id) }}" class="text-indigo-600 hover:text-indigo-800">{{ $breadcrumb->name }}</a>
-                @endforeach
-            </div>
-        @endif
-
-        <div class="bg-white shadow-sm rounded-lg border border-gray-200 overflow-visible">
+    <x-user-dashboard-section title="Your files" description="Browse folders, upload, share, and download.">
+        <div class="overflow-visible -mx-1 sm:-mx-0">
             @if($files->count() > 0)
-                <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4 p-4">
+                <div class="grid grid-cols-2 gap-2 p-1 sm:grid-cols-3 sm:gap-4 sm:p-2 md:grid-cols-4 lg:grid-cols-5">
                     @foreach($files as $item)
                         <div class="group relative bg-gray-50 rounded-lg border border-gray-200 hover:border-indigo-300 hover:shadow-md transition-all duration-200 p-3">
                             @if($item->isFolder())
@@ -179,7 +162,7 @@
                 </div>
             @endif
         </div>
-    </div>
+    </x-user-dashboard-section>
 
     <!-- Upload Modal -->
     <div id="user-upload-file-modal" class="hidden fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50">
@@ -1113,7 +1096,7 @@
             });
         });
     </script>
-</div>
+</x-user-page-shell>
 @endsection
 
 

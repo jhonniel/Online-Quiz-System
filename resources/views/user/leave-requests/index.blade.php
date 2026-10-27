@@ -3,7 +3,7 @@
 @section('page-title', 'Leave Requests')
 
 @section('content')
-<x-user-page-shell>
+<x-user-page-shell fluid class="space-y-5 pb-6 -mx-3 px-3 sm:-mx-4 sm:px-4 lg:-mx-6 lg:px-6">
     <x-user-page-header title="Leave Requests" subtitle="Manage your leave and other requests">
         <x-slot:icon>
             <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -11,16 +11,17 @@
             </svg>
         </x-slot:icon>
         <x-slot:actions>
-            <a href="{{ route('user.leave-requests.create') }}" class="user-btn-primary w-full sm:w-auto touch-manipulation">
-                <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+            <x-user-header-btn-primary href="{{ route('user.leave-requests.create') }}" class="w-full sm:w-auto">
+                <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path>
                 </svg>
                 New Request
-            </a>
+            </x-user-header-btn-primary>
         </x-slot:actions>
     </x-user-page-header>
 
-    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+    <x-user-dashboard-section title="Summary" description="Request counts and leave balances at a glance.">
+    <div class="grid grid-cols-1 gap-3 sm:grid-cols-2 sm:gap-4 lg:grid-cols-4 -mt-1">
         <x-user-stat-card label="Total Requests" :value="$stats['total']" tone="indigo">
             <x-slot:icon>
                 <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>
@@ -71,7 +72,7 @@
     </div>
 
     @if(auth()->user()->role === 'student' && isset($studentTime))
-        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 px-4 pb-4">
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mt-4 pt-4 border-t border-slate-100">
             <!-- Total Time from DTR -->
             <div class="bg-white rounded-lg shadow p-4 border border-indigo-200 sm:col-span-2 lg:col-span-2">
                 <div class="flex items-center">
@@ -133,8 +134,9 @@
 
         </div>
     @endif
+    </x-user-dashboard-section>
 
-    <x-user-panel title="Your requests" subtitle="Track status and open details for each submission." class="flex-1 min-h-0">
+    <x-user-dashboard-section title="Your requests" description="Track status and open details for each submission." class="flex-1 min-h-0">
         @if($leaveRequests->count() > 0)
             <x-responsive-data-panel>
                 <x-slot:mobile>
@@ -279,7 +281,7 @@
                 </div>
         </div>
         @endif
-    </x-user-panel>
+    </x-user-dashboard-section>
 </x-user-page-shell>
 @endsection
 

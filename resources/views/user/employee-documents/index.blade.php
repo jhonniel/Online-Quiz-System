@@ -3,22 +3,23 @@
 @section('title', 'Documents')
 
 @section('content')
-<div class="py-6">
-    <div class="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 space-y-6">
-        <div>
-            <h1 class="text-2xl font-bold text-gray-900">Documents</h1>
-            <p class="mt-1 text-sm text-gray-600">Review and sign required documents with your profile e-signature.</p>
-        </div>
+<x-user-page-shell fluid class="space-y-5 pb-6 -mx-3 px-3 sm:-mx-4 sm:px-4 lg:-mx-6 lg:px-6">
+    <x-user-page-header title="Documents" subtitle="Review and sign required documents with your profile e-signature.">
+        <x-slot:icon>
+            <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+            </svg>
+        </x-slot:icon>
+    </x-user-page-header>
 
-        @if(session('success'))
-            <div class="rounded-md border border-green-200 bg-green-50 p-3 text-sm text-green-700">
-                {{ session('success') }}
-            </div>
-        @endif
+    @if(session('success'))
+        <x-user-notice tone="success">{{ session('success') }}</x-user-notice>
+    @endif
 
-        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+    <x-user-dashboard-section title="Required documents" description="Open each item to review and sign when ready.">
+        <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4 -mt-1">
             @foreach($documents as $document)
-                <div class="rounded-xl border border-gray-200 bg-white p-5 shadow-sm">
+                <div class="rounded-xl border border-slate-200 bg-slate-50/50 p-5 shadow-sm ring-1 ring-slate-900/5">
                     <div class="flex items-start justify-between gap-3">
                         <div>
                             <p class="text-xs font-semibold uppercase tracking-wide text-indigo-600">{{ $document['label'] }}</p>
@@ -53,12 +54,12 @@
         </div>
 
         @unless($user->hasESignature())
-            <div class="rounded-lg border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900">
+            <x-user-notice tone="warning" class="mt-4" title="E-signature required">
                 Upload your e-signature on
-                <a href="{{ route('profile.edit') }}" class="font-semibold underline hover:text-amber-700">My Profile</a>
+                <a href="{{ route('profile.edit') }}" class="font-semibold underline hover:text-amber-900">My Profile</a>
                 before signing documents.
-            </div>
+            </x-user-notice>
         @endunless
-    </div>
-</div>
+    </x-user-dashboard-section>
+</x-user-page-shell>
 @endsection

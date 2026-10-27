@@ -1,61 +1,42 @@
 @extends('layouts.user')
 
+@section('page-title', 'Feedback & Suggestions')
+
 @section('content')
-<div class="h-full flex flex-col space-y-2 min-h-0">
-    <!-- Search and Filter Bar -->
-    <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-2 flex-shrink-0 mx-2 sm:mx-3 lg:mx-4 xl:mx-6">
-        <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
-            <!-- Search -->
-            <div class="flex-1 max-w-md">
-                <div class="relative">
-                    <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                        <svg class="h-4 w-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
-                        </svg>
-                    </div>
-                    <input type="text"
-                           id="search-input"
-                           placeholder="Search feedback..."
-                           class="block w-full pl-9 pr-3 py-2 border border-gray-300 rounded-md leading-5 bg-white placeholder-gray-500 focus:outline-none focus:placeholder-gray-400 focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500 text-sm">
+<x-user-page-shell fluid class="space-y-4 sm:space-y-5">
+    <x-user-page-header title="Feedback & Suggestions" subtitle="Help us improve the system by sharing your feedback" class="shrink-0">
+        <x-slot:icon>
+            <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 8h10M7 12h4m1 8l-4-4H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-3l-4 4z"/>
+            </svg>
+        </x-slot:icon>
+        <x-slot:actions>
+            <x-user-header-btn-primary href="{{ route('user.feedback.create') }}">
+                <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"/></svg>
+                Submit feedback
+            </x-user-header-btn-primary>
+        </x-slot:actions>
+    </x-user-page-header>
+
+    <div class="shrink-0 rounded-xl border border-slate-200 bg-white p-3 shadow-sm ring-1 ring-slate-900/5">
+        <div class="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+            <div class="relative flex-1 max-w-md">
+                <div class="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3">
+                    <svg class="h-4 w-4 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
                 </div>
+                <label for="search-input" class="sr-only">Search feedback</label>
+                <input type="text" id="search-input" placeholder="Search feedback..."
+                       class="block w-full rounded-lg border border-slate-300 py-2 pl-9 pr-3 text-sm focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/20">
             </div>
-
-            <!-- Action Buttons -->
-            <div class="flex items-center space-x-2">
-                <button class="inline-flex items-center px-3 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
-                    <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z"></path>
-                    </svg>
-                    <span class="hidden sm:inline">Filter</span>
-                </button>
-                <a href="{{ route('user.feedback.create') }}" class="inline-flex items-center justify-center px-3 py-2.5 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 touch-manipulation">
-                    <svg class="w-4 h-4 sm:mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path>
-                    </svg>
-                    <span class="hidden sm:inline">Submit Feedback</span>
-                    <span class="sm:hidden">New</span>
-                </a>
-            </div>
+            <button type="button" class="inline-flex items-center justify-center gap-2 rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50">
+                <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z"/></svg>
+                Filter
+            </button>
         </div>
     </div>
 
-    <!-- Page Header -->
-    <div class="bg-gradient-to-r from-indigo-500 to-indigo-600 rounded-lg shadow-sm p-3 flex-shrink-0 mx-2 sm:mx-3 lg:mx-4 xl:mx-6">
-        <div class="flex items-center">
-            <div class="flex-shrink-0">
-                <svg class="h-6 w-6 sm:h-8 sm:w-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 8h10M7 12h4m1 8l-4-4H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-3l-4 4z"></path>
-                </svg>
-            </div>
-            <div class="ml-3">
-                <h1 class="text-lg sm:text-xl lg:text-2xl font-bold text-white">Feedback & Suggestions</h1>
-                <p class="text-indigo-100 text-sm">Help us improve the system by sharing your feedback</p>
-            </div>
-        </div>
-    </div>
-
-    <!-- Feedback Table -->
-    <div class="bg-white shadow-sm border-t border-b border-gray-200 overflow-visible flex-1 flex flex-col mx-2 sm:mx-3 lg:mx-4 xl:mx-6">
+    <x-user-dashboard-section title="Your submissions" description="Track status and responses from the team.">
+        <div class="overflow-visible flex min-h-0 flex-1 flex-col -mx-1 sm:mx-0">
         @if($userFeedbacks->count() > 0)
             <x-responsive-data-panel class="border-0 shadow-none rounded-none flex-1 flex flex-col">
                 <x-slot:mobile>
@@ -270,8 +251,9 @@
                 </div>
             </div>
         @endif
-    </div>
-</div>
+        </div>
+    </x-user-dashboard-section>
+</x-user-page-shell>
 @endsection
 
 <script>

@@ -40,15 +40,15 @@
 
 <div {{ $attributes->merge([
     'class' => trim(($isCompact
-        ? 'border-l-4 bg-white p-3.5 shadow-sm '.$compactAccent.' '
-        : 'flex items-center gap-4 rounded-xl border bg-white p-4 shadow-sm ring-1 ring-slate-900/5 transition-shadow hover:shadow-md '
+        ? 'border-l-4 bg-white p-3 shadow-sm '.$compactAccent.' '
+        : 'flex items-center gap-3 rounded-xl border bg-white p-3 shadow-sm ring-1 ring-slate-900/5 transition-shadow hover:shadow-md sm:gap-4 sm:p-4 '
     ).($isCompact ? 'border border-slate-200/90 ' : '').(!$isCompact ? $borderClass.' ' : '').$class),
 ]) }}>
     @if(! $isCompact)
         @isset($icon)
             <div @class([
-                'flex h-11 w-11 shrink-0 items-center justify-center rounded-lg',
-                '[&>svg]:h-6 [&>svg]:w-6 [&>svg]:max-h-6 [&>svg]:max-w-6 [&>svg]:shrink-0',
+                'flex h-10 w-10 shrink-0 items-center justify-center rounded-lg sm:h-11 sm:w-11',
+                '[&>svg]:h-5 [&>svg]:w-5 [&>svg]:max-h-5 [&>svg]:max-w-5 [&>svg]:shrink-0 sm:[&>svg]:h-6 sm:[&>svg]:w-6 sm:[&>svg]:max-h-6 sm:[&>svg]:max-w-6',
                 $iconClass,
             ])>
                 {{ $icon }}
@@ -62,7 +62,7 @@
         ])>{{ $label }}</p>
         <p @class([
             'font-semibold tabular-nums text-slate-900',
-            $isCompact ? 'mt-0.5 text-xl' : 'mt-1 text-2xl',
+            $isCompact ? 'mt-0.5 text-lg sm:text-xl' : 'mt-1 text-lg sm:text-2xl break-words',
         ])>
             @if(isset($valueSlot))
                 {{ $valueSlot }}

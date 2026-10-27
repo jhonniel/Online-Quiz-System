@@ -3,24 +3,24 @@
     'description' => null,
 ])
 
-<section {{ $attributes->merge(['class' => 'overflow-hidden rounded-xl border border-slate-200/90 bg-white shadow-sm ring-1 ring-slate-900/5']) }}>
-    <div class="border-b border-slate-200/80 bg-gradient-to-b from-slate-50 to-white px-5 py-4 sm:px-6 sm:py-5">
-        <div class="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+<section {{ $attributes->merge(['class' => 'min-w-0 overflow-hidden rounded-xl border border-slate-200/90 bg-white shadow-sm ring-1 ring-slate-900/5']) }}>
+    <div class="border-b border-slate-200/80 bg-gradient-to-b from-slate-50 to-white px-3 py-3.5 sm:px-6 sm:py-5">
+        <div class="flex flex-col gap-2.5 sm:flex-row sm:items-end sm:justify-between sm:gap-3">
             <div class="min-w-0">
-                <p class="text-[11px] font-semibold uppercase tracking-wider text-slate-400">Overview</p>
-                <h2 class="mt-0.5 text-lg font-semibold tracking-tight text-slate-900">{{ $title }}</h2>
+                <p class="text-[10px] font-semibold uppercase tracking-wider text-slate-400 sm:text-[11px]">Overview</p>
+                <h2 class="mt-0.5 text-base font-semibold tracking-tight text-slate-900 break-words sm:text-lg">{{ $title }}</h2>
                 @if($description)
-                    <p class="mt-1 text-sm text-slate-600">{{ $description }}</p>
+                    <p class="mt-1 text-xs text-slate-600 sm:text-sm">{{ $description }}</p>
                 @endif
             </div>
             @if(isset($actions))
-                <div class="flex flex-wrap items-center gap-2 shrink-0">
+                <div class="flex w-full flex-wrap items-stretch gap-2 sm:w-auto sm:items-center sm:shrink-0 [&_.user-header-btn-primary]:flex-1 sm:[&_.user-header-btn-primary]:flex-none">
                     {{ $actions }}
                 </div>
             @endif
         </div>
     </div>
-    <div class="space-y-5 p-5 sm:space-y-6 sm:p-6">
+    <div class="space-y-4 p-3 sm:space-y-6 sm:p-6">
         {{ $slot }}
     </div>
 </section>

@@ -1,42 +1,27 @@
 @extends('layouts.user')
 
-@section('content')
-<div class="h-full flex flex-col space-y-3">
-    <!-- Page Header -->
-    <div class="bg-gradient-to-r from-indigo-500 to-indigo-600 rounded-lg shadow-sm p-4 flex-shrink-0">
-        <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-            <div class="flex items-center">
-                <a href="{{ route('user.feedback.index') }}" class="mr-4 flex-shrink-0">
-                    <svg class="w-6 h-6 text-white hover:text-indigo-200 transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
-                    </svg>
-                </a>
-                <div class="flex-shrink-0">
-                    <svg class="h-6 w-6 sm:h-8 sm:w-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 8h10M7 12h4m1 8l-4-4H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-3l-4 4z"></path>
-                    </svg>
-                </div>
-                <div class="ml-3">
-                    <h1 class="text-lg sm:text-xl lg:text-2xl font-bold text-white">Feedback Details</h1>
-                    <p class="text-indigo-100 text-sm">View the details and status of your feedback submission</p>
-                </div>
-            </div>
-            <div class="flex items-center space-x-2">
-                <a href="{{ route('user.feedback.create') }}"
-                   class="inline-flex items-center px-3 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
-                    <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
-                    </svg>
-                    <span class="hidden sm:inline">New Feedback</span>
-                    <span class="sm:hidden">New</span>
-                </a>
-            </div>
-        </div>
-    </div>
+@section('page-title', 'Feedback Details')
 
-    <!-- Feedback Content -->
-    <div class="bg-white shadow-sm rounded-lg border border-gray-200 overflow-hidden flex-1 flex flex-col">
-        <div class="px-4 py-5 sm:p-6 h-full overflow-y-auto">
+@section('content')
+<x-user-page-shell fluid class="space-y-5 pb-6 -mx-3 px-3 sm:-mx-4 sm:px-4 lg:-mx-6 lg:px-6">
+    <x-user-page-header title="Feedback Details" subtitle="View the details and status of your submission">
+        <x-slot:icon>
+            <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 8h10M7 12h4m1 8l-4-4H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-3l-4 4z"/></svg>
+        </x-slot:icon>
+        <x-slot:subtitleSlot>
+            <a href="{{ route('user.feedback.index') }}" class="text-sm font-medium text-indigo-100/90 hover:text-white">&larr; Back to feedback</a>
+            <p class="mt-1">View the details and status of your feedback submission</p>
+        </x-slot:subtitleSlot>
+        <x-slot:actions>
+            <x-user-header-btn-primary href="{{ route('user.feedback.create') }}">
+                <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"/></svg>
+                New feedback
+            </x-user-header-btn-primary>
+        </x-slot:actions>
+    </x-user-page-header>
+
+    <x-user-dashboard-section :title="$feedback->title" description="Submission overview and team responses.">
+        <div class="space-y-6 -mt-1">
             <!-- Feedback Header -->
             <div class="mb-6">
                 <div class="flex items-start justify-between">
@@ -241,8 +226,8 @@
                 </a>
             </div>
         </div>
-    </div>
-</div>
+    </x-user-dashboard-section>
+</x-user-page-shell>
 
 <!-- Image Modal -->
 <div id="imageModal" class="fixed inset-0 bg-black bg-opacity-75 z-50 hidden flex items-center justify-center p-4">

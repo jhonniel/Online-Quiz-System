@@ -1,36 +1,20 @@
 @extends('layouts.user')
 
-@section('content')
-<div class="h-full flex flex-col space-y-3">
-    <!-- Page Header -->
-    <div class="bg-gradient-to-r from-indigo-500 to-indigo-600 rounded-lg shadow-sm p-4 flex-shrink-0">
-        <div class="flex flex-col sm:flex-row sm:items-center gap-3">
-            <div class="flex items-center">
-                <a href="{{ url('/feedback') }}" class="mr-3 p-2 rounded-lg hover:bg-white hover:bg-opacity-20 transition-colors duration-200">
-                    <svg class="w-5 h-5 sm:w-6 sm:h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
-                    </svg>
-                </a>
-                <div class="flex-shrink-0">
-                    <svg class="h-6 w-6 sm:h-8 sm:w-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 8h10M7 12h4m1 8l-4-4H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-3l-4 4z"></path>
-                    </svg>
-                </div>
-                <div class="ml-3">
-                    <h1 class="text-lg sm:text-xl lg:text-2xl font-bold text-white">Submit Feedback</h1>
-                    <p class="text-indigo-100 text-sm">Help us improve the system by sharing your thoughts</p>
-                </div>
-            </div>
-        </div>
-    </div>
+@section('page-title', 'Submit Feedback')
 
-    <!-- Main Form Card -->
-    <div class="bg-white shadow-sm rounded-lg border border-gray-200 overflow-hidden flex-1 flex flex-col">
-        <div class="px-4 py-5 sm:p-6 h-full overflow-y-auto">
-            <div class="mb-6">
-                <h2 class="text-lg font-medium text-gray-900">Feedback Submission Form</h2>
-                <p class="mt-1 text-sm text-gray-500">Please provide detailed information to help us understand and address your feedback effectively.</p>
-            </div>
+@section('content')
+<x-user-page-shell fluid class="space-y-5 pb-6 -mx-3 px-3 sm:-mx-4 sm:px-4 lg:-mx-6 lg:px-6">
+    <x-user-page-header title="Submit Feedback" subtitle="Help us improve the system by sharing your thoughts">
+        <x-slot:icon>
+            <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 8h10M7 12h4m1 8l-4-4H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-3l-4 4z"/></svg>
+        </x-slot:icon>
+        <x-slot:subtitleSlot>
+            <a href="{{ url('/feedback') }}" class="text-sm font-medium text-indigo-100/90 hover:text-white">&larr; Back to feedback</a>
+            <p class="mt-1">Help us improve the system by sharing your thoughts</p>
+        </x-slot:subtitleSlot>
+    </x-user-page-header>
+
+    <x-user-dashboard-section title="Feedback submission form" description="Please provide detailed information so we can address your feedback effectively.">
         <form id="feedback-form" action="{{ url('/feedback') }}" method="POST" enctype="multipart/form-data" class="space-y-8">
             @csrf
 
@@ -194,9 +178,7 @@
                 </x-formal-button>
             </div>
         </form>
-        </div>
-    </div>
-</div>
+    </x-user-dashboard-section>
 
 <script>
 document.addEventListener('DOMContentLoaded', function() {
@@ -415,6 +397,5 @@ uploadArea.addEventListener('drop', function(e) {
     }
 });
 </script>
-    </div>
-</div>
+</x-user-page-shell>
 @endsection

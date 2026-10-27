@@ -1,33 +1,34 @@
 @extends('layouts.user')
 
-@section('content')
-<div class="space-y-4 mx-2 sm:mx-3 lg:mx-4 xl:mx-6">
-    <div class="bg-gradient-to-r from-indigo-500 to-indigo-600 rounded-lg shadow-sm p-4">
-        <h1 class="text-xl font-bold text-white">My Payslips</h1>
-        <p class="text-indigo-100 text-sm mt-1">Generate and digitally sign your payslip records.</p>
-    </div>
+@section('page-title', 'My Payslips')
 
-    @if(session('success'))
-        <div class="rounded-lg border border-green-200 bg-green-50 px-4 py-3 text-sm text-green-800">{{ session('success') }}</div>
-    @endif
-    @if(session('error'))
-        <div class="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800">{{ session('error') }}</div>
-    @endif
+@section('content')
+<x-user-page-shell fluid class="space-y-5 pb-6 -mx-3 px-3 sm:-mx-4 sm:px-4 lg:-mx-6 lg:px-6">
+    <x-user-page-header title="My Payslips" subtitle="Generate and digitally sign your payslip records.">
+        <x-slot:icon>
+            <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z"/>
+            </svg>
+        </x-slot:icon>
+    </x-user-page-header>
+
+    @include('partials.user-flash')
 
     @unless($user->hasESignature())
-        <div class="rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
-            Upload your <a href="{{ url('/profile/edit') }}" class="font-medium underline">e-signature on your profile</a> before signing payslips.
-        </div>
+        <x-user-notice tone="warning" title="E-signature required">
+            Upload your <a href="{{ url('/profile/edit') }}" class="font-semibold underline hover:text-amber-900">e-signature on your profile</a> before signing payslips.
+        </x-user-notice>
     @endunless
     @if($user->hasESignature() && ! $user->hasP12Certificate())
-        <div class="rounded-lg border border-blue-200 bg-blue-50 px-4 py-3 text-sm text-blue-900">
+        <x-user-notice tone="info" title="Optional P12 certificate">
             You can sign payslips with your uploaded e-signature. Upload a
-            <a href="{{ url('/profile/edit') }}" class="font-medium underline">P12 certificate on your profile</a>
+            <a href="{{ url('/profile/edit') }}" class="font-semibold underline">P12 certificate on your profile</a>
             if you also want cryptographic digital signing.
-        </div>
+        </x-user-notice>
     @endif
 
-    <div class="bg-white rounded-lg border border-gray-200 shadow-sm overflow-hidden">
+    <x-user-dashboard-section title="Payslip periods" description="Open a period to generate, sign, or view your payslip.">
+        <div class="overflow-hidden -mx-1 sm:mx-0 rounded-lg border border-slate-200">
         <div class="overflow-x-auto">
             <table class="min-w-full divide-y divide-gray-200">
                 <thead class="bg-gray-50">
@@ -70,8 +71,9 @@
         @if($payslips->hasPages())
             <div class="px-4 py-3 border-t border-gray-200">{{ $payslips->links() }}</div>
         @endif
-    </div>
-</div>
+        </div>
+    </x-user-dashboard-section>
+</x-user-page-shell>
 
 <div id="payslip-sign-modal" class="fixed inset-0 z-50 hidden" aria-hidden="true">
     <div class="absolute inset-0 bg-gray-900/50" onclick="closePayslipSignModal()"></div>

@@ -861,7 +861,7 @@
             </div>
 
             <!-- Page content -->
-            <main class="flex-1 min-h-0 min-w-0 overflow-y-auto overflow-x-hidden bg-gray-50 px-3 sm:px-4 lg:px-6 py-3 sm:py-4 safe-bottom">
+            <main class="user-portal-main-flow flex-1 min-h-0 min-w-0 overflow-y-auto overflow-x-hidden bg-gray-50 px-3 sm:px-4 lg:px-6 py-3 sm:py-4 safe-bottom">
                 <div class="min-h-full flex flex-col gap-4">
                     @include('partials.user-flash')
                     @yield('content')

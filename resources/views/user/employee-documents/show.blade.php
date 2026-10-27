@@ -3,51 +3,43 @@
 @section('title', $title)
 
 @section('content')
-<div class="py-6">
-    <div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 space-y-6">
-        <div class="flex items-center justify-between gap-4">
-            <div>
-                <a href="{{ route('user.employee-documents.index') }}" class="text-sm text-indigo-600 hover:text-indigo-800">&larr; Back to Documents</a>
-                <h1 class="mt-2 text-2xl font-bold text-gray-900">{{ $title }}</h1>
-                <p class="mt-1 text-sm text-gray-600">
-                    @if($type === 'nda')
-                        Review the Non-Disclosure Agreement below, then sign with your profile e-signature.
-                    @elseif($type === 'policy')
-                        Review the Company Policy Acknowledgment below, then sign with your profile e-signature.
-                    @else
-                        Review this {{ $label }} document, then sign with your profile e-signature.
-                    @endif
-                </p>
-            </div>
-            <div class="flex flex-col items-end gap-2">
-                <span class="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium {{ ($signature && $signature->isSigned()) ? 'bg-green-100 text-green-700' : 'bg-amber-100 text-amber-700' }}">
-                    {{ ($signature && $signature->isSigned()) ? 'Signed' : 'Pending Signature' }}
-                </span>
-                <div class="flex flex-wrap justify-end gap-2">
-                    <a href="{{ route('user.employee-documents.pdf', $type) }}"
-                       target="_blank"
-                       class="inline-flex items-center justify-center px-3 py-1.5 border border-gray-300 rounded-md text-xs font-medium text-gray-700 bg-white hover:bg-gray-50">
-                        View PDF
-                    </a>
-                    <a href="{{ route('user.employee-documents.pdf', ['type' => $type, 'download' => 1]) }}"
-                       class="inline-flex items-center justify-center px-3 py-1.5 border border-indigo-300 rounded-md text-xs font-medium text-indigo-700 bg-indigo-50 hover:bg-indigo-100">
-                        Download PDF
-                    </a>
-                </div>
-            </div>
-        </div>
+@php
+    $docSubtitle = match ($type) {
+        'nda' => 'Review the Non-Disclosure Agreement below, then sign with your profile e-signature.',
+        'policy' => 'Review the Company Policy Acknowledgment below, then sign with your profile e-signature.',
+        default => 'Review this '.$label.' document, then sign with your profile e-signature.',
+    };
+@endphp
+<x-user-page-shell fluid class="space-y-5 pb-6 -mx-3 px-3 sm:-mx-4 sm:px-4 lg:-mx-6 lg:px-6 max-w-5xl mx-auto w-full">
+    <x-user-page-header :title="$title" :subtitle="$docSubtitle">
+        <x-slot:icon>
+            <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+            </svg>
+        </x-slot:icon>
+        <x-slot:subtitleSlot>
+            <a href="{{ route('user.employee-documents.index') }}" class="text-indigo-100/90 hover:text-white text-sm font-medium">&larr; Back to Documents</a>
+            <p class="mt-1">{{ $docSubtitle }}</p>
+        </x-slot:subtitleSlot>
+        <x-slot:actions>
+            <span class="col-span-full inline-flex w-full items-center justify-center px-3 py-2 rounded-full text-xs font-semibold sm:col-auto sm:w-auto sm:py-1.5 {{ ($signature && $signature->isSigned()) ? 'bg-white/20 text-white ring-1 ring-white/30' : 'bg-amber-400/90 text-amber-950' }}">
+                {{ ($signature && $signature->isSigned()) ? 'Signed' : 'Pending signature' }}
+            </span>
+            <x-user-header-btn-secondary href="{{ route('user.employee-documents.pdf', $type) }}" target="_blank">View PDF</x-user-header-btn-secondary>
+            <x-user-header-btn-primary href="{{ route('user.employee-documents.pdf', ['type' => $type, 'download' => 1]) }}">Download</x-user-header-btn-primary>
+        </x-slot:actions>
+    </x-user-page-header>
 
-        @if(session('success'))
-            <div class="rounded-md border border-green-200 bg-green-50 p-3 text-sm text-green-700">
-                {{ session('success') }}
-            </div>
-        @endif
+    @if(session('success'))
+        <x-user-notice tone="success">{{ session('success') }}</x-user-notice>
+    @endif
 
-        @error('signature')
-            <div class="rounded-md border border-red-200 bg-red-50 p-3 text-sm text-red-700">{{ $message }}</div>
-        @enderror
+    @error('signature')
+        <x-user-notice tone="danger">{{ $message }}</x-user-notice>
+    @enderror
 
-        <div class="rounded-xl border border-gray-200 bg-white shadow-sm overflow-hidden">
+    <x-user-dashboard-section title="Document" description="Read the full text before signing.">
+        <div class="overflow-hidden -mx-1 sm:mx-0 rounded-lg border border-slate-200 bg-white">
             @if($type === 'contract' && $contractView)
                 @include('user.employee-documents.partials.contract-content', $contractView)
             @elseif($type === 'nda' && $ndaView)
@@ -116,8 +108,8 @@
                 @endif
             </div>
         </div>
-    </div>
-</div>
+    </x-user-dashboard-section>
+</x-user-page-shell>
 
 @if($user->hasESignature() && ! ($signature && $signature->isSigned()))
     <div id="document-sign-modal"

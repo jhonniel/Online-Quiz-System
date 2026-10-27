@@ -10,19 +10,17 @@ function parseMentions($content) {
 @endphp
 
 @section('content')
-<div class="h-screen flex flex-col space-y-2 overflow-hidden">
-    <!-- Back Button -->
-    <div class="flex-shrink-0 mx-2 sm:mx-3 lg:mx-4 xl:mx-6">
-        <a href="{{ url('/forum') }}" class="inline-flex items-center text-sm text-gray-500 hover:text-gray-700">
-            <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"></path>
-            </svg>
-            Back to Forum
-        </a>
-    </div>
+<x-user-page-shell fluid class="user-portal-viewport-pane">
+    <x-user-page-header :title="$forum->title" subtitle="Forum discussion" class="shrink-0">
+        <x-slot:icon>
+            <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 8h2a2 2 0 012 2v6a2 2 0 01-2 2h-2v4l-4-4H9a1.994 1.994 0 01-1.414-.586m0 0L11 14h4a2 2 0 002-2V6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2v4l.586-.586z"/></svg>
+        </x-slot:icon>
+        <x-slot:subtitleSlot>
+            <a href="{{ url('/forum') }}" class="text-sm font-medium text-indigo-100/90 hover:text-white">&larr; Back to Forum</a>
+        </x-slot:subtitleSlot>
+    </x-user-page-header>
 
-    <!-- Thread Content -->
-    <div class="flex-1 overflow-y-auto mx-2 sm:mx-3 lg:mx-4 xl:mx-6">
+    <div class="min-h-0 flex-1 overflow-y-auto">
         <div class="max-w-4xl mx-auto space-y-6 pb-4">
             <!-- Thread Header -->
             <div class="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
@@ -361,7 +359,7 @@ function parseMentions($content) {
             </div>
         </div>
     </div>
-</div>
+</x-user-page-shell>
 
 <!-- Share Modal -->
 <div id="shareModal" class="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full hidden z-50">

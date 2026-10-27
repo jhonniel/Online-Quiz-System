@@ -420,7 +420,47 @@
     }
 
     .user-page-header__actions {
-        @apply flex flex-wrap items-center gap-2 shrink-0;
+        @apply shrink-0;
+    }
+
+    .user-page-header__actions > .user-header-btn-primary,
+    .user-page-header__actions > .user-header-btn-secondary,
+    .user-page-header__actions > a:not([class*="user-header"]),
+    .user-page-header__actions > button {
+        @apply min-h-[44px] min-w-0;
+    }
+
+    @media (min-width: 640px) {
+        .user-page-header__actions > .user-header-btn-primary,
+        .user-page-header__actions > .user-header-btn-secondary {
+            @apply w-auto;
+        }
+    }
+
+    /* Full-height portal panes: scroll in <main> on phones; fixed pane on large screens */
+    .user-portal-viewport-pane {
+        @apply flex min-h-0 min-w-0 flex-col gap-4;
+    }
+
+    @media (min-width: 1024px) {
+        .user-portal-viewport-pane {
+            max-height: calc(100vh - var(--layout-offset-desktop, 4rem) - 2.5rem);
+            @apply overflow-hidden;
+        }
+    }
+
+    .user-portal-main-flow {
+        @apply min-w-0 max-w-full overflow-x-hidden;
+    }
+
+    .user-portal-main-flow img,
+    .user-portal-main-flow video,
+    .user-portal-main-flow iframe {
+        max-width: 100%;
+    }
+
+    .user-portal-main-flow table {
+        @apply block max-w-full overflow-x-auto sm:table sm:overflow-visible;
     }
 
     .user-stat-card {

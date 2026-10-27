@@ -3,110 +3,106 @@
 @section('page-title', 'Daily Time Record')
 
 @section('content')
-<x-user-page-shell wide>
-    <x-user-page-header title="Daily Time Record (DTR)" subtitle="View and manage your attendance records">
+<x-user-page-shell fluid class="pb-6 -mx-3 px-3 sm:-mx-4 sm:px-4 lg:-mx-6 lg:px-6">
+    <x-user-page-header title="Daily Time Record (DTR)" subtitle="View attendance, filter by date, and manage time requests.">
         <x-slot:icon>
             <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
             </svg>
         </x-slot:icon>
+        <x-slot:actions>
+            <a href="{{ route('user.dtr.export-pdf', request()->only(['date_from', 'date_to', 'status'])) }}"
+               class="inline-flex items-center gap-2 rounded-lg border border-white/30 bg-white/10 px-3 py-2 text-sm font-medium text-white hover:bg-white/20">
+                <svg class="h-4 w-4 opacity-90" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+                </svg>
+                Export PDF
+            </a>
+        </x-slot:actions>
     </x-user-page-header>
 
     @if(auth()->user()->role === 'student' && empty($canStudentRecordAttendance))
-        <div class="mx-2 sm:mx-3 lg:mx-4 xl:mx-6 mt-4 rounded-lg border p-4 {{ ($studentNda && $studentNda->isPendingApproval()) ? 'border-amber-200 bg-amber-50' : (($studentNda && $studentNda->isRejected()) ? 'border-red-200 bg-red-50' : 'border-indigo-200 bg-indigo-50') }}">
-            <div class="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
-                <div>
-                    <p class="text-sm font-semibold text-gray-900">NDA required before recording attendance</p>
-                    @if(! $studentNda || (! $studentNda->hasSignedUpload() && ! $studentNda->isRejected()))
-                        <p class="text-sm text-gray-700 mt-1">Upload your signed Non-Disclosure Agreement (NDA) and wait for administrator approval before you can use Record Attendance.</p>
-                    @elseif($studentNda->isPendingApproval())
-                        <p class="text-sm text-gray-700 mt-1">Your signed NDA was uploaded on {{ $studentNda->signed_uploaded_at?->format('M d, Y h:i A') }} and is waiting for administrator review.</p>
-                    @elseif($studentNda->isRejected())
-                        <p class="text-sm text-gray-700 mt-1">Your NDA was rejected and the signed file was removed. Please upload a corrected signed PDF and wait for approval.</p>
-                        @if($studentNda->review_notes)
-                            <p class="text-sm text-red-700 mt-2"><span class="font-medium">Admin note:</span> {{ $studentNda->review_notes }}</p>
-                        @endif
-                    @endif
-                </div>
-                <a href="{{ route('user.nda.index') }}"
-                   class="inline-flex items-center justify-center px-4 py-2 rounded-lg bg-indigo-600 text-white text-sm font-medium hover:bg-indigo-700 whitespace-nowrap">
+        @php
+            $ndaTone = ($studentNda && $studentNda->isRejected()) ? 'danger' : (($studentNda && $studentNda->isPendingApproval()) ? 'warning' : 'info');
+        @endphp
+        <x-user-notice :tone="$ndaTone" title="NDA required before recording attendance">
+            <x-slot:icon>
+                <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>
+            </x-slot:icon>
+            @if(! $studentNda || (! $studentNda->hasSignedUpload() && ! $studentNda->isRejected()))
+                <p>Upload your signed Non-Disclosure Agreement (NDA) and wait for administrator approval before you can use Record Attendance.</p>
+            @elseif($studentNda->isPendingApproval())
+                <p>Your signed NDA was uploaded on {{ $studentNda->signed_uploaded_at?->format('M d, Y g:i A') }} and is waiting for administrator review.</p>
+            @elseif($studentNda->isRejected())
+                <p>Your NDA was rejected and the signed file was removed. Please upload a corrected signed PDF and wait for approval.</p>
+                @if($studentNda->review_notes)
+                    <p class="mt-2 font-medium">Admin note: {{ $studentNda->review_notes }}</p>
+                @endif
+            @endif
+            <x-slot:actions>
+                <a href="{{ route('user.nda.index') }}" class="inline-flex items-center rounded-lg bg-indigo-600 px-3 py-2 text-sm font-medium text-white shadow-sm hover:bg-indigo-700">
                     Go to NDA
                 </a>
-            </div>
-        </div>
+            </x-slot:actions>
+        </x-user-notice>
     @endif
 
-
-    <!-- Filter Form -->
-    <div class="bg-white rounded-lg shadow border border-gray-200 p-4 mx-2 sm:mx-3 lg:mx-4 xl:mx-6 mt-4">
-        <form method="GET" action="{{ url('/dtr') }}" class="space-y-4">
-            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <!-- Date From -->
+    <x-user-dashboard-section title="Filters" description="Choose a date range and status to refine your records.">
+        <form method="GET" action="{{ route('user.dtr.index') }}" class="space-y-4">
+            <div class="grid grid-cols-1 gap-4 md:grid-cols-3">
                 <div>
-                    <label for="date_from" class="block text-sm font-medium text-gray-700 mb-2">Date From</label>
+                    <label for="date_from" class="block text-sm font-medium text-slate-700">Date from</label>
                     <input type="date" name="date_from" id="date_from" value="{{ request('date_from') }}"
-                           class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">
+                           class="mt-1.5 block w-full rounded-lg border-slate-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500">
                 </div>
-
-                <!-- Date To -->
                 <div>
-                    <label for="date_to" class="block text-sm font-medium text-gray-700 mb-2">Date To</label>
+                    <label for="date_to" class="block text-sm font-medium text-slate-700">Date to</label>
                     <input type="date" name="date_to" id="date_to" value="{{ request('date_to') }}"
-                           class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">
+                           class="mt-1.5 block w-full rounded-lg border-slate-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500">
                 </div>
-
-                <!-- Status Filter -->
                 <div>
-                    <label for="status" class="block text-sm font-medium text-gray-700 mb-2">Status</label>
-                    <select name="status" id="status" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">
-                        <option value="">All Status</option>
-                        <option value="present" {{ request('status') == 'present' ? 'selected' : '' }}>Present</option>
-                        <option value="absent" {{ request('status') == 'absent' ? 'selected' : '' }}>Absent</option>
-                        <option value="holiday" {{ request('status') == 'holiday' ? 'selected' : '' }}>HOLIDAY</option>
-                        <option value="late" {{ request('status') == 'late' ? 'selected' : '' }}>Late</option>
-                        <option value="half_day" {{ request('status') == 'half_day' ? 'selected' : '' }}>Half Day</option>
-                        <option value="on_leave" {{ request('status') == 'on_leave' ? 'selected' : '' }}>On Leave</option>
-                        <option value="travel" {{ request('status') == 'travel' ? 'selected' : '' }}>TRAVEL</option>
+                    <label for="status" class="block text-sm font-medium text-slate-700">Status</label>
+                    <select name="status" id="status" class="mt-1.5 block w-full rounded-lg border-slate-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500">
+                        <option value="">All statuses</option>
+                        <option value="present" @selected(request('status') == 'present')>Present</option>
+                        <option value="absent" @selected(request('status') == 'absent')>Absent</option>
+                        <option value="holiday" @selected(request('status') == 'holiday')>Holiday</option>
+                        <option value="late" @selected(request('status') == 'late')>Late</option>
+                        <option value="half_day" @selected(request('status') == 'half_day')>Half day</option>
+                        <option value="on_leave" @selected(request('status') == 'on_leave')>On leave</option>
+                        <option value="travel" @selected(request('status') == 'travel')>Travel</option>
                     </select>
                 </div>
             </div>
-
-            <div class="flex flex-wrap items-center gap-3">
-                <button type="submit" class="inline-flex items-center px-4 sm:px-6 py-2 border border-transparent text-xs sm:text-sm font-medium rounded-lg shadow-sm text-white bg-gradient-to-r from-indigo-600 to-indigo-700 hover:from-indigo-700 hover:to-indigo-800 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
-                    <svg class="h-4 w-4 mr-1 sm:mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
-                    </svg>
-                    Filter
+            <div class="flex flex-wrap items-center gap-2">
+                <button type="submit" class="inline-flex items-center gap-2 rounded-lg bg-indigo-600 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2">
+                    <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
+                    Apply filters
                 </button>
-                <a href="{{ url('/dtr') }}" class="inline-flex items-center px-4 sm:px-6 py-2 border border-gray-300 text-xs sm:text-sm font-medium rounded-lg text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
+                <a href="{{ route('user.dtr.index') }}" class="inline-flex items-center rounded-lg border border-slate-300 bg-white px-4 py-2 text-sm font-medium text-slate-700 shadow-sm hover:bg-slate-50">
                     Reset
                 </a>
             </div>
         </form>
-    </div>
+    </x-user-dashboard-section>
 
     @if(auth()->user()->role === 'student' && !empty($incompleteOvertimeReminderItems))
-    <div class="mx-2 sm:mx-3 lg:mx-4 xl:mx-6 mt-4 mb-2 rounded-lg border border-orange-200 bg-orange-50 px-4 py-3 text-sm text-orange-900">
-        <strong>{{ count($incompleteOvertimeReminderItems) }} Additional Time request(s)</strong> from Record Attendance have
-        <strong>Incomplete details</strong>.
-        Complete them in
-        <a href="{{ route('user.leave-requests.index') }}" class="font-semibold text-orange-800 underline hover:text-orange-950">Leave Requests</a>
-        within {{ \App\Services\LeaveRequestIncompleteAttendanceOvertimeService::RESPONSE_WINDOW_DAYS }} days of filing, or they will be <strong>automatically rejected</strong>.
-    </div>
+    <x-user-notice tone="warning" title="Incomplete Additional Time details">
+        <x-slot:icon>
+            <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path></svg>
+        </x-slot:icon>
+        <p>
+            <strong>{{ count($incompleteOvertimeReminderItems) }}</strong> Additional Time request(s) from Record Attendance need a reason and Hubstaff screenshot(s).
+            Complete them in <a href="{{ route('user.leave-requests.index') }}" class="font-semibold underline">Leave Requests</a>
+            within {{ \App\Services\LeaveRequestIncompleteAttendanceOvertimeService::RESPONSE_WINDOW_DAYS }} days or they will be automatically rejected.
+        </p>
+    </x-user-notice>
     @endif
 
-    <!-- Pending Time Requests — regular hours only (Students Only) -->
     @if(auth()->user()->role === 'student' && isset($pendingTimeRequests) && $pendingTimeRequests->count() > 0)
-    <div class="bg-white rounded-lg shadow border border-gray-200 overflow-hidden mx-2 sm:mx-3 lg:mx-4 xl:mx-6 mt-4 mb-4">
-        <div class="px-4 sm:px-6 py-4 border-b border-gray-200 bg-yellow-50">
-            <div class="flex items-center justify-between">
-                <div>
-                    <h2 class="text-lg font-semibold text-gray-900">Pending Time Requests</h2>
-                    <p class="text-sm text-gray-600 mt-1">Regular hours awaiting approval ({{ $pendingTimeRequests->count() }}). Additional Time is handled under Leave Requests.</p>
-                </div>
-            </div>
-        </div>
-        <x-responsive-data-panel class="border-0 shadow-none rounded-none">
+    <x-user-dashboard-section title="Pending time requests" :description="'Regular hours awaiting approval ('.$pendingTimeRequests->count().'). Additional Time is under Leave Requests.'">
+        <x-user-panel title="Awaiting approval" :padding="false" embedded class="overflow-hidden border-0 shadow-none ring-0">
+        <x-responsive-data-panel class="rounded-lg border border-slate-200/90 shadow-none">
             <x-slot:mobile>
                 @foreach($pendingTimeRequests as $request)
                     <div class="mobile-card">
@@ -146,21 +142,21 @@
                 @endforeach
             </x-slot:mobile>
             <x-slot:desktop>
-            <table class="min-w-full divide-y divide-gray-200">
-                <thead class="bg-gray-50">
+            <table class="min-w-full divide-y divide-slate-100">
+                <thead class="bg-slate-50/95">
                     <tr>
-                        <th scope="col" class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Date</th>
-                        <th scope="col" class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Type</th>
-                        <th scope="col" class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Hours</th>
-                        <th scope="col" class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
-                        <th scope="col" class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Remarks</th>
-                        <th scope="col" class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Submitted</th>
-                        <th scope="col" class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Action</th>
+                        <th scope="col" class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">Date</th>
+                        <th scope="col" class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">Type</th>
+                        <th scope="col" class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">Hours</th>
+                        <th scope="col" class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">Status</th>
+                        <th scope="col" class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">Remarks</th>
+                        <th scope="col" class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">Submitted</th>
+                        <th scope="col" class="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wide text-slate-500">Action</th>
                     </tr>
                 </thead>
-                <tbody class="bg-white divide-y divide-gray-200">
+                <tbody class="divide-y divide-slate-100 bg-white">
                     @foreach($pendingTimeRequests as $request)
-                    <tr class="hover:bg-gray-50">
+                    <tr class="transition-colors hover:bg-slate-50/80">
                         <td class="px-4 py-3 whitespace-nowrap text-sm text-gray-900">
                             {{ $request->date->format('M d, Y') }}
                         </td>
@@ -189,7 +185,7 @@
                                       onsubmit="return confirm('Discard this pending time request? The linked Additional Time leave request for the same day will also be removed.');">
                                     @csrf
                                     @method('DELETE')
-                                    <button type="submit" class="text-red-600 hover:text-red-800 font-medium">
+                                    <button type="submit" class="text-sm font-medium text-rose-600 hover:text-rose-800">
                                         Discard
                                     </button>
                                 </form>
@@ -203,79 +199,60 @@
             </table>
             </x-slot:desktop>
         </x-responsive-data-panel>
-    </div>
+        </x-user-panel>
+    </x-user-dashboard-section>
     @endif
 
-    <!-- DTR Table -->
-    <div class="bg-white rounded-lg shadow border border-gray-200 overflow-hidden flex-1 flex flex-col mx-2 sm:mx-3 lg:mx-4 xl:mx-6 mt-4 mb-4">
-        <div class="px-4 sm:px-6 py-4 border-b border-gray-200 bg-gray-50">
-            <div class="flex items-center justify-between flex-wrap gap-3">
-                <div>
-                    <h2 class="text-lg font-semibold text-gray-900">Time Records</h2>
-                    <p class="text-sm text-gray-600 mt-1">Total records: {{ $totalRecords }}</p>
-                </div>
-                <div class="flex items-center gap-3">
-                    @if(auth()->user()->role === 'student')
-                        @if(! empty($canStudentRecordAttendance))
-                        <button type="button" onclick="openRecordAttendanceModal()"
-                                class="inline-flex items-center px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors text-sm font-medium">
-                            <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path>
-                            </svg>
-                            Record Attendance
-                        </button>
-                        @else
-                        <button type="button" disabled
-                                title="Upload and get your NDA approved first"
-                                class="inline-flex items-center px-4 py-2 bg-gray-300 text-gray-600 rounded-lg cursor-not-allowed text-sm font-medium">
-                            <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path>
-                            </svg>
-                            Record Attendance
-                        </button>
-                        @endif
-                    @endif
-                </div>
-            </div>
-        </div>
+    <x-user-dashboard-section title="Time records" description="Grouped by year, month, and week. Expand a section to view daily entries.">
+        @if(auth()->user()->role === 'student')
+            <x-slot:actions>
+                @if(! empty($canStudentRecordAttendance))
+                    <button type="button" onclick="openRecordAttendanceModal()"
+                            class="inline-flex items-center gap-2 rounded-lg bg-emerald-600 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-emerald-700">
+                        <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path></svg>
+                        Record attendance
+                    </button>
+                @else
+                    <button type="button" disabled title="Upload and get your NDA approved first"
+                            class="inline-flex cursor-not-allowed items-center gap-2 rounded-lg bg-slate-200 px-4 py-2 text-sm font-medium text-slate-500">
+                        Record attendance
+                    </button>
+                @endif
+            </x-slot:actions>
+        @endif
 
-        <div class="overflow-auto flex-1" id="dtr-groups-root">
+        <x-user-kpi-grid columns="grid-cols-1 divide-y sm:grid-cols-1 sm:divide-y-0">
+            <x-user-kpi-cell label="Records in current view" :value="number_format($totalRecords)" />
+        </x-user-kpi-grid>
+
+        <div class="overflow-hidden rounded-lg border border-slate-200/90 bg-white" id="dtr-groups-root">
             @forelse($groupedDtrsByYear as $yearKey => $year)
-                <div class="border-b border-gray-300" data-year-group>
+                <div class="border-b border-slate-200 last:border-b-0" data-year-group>
                     <button type="button"
-                            class="w-full flex items-center justify-between px-4 sm:px-6 py-3.5 bg-indigo-50 hover:bg-indigo-100 transition text-left"
+                            class="flex w-full items-center justify-between bg-slate-50 px-5 py-3.5 text-left transition hover:bg-slate-100/80 sm:px-6"
                             data-toggle="year">
-                        <h2 class="text-lg font-bold text-indigo-900">{{ $year['label'] }}</h2>
-                        <span class="ml-3 inline-flex items-center justify-center rounded-full bg-white/80 text-indigo-800 text-xs px-2 py-0.5">
-                            <span class="mr-1" data-year-chevron>+</span>
-                            Toggle
-                        </span>
+                        <h2 class="text-base font-semibold text-slate-900">{{ $year['label'] }}</h2>
+                        <span class="inline-flex h-7 w-7 items-center justify-center rounded-md border border-slate-200 bg-white text-sm font-medium text-slate-600" data-year-chevron aria-hidden="true">+</span>
                     </button>
 
-                    <div class="border-t border-gray-200 hidden" data-year-content style="display: none;">
+                    <div class="hidden border-t border-slate-200 bg-white" data-year-content style="display: none;">
                         @foreach($year['months'] as $monthKey => $month)
-                <div class="border-b border-gray-200" data-month-group>
+                <div class="border-b border-slate-100" data-month-group>
                     <button type="button"
-                            class="w-full flex items-center justify-between px-4 sm:px-6 py-3 bg-gray-100 hover:bg-gray-200 transition text-left pl-8 sm:pl-10"
+                            class="flex w-full items-center justify-between bg-white py-3 pl-8 pr-5 text-left transition hover:bg-slate-50 sm:pl-10 sm:pr-6"
                             data-toggle="month">
-                        <h3 class="text-md font-bold text-gray-900">{{ $month['label'] }}</h3>
-                        <span class="ml-3 inline-flex items-center justify-center rounded-full bg-white/70 text-gray-700 text-xs px-2 py-0.5">
-                            <span class="mr-1" data-month-chevron>+</span>
-                            Toggle
-                        </span>
+                        <h3 class="text-sm font-semibold text-slate-800">{{ $month['label'] }}</h3>
+                        <span class="inline-flex h-6 w-6 items-center justify-center rounded border border-slate-200 bg-slate-50 text-xs font-medium text-slate-600" data-month-chevron aria-hidden="true">+</span>
                     </button>
 
-                    <div class="border-t border-gray-200 hidden" data-month-content style="display: none;">
+                    <div class="hidden border-t border-slate-100" data-month-content style="display: none;">
                         @foreach($month['weeks'] as $weekKey => $week)
-                            <div class="border-b border-gray-200" data-week-group>
+                            <div class="border-b border-slate-100 last:border-b-0" data-week-group>
                                 <button type="button"
-                                        class="w-full flex items-center justify-between px-4 sm:px-6 py-2 bg-gray-50 hover:bg-gray-100 transition text-left"
+                                        class="flex w-full items-center justify-between bg-slate-50/60 py-2.5 pl-10 pr-5 text-left transition hover:bg-slate-100/60 sm:pl-12 sm:pr-6"
                                         data-toggle="week">
-                                    <h4 class="text-sm font-semibold text-gray-800">{{ $week['label'] }}</h4>
-                                    <span class="ml-3 inline-flex items-center justify-center rounded-full bg-white/70 text-gray-700 text-xs px-2 py-0.5">
-                                        <span class="mr-1" data-week-chevron>+</span>
-                                        Toggle
-                                    </span>
+                                    <h4 class="text-sm font-medium text-slate-700">{{ $week['label'] }}</h4>
+                                    <span class="inline-flex h-6 w-6 items-center justify-center rounded border border-slate-200 bg-white text-xs font-medium text-slate-600" data-week-chevron aria-hidden="true">+</span>
                                 </button>
 
                                 <div class="hidden" data-week-content style="display: none;">
@@ -285,19 +262,19 @@
                                         @endforeach
                                     </div>
                                     <div class="hidden md:block overflow-x-auto mobile-table-scroll">
-                                    <table class="min-w-full divide-y divide-gray-200">
-                                        <thead class="bg-gray-50">
+                                    <table class="min-w-full divide-y divide-slate-100">
+                                        <thead class="bg-slate-50/95">
                                             <tr>
-                                                <th class="px-3 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Date</th>
-                                                <th class="px-3 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Hubstaff Hours</th>
-                                                <th class="px-3 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Leave/Offset</th>
-                                                <th class="px-3 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Added Time</th>
-                                                <th class="px-3 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Total Hours</th>
-                                                <th class="px-3 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
-                                                <th class="px-3 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Remarks</th>
+                                                <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-500 sm:px-6">Date</th>
+                                                <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-500 sm:px-6">Hubstaff</th>
+                                                <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-500 sm:px-6">Leave/offset</th>
+                                                <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-500 sm:px-6">Added time</th>
+                                                <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-500 sm:px-6">Total</th>
+                                                <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-500 sm:px-6">Status</th>
+                                                <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-500 sm:px-6">Remarks</th>
                                             </tr>
                                         </thead>
-                                        <tbody class="bg-white divide-y divide-gray-200">
+                                        <tbody class="divide-y divide-slate-100 bg-white">
                                             @foreach($week['records'] as $dtr)
                                                 @php
                                                     // Determine status first
@@ -350,7 +327,7 @@
                                                     $totalMinutes = (int) round(\App\Support\DtrEmployeeAttendance::displayedTotalHoursForColumn($dtr) * 60);
                                                     $totalOver8Hours = $totalMinutes > 480; // 8 hours = 480 minutes
                                                 @endphp
-                                                <tr class="hover:bg-gray-50">
+                                                <tr class="transition-colors hover:bg-slate-50/80">
                                                     <td class="px-3 sm:px-6 py-4 whitespace-nowrap">
                                                         <div class="text-sm text-gray-900">{{ $dtr->date->format('M d, Y') }}</div>
                                                         <div class="text-xs text-gray-500">{{ $dtr->date->format('l') }}</div>
@@ -429,7 +406,7 @@
                                                 </tr>
                                             @endforeach
                                         </tbody>
-                                        <tfoot class="bg-gradient-to-r from-indigo-50 to-purple-50 border-t-2 border-indigo-300">
+                                        <tfoot class="border-t-2 border-slate-200 bg-slate-50">
                                             @php
                                                 $weeklyTotalHours = 0;
                                                 foreach ($week['records'] as $dtr) {
@@ -484,7 +461,7 @@
                                         $deficitM = $deficitMinutes % 60;
                                         $deficitFormatted = sprintf('%02d:%02d', $deficitH, $deficitM);
                                     @endphp
-                                    <div class="md:hidden mx-3 mb-3 mt-1 rounded-lg bg-indigo-50 border border-indigo-200 px-4 py-3 text-sm">
+                                    <div class="mx-3 mb-3 mt-1 rounded-lg border border-slate-200 bg-slate-50 px-4 py-3 text-sm md:hidden">
                                         <div class="flex justify-between font-semibold text-gray-900">
                                             <span>Weekly total</span>
                                             <span>{{ $deficitMinutes === 0 ? 'Complete' : $weeklyTotalFormatted }}</span>
@@ -502,18 +479,22 @@
                     </div>
                 </div>
             @empty
-                <div class="text-center py-12 px-4">
-                    <svg class="mx-auto h-16 w-16 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
-                    </svg>
-                    <h3 class="mt-4 text-lg font-medium text-gray-900">No DTR records found</h3>
-                    <p class="mt-2 text-sm text-gray-500">Your time records will appear here once they are added.</p>
+                <div class="rounded-xl border border-dashed border-slate-200 bg-slate-50/80 px-6 py-14 text-center">
+                    <div class="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-white shadow-sm ring-1 ring-slate-200">
+                        <svg class="h-6 w-6 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                        </svg>
+                    </div>
+                    <h3 class="mt-4 text-base font-semibold text-slate-900">No DTR records found</h3>
+                    <p class="mt-2 text-sm text-slate-600">Adjust your filters or wait for records to be posted.</p>
                 </div>
             @endforelse
         </div>
-    </div>
+    </x-user-dashboard-section>
 </x-user-page-shell>
+@endsection
 
+@section('scripts')
 <script>
 document.addEventListener('DOMContentLoaded', function() {
     document.querySelectorAll('[data-toggle="year"]').forEach(button => {
@@ -585,8 +566,8 @@ document.addEventListener('DOMContentLoaded', function() {
 
 @if(auth()->user()->role === 'student')
 <!-- Record Attendance Modal -->
-<div id="record-attendance-modal" class="hidden fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50">
-    <div class="relative top-10 mx-auto p-5 border w-11/12 md:w-3/4 lg:w-2/3 shadow-lg rounded-md bg-white max-h-[90vh] overflow-y-auto">
+<div id="record-attendance-modal" class="fixed inset-0 z-50 hidden h-full w-full overflow-y-auto bg-slate-900/50 backdrop-blur-[2px]">
+    <div class="relative top-10 mx-auto max-h-[90vh] w-11/12 overflow-y-auto rounded-xl border border-slate-200 bg-white p-5 shadow-xl md:w-3/4 lg:w-2/3 sm:p-6">
         <div class="flex items-start gap-3 mb-4">
             <div class="flex-shrink-0 w-10 h-10 rounded-full bg-green-100 flex items-center justify-center">
                 <svg class="w-5 h-5 text-green-700" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
@@ -1432,5 +1413,4 @@ document.addEventListener('DOMContentLoaded', function() {
 
 @endif
 @endsection
-
 

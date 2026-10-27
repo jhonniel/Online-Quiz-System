@@ -47,7 +47,7 @@
     <div class="flex items-start justify-between gap-3">
         <div>
             <p class="mobile-card-title">{{ $dtr->date->format('M d, Y') }}</p>
-            <p class="text-xs text-gray-500">{{ $dtr->date->format('l') }}</p>
+            <p class="text-xs text-slate-500">{{ $dtr->date->format('l') }}</p>
         </div>
         <span class="px-2 py-1 inline-flex shrink-0 text-xs font-semibold rounded-full {{ $statusClass }}">{{ $statusLabel }}</span>
     </div>

@@ -3,33 +3,24 @@
 @section('page-title', 'Saved Forum Posts')
 
 @section('content')
-<div class="h-screen flex flex-col space-y-2 overflow-hidden">
-    <!-- Back Button -->
-    <div class="flex-shrink-0 mx-2 sm:mx-3 lg:mx-4 xl:mx-6">
-        <a href="{{ route('forum.index') }}" class="inline-flex items-center text-sm text-gray-500 hover:text-gray-700">
-            <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"></path>
-            </svg>
-            Back to Forum
-        </a>
-    </div>
-
-    <!-- Page Header -->
-    <div class="bg-gradient-to-r from-indigo-500 to-indigo-600 rounded-lg shadow-sm p-3 flex-shrink-0 mx-2 sm:mx-3 lg:mx-4 xl:mx-6">
-        <div class="flex items-center justify-between">
-            <div>
-                <h1 class="text-xl font-bold text-white">Saved Threads</h1>
-                <p class="text-indigo-100 text-sm mt-1">Your bookmarked forum discussions</p>
+<x-user-page-shell fluid class="user-portal-viewport-pane">
+    <x-user-page-header title="Saved Threads" subtitle="Your bookmarked forum discussions" class="shrink-0">
+        <x-slot:icon>
+            <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z"/></svg>
+        </x-slot:icon>
+        <x-slot:subtitleSlot>
+            <a href="{{ route('forum.index') }}" class="text-sm font-medium text-indigo-100/90 hover:text-white">&larr; Back to Forum</a>
+            <p class="mt-1">Your bookmarked forum discussions</p>
+        </x-slot:subtitleSlot>
+        <x-slot:actions>
+            <div class="rounded-lg bg-white/15 px-3 py-2 text-center ring-1 ring-white/20">
+                <div class="text-xl font-bold text-white leading-none">{{ $savedThreads->total() }}</div>
+                <div class="text-[11px] font-medium text-indigo-100">Saved</div>
             </div>
-            <div class="text-right">
-                <div class="text-2xl font-bold text-white">{{ $savedThreads->total() }}</div>
-                <div class="text-indigo-100 text-sm">Saved Threads</div>
-            </div>
-        </div>
-    </div>
+        </x-slot:actions>
+    </x-user-page-header>
 
-    <!-- Saved Threads -->
-    <div class="flex-1 overflow-y-auto mx-2 sm:mx-3 lg:mx-4 xl:mx-6">
+    <div class="min-h-0 flex-1 overflow-y-auto">
         <div class="space-y-4 pb-4">
             @forelse($savedThreads as $save)
             @php $thread = $save->thread; @endphp
@@ -158,7 +149,7 @@
         </div>
         @endif
     </div>
-</div>
+</x-user-page-shell>
 
 <!-- Share Modal -->
 <div id="shareModal" class="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full hidden z-50">

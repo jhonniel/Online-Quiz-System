@@ -1,38 +1,28 @@
 @extends('layouts.user')
 
 @section('content')
-    <div class="h-full flex flex-col space-y-2 min-h-0" data-chat-realtime>
-    <!-- Page Header -->
-    <div class="bg-gradient-to-r from-indigo-500 to-indigo-600 rounded-lg shadow-sm p-4 flex-shrink-0 mx-2 sm:mx-3 lg:mx-4 xl:mx-6">
-        <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-            <div class="flex items-center">
-                <div class="flex-shrink-0">
-                    <svg class="h-6 w-6 sm:h-8 sm:w-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"></path>
-                    </svg>
-                </div>
-                <div class="ml-3">
-                    <h1 class="text-lg sm:text-xl lg:text-2xl font-bold text-white">Chat</h1>
-                    <p class="text-indigo-100 text-sm">Message friends, groups, or chat anonymously</p>
-                </div>
-            </div>
-            <div class="flex items-center space-x-2">
-                <a href="{{ url('/friends') }}"
-                   class="inline-flex items-center px-3 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
-                    <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"></path>
-                    </svg>
-                    <span class="hidden sm:inline">Manage Friends</span>
-                </a>
-            </div>
-        </div>
-    </div>
+    <x-user-page-shell fluid class="user-portal-viewport-pane lg:h-full" data-chat-realtime>
+    <x-user-page-header title="Chat" subtitle="Message friends, groups, or chat anonymously" class="shrink-0">
+        <x-slot:icon>
+            <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"/>
+            </svg>
+        </x-slot:icon>
+        <x-slot:actions>
+            <x-user-header-btn-primary href="{{ url('/friends') }}">
+                <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"/>
+                </svg>
+                Manage friends
+            </x-user-header-btn-primary>
+        </x-slot:actions>
+    </x-user-page-header>
 
     <!-- Chat Interface -->
-    <div class="bg-white shadow-sm border-t border-b border-gray-200 overflow-hidden flex-1 flex flex-col min-w-0">
-        <div class="flex flex-col lg:flex-row h-full min-w-0">
+    <div class="flex min-h-[min(70dvh,32rem)] min-w-0 flex-col overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm ring-1 ring-slate-900/5 lg:min-h-0 lg:flex-1">
+        <div class="flex min-h-0 min-w-0 flex-1 flex-col lg:h-full lg:flex-row">
             <!-- Friends Sidebar -->
-            <div class="w-full lg:w-1/3 border-r border-gray-200 flex flex-col">
+            <div class="flex max-h-[45dvh] min-h-0 w-full flex-col border-b border-gray-200 lg:max-h-none lg:w-1/3 lg:border-b-0 lg:border-r">
                 <!-- Sidebar Header -->
                 <div class="p-3 sm:p-4 border-b border-gray-200 bg-gray-50">
                     <div class="flex items-center justify-between gap-2">
@@ -364,7 +354,7 @@
     </div>
 
     <x-story-ui :feed="$storyFeed" />
-</div>
+</x-user-page-shell>
 @endsection
 
 @section('scripts')
