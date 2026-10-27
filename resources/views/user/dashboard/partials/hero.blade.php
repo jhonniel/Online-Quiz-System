@@ -43,7 +43,7 @@
                         <input type="search"
                                id="search-input"
                                placeholder="Search quizzes…"
-                               class="user-dashboard-hero__search block w-full rounded-lg border-0 py-2.5 pl-9 pr-3 text-sm text-white placeholder-indigo-200 ring-1 ring-inset ring-white/25 focus:ring-2 focus:ring-white/40">
+                               class="user-dashboard-hero__search block w-full rounded-lg border-0 py-2.5 pl-9 pr-3 text-sm text-white placeholder-indigo-200 ring-1 ring-inset ring-white/25 focus:ring-2 focus:ring-white/40 bg-white/10">
                     </div>
                     <button type="button"
                             onclick="openQuizCodeModal()"

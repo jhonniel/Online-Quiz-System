@@ -19,8 +19,11 @@
         height: auto;
     }
 
-    /* Don't let global svg sizing blow up verified badges / icons */
-    svg:not(.twetch-green-check) {
+    /*
+     * Avoid max-width:100% on all SVGs — it stretches icons to the full column width
+     * when a card/layout class fails to load. Size icons in components instead.
+     */
+    svg:not(.twetch-green-check):not(.ui-icon) {
         max-width: 100%;
         height: auto;
     }
