@@ -256,8 +256,8 @@
                                 <td class="px-4 py-3 text-xs font-semibold text-gray-700" x-text="row.method"></td>
                                 <td class="px-4 py-3 text-sm font-mono text-gray-900" x-text="row.uri"></td>
                                 <td class="px-4 py-3 text-xs text-gray-600" x-text="row.name || '—'"></td>
-                                <td class="px-4 py-3">
-                                    <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold"
+                                <td class="px-4 py-3 whitespace-nowrap">
+                                    <span class="inline-flex items-center whitespace-nowrap px-2 py-0.5 rounded-full text-xs font-semibold leading-none"
                                           :class="statusBadgeClass(row.status)"
                                           x-text="formatStatus(row.status)">
                                     </span>
@@ -354,7 +354,7 @@
                     return 'Healthy';
                 }
                 if (status === 'degraded') {
-                    return 'Client error';
+                    return '4xx';
                 }
                 if (status === 'failing') {
                     return 'Failing';
