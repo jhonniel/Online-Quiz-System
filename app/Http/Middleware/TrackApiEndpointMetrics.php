@@ -33,8 +33,10 @@ class TrackApiEndpointMetrics
         }
 
         $routeName = $route->getName();
-        $methods = array_values(array_diff($route->methods() ?? [], ['HEAD', 'OPTIONS']));
-        $method = strtoupper($methods[0] ?? $request->method());
+        $method = strtoupper($request->method());
+        if (in_array($method, ['HEAD', 'OPTIONS'], true)) {
+            return $response;
+        }
 
         $isApiRoute = $this->shouldTrackEndpoint($uri, $routeName, $method);
 

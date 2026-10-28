@@ -7,6 +7,7 @@ use App\Models\ApiEndpointMetric;
 use App\Models\ApiEndpointMetricPoint;
 use App\Models\ExternalApiKey;
 use App\Models\Setting;
+use App\Support\ApiEndpointHealth;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -128,6 +129,7 @@ class ApiMonitoringController extends Controller
     private function buildApiRows(string $scope = 'api_like'): array
     {
         $metrics = ApiEndpointMetric::query()->get()->keyBy('route_key');
+        $latestStatusByRoute = $this->latestStatusCodeByRouteKey();
         $uptimeSince = now()->subDays(self::UPTIME_MONITOR_DAYS - 1)->startOfDay();
         $dailyBucketsByRoute = $this->buildDailyBucketsByRoute($uptimeSince);
 
@@ -156,13 +158,12 @@ class ApiMonitoringController extends Controller
                 $requestCount = (int) ($metric->request_count ?? 0);
                 $successCount = (int) ($metric->success_count ?? 0);
                 $failureCount = (int) ($metric->failure_count ?? 0);
-                $lastStatusCode = $metric->last_status_code ?? null;
-
-                $status = 'unknown';
-                $effectiveStatusCode = $lastStatusCode;
-                if ($effectiveStatusCode !== null) {
-                    $status = $effectiveStatusCode >= 500 ? 'failing' : 'healthy';
-                }
+                $health = ApiEndpointHealth::resolve(
+                    $metric,
+                    isset($latestStatusByRoute[$routeKey]) ? (int) $latestStatusByRoute[$routeKey] : null
+                );
+                $status = $health['status'];
+                $effectiveStatusCode = $health['last_status_code'];
 
                 $dailyForRoute = $dailyBucketsByRoute->get($routeKey, []);
                 $usagePoints = $this->applyUsagePointsFallback(
@@ -209,6 +210,7 @@ class ApiMonitoringController extends Controller
         $summary = [
             'total' => count($rows),
             'healthy' => 0,
+            'degraded' => 0,
             'failing' => 0,
             'unknown' => 0,
             'total_requests' => 0,
@@ -288,6 +290,18 @@ class ApiMonitoringController extends Controller
      *
      * @return \Illuminate\Support\Collection<string, array<string, array{total: int, success: int}>>
      */
+    /**
+     * @return array<string, int>
+     */
+    private function latestStatusCodeByRouteKey(): array
+    {
+        return ApiEndpointMetricPoint::query()
+            ->whereIn('id', ApiEndpointMetricPoint::query()->selectRaw('MAX(id)')->groupBy('route_key'))
+            ->pluck('status_code', 'route_key')
+            ->map(fn ($code) => (int) $code)
+            ->all();
+    }
+
     private function buildDailyBucketsByRoute(\Illuminate\Support\Carbon $since)
     {
         return ApiEndpointMetricPoint::query()

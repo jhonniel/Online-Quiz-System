@@ -4,7 +4,9 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use App\Models\ApiEndpointMetric;
+use App\Models\ApiEndpointMetricPoint;
 use App\Models\Setting;
+use App\Support\ApiEndpointHealth;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Str;
@@ -103,6 +105,11 @@ class ExternalApiMonitoringController extends Controller
     private function buildApiRows(array $allowedRouteKeys): array
     {
         $metrics = ApiEndpointMetric::query()->get()->keyBy('route_key');
+        $latestStatusByRoute = ApiEndpointMetricPoint::query()
+            ->whereIn('id', ApiEndpointMetricPoint::query()->selectRaw('MAX(id)')->groupBy('route_key'))
+            ->pluck('status_code', 'route_key')
+            ->map(fn ($code) => (int) $code)
+            ->all();
         $allowed = array_fill_keys($allowedRouteKeys, true);
         $rows = [];
 
@@ -126,12 +133,10 @@ class ExternalApiMonitoringController extends Controller
                 }
 
                 $metric = $metrics->get($routeKey);
-                $lastStatusCode = $metric->last_status_code ?? null;
-
-                $status = 'unknown';
-                if ($lastStatusCode !== null) {
-                    $status = $lastStatusCode >= 500 ? 'failing' : 'healthy';
-                }
+                $health = ApiEndpointHealth::resolve(
+                    $metric,
+                    $latestStatusByRoute[$routeKey] ?? null
+                );
 
                 $requestCount = (int) ($metric->request_count ?? 0);
                 $successCount = (int) ($metric->success_count ?? 0);
@@ -141,12 +146,12 @@ class ExternalApiMonitoringController extends Controller
                     'method' => $method,
                     'uri' => '/'.$uri,
                     'name' => $name,
-                    'status' => $status,
+                    'status' => $health['status'],
                     'request_count' => $requestCount,
                     'success_count' => $successCount,
                     'failure_count' => (int) ($metric->failure_count ?? 0),
                     'uptime_percent' => $requestCount > 0 ? round(($successCount / $requestCount) * 100, 2) : null,
-                    'last_status_code' => $lastStatusCode,
+                    'last_status_code' => $health['last_status_code'],
                     'avg_response_time_ms' => round((float) ($metric->avg_response_time_ms ?? 0), 2),
                     'last_response_at' => optional($metric?->last_response_at)->toDateTimeString(),
                     'last_failure_at' => optional($metric?->last_failure_at)->toDateTimeString(),
@@ -168,6 +173,7 @@ class ExternalApiMonitoringController extends Controller
         $summary = [
             'total' => count($rows),
             'healthy' => 0,
+            'degraded' => 0,
             'failing' => 0,
             'unknown' => 0,
             'total_requests' => 0,

@@ -303,7 +303,7 @@
     function apiMonitor(config) {
         return {
             rows: config.initialRows || [],
-            summary: config.initialSummary || { total: 0, healthy: 0, failing: 0, unknown: 0, total_requests: 0 },
+            summary: config.initialSummary || { total: 0, healthy: 0, degraded: 0, failing: 0, unknown: 0, total_requests: 0 },
             lastRefreshedText: new Date().toLocaleString(),
             timerId: null,
             metricsUrl: config.metricsUrl,
@@ -341,14 +341,20 @@
                 if (status === 'healthy') {
                     return 'bg-emerald-100 text-emerald-700';
                 }
+                if (status === 'degraded') {
+                    return 'bg-amber-100 text-amber-800';
+                }
                 if (status === 'failing') {
                     return 'bg-rose-100 text-rose-700';
                 }
-                return 'bg-amber-100 text-amber-700';
+                return 'bg-slate-100 text-slate-600';
             },
             formatStatus(status) {
                 if (status === 'healthy') {
                     return 'Healthy';
+                }
+                if (status === 'degraded') {
+                    return 'Client error';
                 }
                 if (status === 'failing') {
                     return 'Failing';
