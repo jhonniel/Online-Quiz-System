@@ -753,19 +753,39 @@
         });
     }
 
+    /** Line thickness from stored edge weight (hits). Kept subtle — weight can be huge after sync/log linking. */
+    function edgeStrokeWidth(rawValue, kind) {
+        const hits = Math.max(1, Number(rawValue || 1));
+        if (kind === 'bridge') {
+            return 0.45;
+        }
+        if (kind === 'log') {
+            return Math.min(1, 0.55 + Math.log1p(hits) * 0.08);
+        }
+        if (kind === 'user') {
+            return Math.min(1.25, 0.5 + Math.log1p(hits) * 0.12);
+        }
+
+        return Math.min(1.05, 0.45 + Math.log1p(hits) * 0.1);
+    }
+
     function buildVisEdges(rawEdges) {
         return (rawEdges || []).map((e, index) => {
             const isBridge = !!e.bridge;
             const isLogTrail = !!e.log_trail;
             const isUserAccess = !!e.dashes && !isBridge && !isLogTrail;
+            const hits = Math.max(1, Number(e.value || 1));
+            const kind = isBridge ? 'bridge' : (isLogTrail ? 'log' : (isUserAccess ? 'user' : 'traffic'));
+
             return {
                 id: `${e.from}|${e.to}|${index}`,
                 from: e.from,
                 to: e.to,
-                value: Math.max(1, Number(e.value || 1)),
+                value: 1,
+                title: hits > 1 ? `${hits.toLocaleString()} recorded hits on this link` : undefined,
                 dashes: isBridge ? [6, 6] : !!e.dashes,
                 color: isBridge ? '#cbd5e1' : (isLogTrail ? '#f97316' : (isUserAccess ? '#c084fc' : '#64748b')),
-                width: isBridge ? 1 : Math.min(6, Math.max(1, Math.log((e.value || 1) + 1))),
+                width: edgeStrokeWidth(hits, kind),
                 hidden: false,
             };
         });
@@ -798,7 +818,11 @@
                     highlight: 'rgba(99, 102, 241, 0.85)',
                     hover: 'rgba(99, 102, 241, 0.75)',
                 },
-                width: 0.75,
+                width: 0.5,
+                scaling: {
+                    min: 0.35,
+                    max: 1.25,
+                },
             },
             interaction: {
                 dragView: true,

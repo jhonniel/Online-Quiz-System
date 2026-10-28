@@ -143,6 +143,8 @@ class NetworkGraphRecorder
         $this->touchNode($errorKey, 'Error '.$statusCode.' · '.$path, 'error', self::GROUP_COLORS['error']);
         $this->touchNode($apiKey, $routeKey, 'api', self::GROUP_COLORS['api']);
 
+        $this->touchEdge('hub:system', 'module:'.$module);
+        $this->touchEdge('module:'.$module, $apiKey);
         $this->touchEdge('hub:system', $errorKey, 'error');
         $this->touchEdge('module:'.$module, $errorKey, 'error');
         $this->touchEdge($apiKey, $errorKey, 'error');
@@ -182,11 +184,20 @@ class NetworkGraphRecorder
         $this->touchEdge('role:'.$role, $activityKey, 'activity');
         $this->touchEdge('hub:system', $activityKey, 'activity');
 
+        $apiKey = null;
         if ($activity->page_url) {
             $path = parse_url((string) $activity->page_url, PHP_URL_PATH) ?: '';
-            $module = $this->resolveModuleKey(ltrim($path, '/'));
+            $path = ltrim($path, '/');
+            $module = $this->resolveModuleKey($path);
+            $routeKey = 'PAGE '.$path;
+            $apiKey = 'api:'.$this->slug($routeKey);
+
             $this->touchNode('module:'.$module, $this->moduleLabel($module), 'module', self::GROUP_COLORS['module']);
+            $this->touchNode($apiKey, $routeKey, 'api', self::GROUP_COLORS['api']);
+            $this->touchEdge('hub:system', 'module:'.$module);
+            $this->touchEdge('module:'.$module, $apiKey);
             $this->touchEdge($activityKey, 'module:'.$module, 'activity');
+            $this->touchEdge($activityKey, $apiKey, 'activity');
         }
 
         $logKey = 'activity_log:'.$activity->id;
@@ -198,12 +209,16 @@ class NetworkGraphRecorder
         $this->touchEdge('hub:system', $logKey, 'activity_log');
         $this->touchEdge($activityKey, $logKey, 'activity_log');
         $this->touchEdge($logKey, 'module:'.$module, 'activity_log');
+        if ($apiKey !== null) {
+            $this->touchEdge($logKey, $apiKey, 'activity_log');
+        }
 
+        $accessTarget = $apiKey ?? $activityKey;
         if ($activity->user instanceof User) {
-            $this->linkUserToAccess($activity->user, $role, $module, $activityKey);
+            $this->linkUserToAccess($activity->user, $role, $module, $accessTarget);
             $this->touchEdge('user:'.$activity->user->id, $logKey, 'activity_log');
         } elseif (! $activity->user_id) {
-            $this->linkGuestToAccess('guest:visitor', 'Guests (visitor)', $module, $activityKey);
+            $this->linkGuestToAccess('guest:visitor', 'Guests (visitor)', $module, $accessTarget);
             $this->touchEdge('guest:visitor', $logKey, 'activity_log');
         }
     }

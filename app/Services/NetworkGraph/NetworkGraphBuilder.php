@@ -265,6 +265,16 @@ class NetworkGraphBuilder
             $hub = NetworkGraphNode::query()->where('node_key', 'hub:system')->first();
             if ($hub !== null) {
                 $nodes = $nodes->push($hub);
+                $keys[] = 'hub:system';
+            }
+        }
+
+        foreach (['guest:visitor', 'guest:applicant'] as $guestKey) {
+            if (! in_array($guestKey, $keys, true)) {
+                $guest = NetworkGraphNode::query()->where('node_key', $guestKey)->first();
+                if ($guest !== null) {
+                    $nodes = $nodes->push($guest);
+                }
             }
         }
 
@@ -322,13 +332,38 @@ class NetworkGraphBuilder
             return true;
         };
 
-        foreach ($pool->filter(fn (NetworkGraphEdge $edge) => in_array($edge->edge_type, ['user_access', 'error', 'error_log', 'activity_log'], true)) as $edge) {
-            $push($edge);
+        $spineTypes = ['user_access', 'user', 'domain', 'quiz_attempt', 'application', 'applied_position'];
+        foreach ($pool as $edge) {
+            if (in_array($edge->edge_type, $spineTypes, true)) {
+                $push($edge);
+            }
         }
 
         foreach ($pool as $edge) {
             if ($edge->source_node_key === 'hub:system' || $edge->target_node_key === 'hub:system') {
+                if (! in_array($edge->edge_type, ['activity_log', 'error_log'], true)) {
+                    $push($edge);
+                }
+            }
+        }
+
+        foreach ($pool as $edge) {
+            if ($edge->edge_type === 'error') {
                 $push($edge);
+            }
+        }
+
+        $logTrailCap = (int) max(40, floor($maxEdges * 0.35));
+        $logTrailCount = 0;
+        foreach ($pool as $edge) {
+            if ($logTrailCount >= $logTrailCap) {
+                break;
+            }
+            if (! in_array($edge->edge_type, ['activity_log', 'error_log'], true)) {
+                continue;
+            }
+            if ($push($edge)) {
+                $logTrailCount++;
             }
         }
 
@@ -609,25 +644,56 @@ class NetworkGraphBuilder
             return $visEdges;
         }
 
-        $incident = [];
-        foreach ($visEdges as $edge) {
-            $incident[(string) $edge['from']] = true;
-            $incident[(string) $edge['to']] = true;
+        $parent = array_combine($nodeIds, $nodeIds);
+        if ($parent === false) {
+            return $visEdges;
         }
 
-        foreach ($nodeIds as $nodeId) {
-            if ($nodeId === 'hub:system' || isset($incident[$nodeId])) {
-                continue;
+        $find = function (string $node) use (&$parent, &$find): string {
+            if ($parent[$node] !== $node) {
+                $parent[$node] = $find($parent[$node]);
             }
 
+            return $parent[$node];
+        };
+
+        $union = function (string $a, string $b) use ($find): void {
+            $rootA = $find($a);
+            $rootB = $find($b);
+            if ($rootA !== $rootB) {
+                $parent[$rootB] = $rootA;
+            }
+        };
+
+        foreach ($visEdges as $edge) {
+            $from = (string) $edge['from'];
+            $to = (string) $edge['to'];
+            if (isset($parent[$from], $parent[$to])) {
+                $union($from, $to);
+            }
+        }
+
+        $groups = [];
+        foreach ($nodeIds as $nodeId) {
+            $groups[$find($nodeId)][] = $nodeId;
+        }
+
+        if (count($groups) <= 1) {
+            return $visEdges;
+        }
+
+        $hubRoot = $find('hub:system');
+        foreach ($groups as $root => $members) {
+            if ($root === $hubRoot) {
+                continue;
+            }
             $visEdges[] = [
-                'from' => $nodeId,
+                'from' => $members[0],
                 'to' => 'hub:system',
                 'value' => 1,
                 'dashes' => true,
                 'bridge' => true,
             ];
-            $incident[$nodeId] = true;
         }
 
         return $visEdges;
