@@ -11,9 +11,35 @@ use Illuminate\Support\Str;
 
 class ExternalApiMonitoringController extends Controller
 {
+    public function ping(): JsonResponse
+    {
+        return response()->json([
+            'ok' => true,
+            'message' => 'API key accepted.',
+            'generated_at' => now()->toIso8601String(),
+        ]);
+    }
+
     public function endpoints(): JsonResponse
     {
-        $rows = $this->buildApiRows();
+        $allowedRouteKeys = $this->resolveAllowedRouteKeys();
+        if ($allowedRouteKeys === []) {
+            return response()->json([
+                'message' => 'No endpoints are exposed for external access. In Admin → API Monitoring, check endpoints under “Allowed APIs for External Access”, then click Save Allowed APIs.',
+                'code' => 'NO_ALLOWED_ENDPOINTS',
+                'summary' => [
+                    'total' => 0,
+                    'healthy' => 0,
+                    'failing' => 0,
+                    'unknown' => 0,
+                    'total_requests' => 0,
+                ],
+                'rows' => [],
+                'generated_at' => now()->toIso8601String(),
+            ], 403);
+        }
+
+        $rows = $this->buildApiRows($allowedRouteKeys);
 
         return response()->json([
             'summary' => $this->buildSummary($rows),
@@ -23,55 +49,109 @@ class ExternalApiMonitoringController extends Controller
     }
 
     /**
+     * @return array<int, string>
+     */
+    private function resolveAllowedRouteKeys(): array
+    {
+        $setting = Setting::query()->where('key', 'external_api_allowed_route_keys')->first();
+
+        // Never configured: expose all API-like routes so a new key works after enabling external access.
+        if ($setting === null) {
+            return $this->discoverApiLikeRouteKeys();
+        }
+
+        $stored = Setting::parseRawValue($setting->getAttributes()['value'] ?? null);
+        if (! is_array($stored)) {
+            return [];
+        }
+
+        return array_values(array_filter($stored, fn ($item) => is_string($item) && trim($item) !== ''));
+    }
+
+    /**
+     * @return array<int, string>
+     */
+    private function discoverApiLikeRouteKeys(): array
+    {
+        $keys = [];
+
+        foreach (Route::getRoutes() as $route) {
+            $uri = trim((string) $route->uri(), '/');
+            $name = $route->getName();
+            $methods = array_values(array_diff($route->methods() ?? [], ['HEAD', 'OPTIONS']));
+            if ($methods === []) {
+                $methods = ['GET'];
+            }
+
+            foreach ($methods as $method) {
+                $method = strtoupper((string) $method);
+                if (! $this->isExportableRoute($uri, $name, $method)) {
+                    continue;
+                }
+
+                $keys[] = $method.' '.$uri;
+            }
+        }
+
+        return array_values(array_unique($keys));
+    }
+
+    /**
+     * @param  array<int, string>  $allowedRouteKeys
      * @return array<int, array<string, mixed>>
      */
-    private function buildApiRows(): array
+    private function buildApiRows(array $allowedRouteKeys): array
     {
         $metrics = ApiEndpointMetric::query()->get()->keyBy('route_key');
-        $allowedRouteKeys = $this->getAllowedRouteKeys();
+        $allowed = array_fill_keys($allowedRouteKeys, true);
         $rows = [];
 
         foreach (Route::getRoutes() as $route) {
             $uri = trim((string) $route->uri(), '/');
             $name = $route->getName();
             $methods = array_values(array_diff($route->methods() ?? [], ['HEAD', 'OPTIONS']));
-            $method = strtoupper($methods[0] ?? 'GET');
-
-            if (! $this->isApiRoute($uri, $name, $method)) {
-                continue;
+            if ($methods === []) {
+                $methods = ['GET'];
             }
 
-            $routeKey = $method.' '.$uri;
-            if (! in_array($routeKey, $allowedRouteKeys, true)) {
-                continue;
+            foreach ($methods as $method) {
+                $method = strtoupper((string) $method);
+                if (! $this->isExportableRoute($uri, $name, $method)) {
+                    continue;
+                }
+
+                $routeKey = $method.' '.$uri;
+                if (! isset($allowed[$routeKey])) {
+                    continue;
+                }
+
+                $metric = $metrics->get($routeKey);
+                $lastStatusCode = $metric->last_status_code ?? null;
+
+                $status = 'unknown';
+                if ($lastStatusCode !== null) {
+                    $status = $lastStatusCode >= 500 ? 'failing' : 'healthy';
+                }
+
+                $requestCount = (int) ($metric->request_count ?? 0);
+                $successCount = (int) ($metric->success_count ?? 0);
+
+                $rows[] = [
+                    'route_key' => $routeKey,
+                    'method' => $method,
+                    'uri' => '/'.$uri,
+                    'name' => $name,
+                    'status' => $status,
+                    'request_count' => $requestCount,
+                    'success_count' => $successCount,
+                    'failure_count' => (int) ($metric->failure_count ?? 0),
+                    'uptime_percent' => $requestCount > 0 ? round(($successCount / $requestCount) * 100, 2) : null,
+                    'last_status_code' => $lastStatusCode,
+                    'avg_response_time_ms' => round((float) ($metric->avg_response_time_ms ?? 0), 2),
+                    'last_response_at' => optional($metric?->last_response_at)->toDateTimeString(),
+                    'last_failure_at' => optional($metric?->last_failure_at)->toDateTimeString(),
+                ];
             }
-
-            $metric = $metrics->get($routeKey);
-            $lastStatusCode = $metric->last_status_code ?? null;
-
-            $status = 'unknown';
-            if ($lastStatusCode !== null) {
-                $status = $lastStatusCode >= 500 ? 'failing' : 'healthy';
-            }
-
-            $requestCount = (int) ($metric->request_count ?? 0);
-            $successCount = (int) ($metric->success_count ?? 0);
-
-            $rows[] = [
-                'route_key' => $routeKey,
-                'method' => $method,
-                'uri' => '/'.$uri,
-                'name' => $name,
-                'status' => $status,
-                'request_count' => $requestCount,
-                'success_count' => $successCount,
-                'failure_count' => (int) ($metric->failure_count ?? 0),
-                'uptime_percent' => $requestCount > 0 ? round(($successCount / $requestCount) * 100, 2) : null,
-                'last_status_code' => $lastStatusCode,
-                'avg_response_time_ms' => round((float) ($metric->avg_response_time_ms ?? 0), 2),
-                'last_response_at' => optional($metric?->last_response_at)->toDateTimeString(),
-                'last_failure_at' => optional($metric?->last_failure_at)->toDateTimeString(),
-            ];
         }
 
         usort($rows, fn (array $a, array $b): int => [$a['uri'], $a['method']] <=> [$b['uri'], $b['method']]);
@@ -104,8 +184,12 @@ class ExternalApiMonitoringController extends Controller
         return $summary;
     }
 
-    private function isApiRoute(string $uri, ?string $name, string $method): bool
+    private function isExportableRoute(string $uri, ?string $name, string $method): bool
     {
+        if (in_array($uri, ['monitoring/endpoints', 'monitoring/ping'], true)) {
+            return false;
+        }
+
         if (Str::startsWith($uri, ['_debugbar', '_ignition', 'livewire', 'sanctum/csrf-cookie', 'admin/system/api-monitoring'])) {
             return false;
         }
@@ -142,19 +226,5 @@ class ExternalApiMonitoringController extends Controller
             '.preview',
             '.calendar',
         ]);
-    }
-
-    /**
-     * @return array<int, string>
-     */
-    private function getAllowedRouteKeys(): array
-    {
-        $stored = Setting::get('external_api_allowed_route_keys', []);
-
-        if (is_array($stored)) {
-            return array_values(array_filter($stored, fn ($item) => is_string($item) && trim($item) !== ''));
-        }
-
-        return [];
     }
 }

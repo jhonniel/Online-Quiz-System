@@ -18,14 +18,16 @@ class VerifyExternalApiKey
         $isEnabled = Setting::get('external_api_enabled', 'disabled') === 'enabled';
         if (! $isEnabled) {
             return new JsonResponse([
-                'message' => 'External API access is currently disabled.',
+                'message' => 'External API access is currently disabled. Enable it under Admin → API Monitoring → External API Access.',
+                'code' => 'EXTERNAL_API_DISABLED',
             ], 403);
         }
 
-        $providedKey = (string) ($request->header('X-API-Key') ?? $request->query('api_key', ''));
+        $providedKey = $this->extractProvidedKey($request);
         if ($providedKey === '') {
             return new JsonResponse([
-                'message' => 'Missing API key. Provide X-API-Key header.',
+                'message' => 'Missing API key. Send header X-API-Key, Authorization: Bearer <key>, or query api_key=.',
+                'code' => 'MISSING_API_KEY',
             ], 401);
         }
 
@@ -37,7 +39,8 @@ class VerifyExternalApiKey
 
         if (! $apiKey) {
             return new JsonResponse([
-                'message' => 'Invalid or inactive API key.',
+                'message' => 'Invalid or inactive API key. Generate a new key in Admin → API Monitoring if needed.',
+                'code' => 'INVALID_API_KEY',
             ], 401);
         }
 
@@ -47,5 +50,22 @@ class VerifyExternalApiKey
         ])->save();
 
         return $next($request);
+    }
+
+    private function extractProvidedKey(Request $request): string
+    {
+        foreach (['X-API-Key', 'X-Api-Key', 'API-Key'] as $header) {
+            $value = trim((string) $request->header($header, ''));
+            if ($value !== '') {
+                return $value;
+            }
+        }
+
+        $authorization = trim((string) $request->header('Authorization', ''));
+        if ($authorization !== '' && preg_match('/^Bearer\s+(.+)$/i', $authorization, $matches) === 1) {
+            return trim($matches[1]);
+        }
+
+        return trim((string) $request->query('api_key', ''));
     }
 }

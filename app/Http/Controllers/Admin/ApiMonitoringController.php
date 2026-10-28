@@ -10,7 +10,6 @@ use App\Models\Setting;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Str;
 
@@ -130,82 +129,68 @@ class ApiMonitoringController extends Controller
     {
         $metrics = ApiEndpointMetric::query()->get()->keyBy('route_key');
         $uptimeSince = now()->subDays(self::UPTIME_MONITOR_DAYS - 1)->startOfDay();
-        $dayBucketSql = $this->dailyBucketSqlExpression();
-
-        $dailyBucketsByRoute = ApiEndpointMetricPoint::query()
-            ->where('recorded_at', '>=', $uptimeSince)
-            ->select([
-                'route_key',
-                DB::raw("{$dayBucketSql} as day_bucket"),
-                DB::raw('COUNT(*) as total_count'),
-                DB::raw('SUM(CASE WHEN is_success THEN 1 ELSE 0 END) as success_count'),
-            ])
-            ->groupBy('route_key', DB::raw($dayBucketSql))
-            ->get()
-            ->groupBy('route_key')
-            ->map(function ($rows) {
-                $bucket = [];
-                foreach ($rows as $row) {
-                    $dayValue = $row->day_bucket ?? null;
-                    $dayKey = $dayValue ? \Illuminate\Support\Carbon::parse($dayValue)->startOfDay()->format('Y-m-d 00:00:00') : '';
-                    if ($dayKey === '') {
-                        continue;
-                    }
-
-                    $bucket[$dayKey] = [
-                        'total' => (int) ($row->total_count ?? 0),
-                        'success' => (int) ($row->success_count ?? 0),
-                    ];
-                }
-
-                return $bucket;
-            });
+        $dailyBucketsByRoute = $this->buildDailyBucketsByRoute($uptimeSince);
 
         $dayKeys = collect(range(self::UPTIME_MONITOR_DAYS - 1, 0))->map(function (int $daysAgo) {
-            return now()->subDays($daysAgo)->startOfDay()->format('Y-m-d 00:00:00');
+            return $this->normalizeDayBucketKey(now()->subDays($daysAgo));
         })->values()->all();
         $rows = [];
         foreach (Route::getRoutes() as $route) {
             $uri = trim((string) $route->uri(), '/');
             $name = $route->getName();
             $methods = array_values(array_diff($route->methods() ?? [], ['HEAD', 'OPTIONS']));
-            $method = strtoupper($methods[0] ?? 'GET');
-
-            if (! $this->shouldIncludeRoute($uri, $name, $method, $scope)) {
-                continue;
+            if ($methods === []) {
+                $methods = ['GET'];
             }
 
-            $routeKey = $method.' '.$uri;
-            $metric = $metrics->get($routeKey);
+            foreach ($methods as $method) {
+                $method = strtoupper((string) $method);
 
-            $requestCount = (int) ($metric->request_count ?? 0);
-            $successCount = (int) ($metric->success_count ?? 0);
-            $failureCount = (int) ($metric->failure_count ?? 0);
-            $lastStatusCode = $metric->last_status_code ?? null;
+                if (! $this->shouldIncludeRoute($uri, $name, $method, $scope)) {
+                    continue;
+                }
 
-            $status = 'unknown';
-            $effectiveStatusCode = $lastStatusCode;
-            if ($effectiveStatusCode !== null) {
-                $status = $effectiveStatusCode >= 500 ? 'failing' : 'healthy';
+                $routeKey = $method.' '.$uri;
+                $metric = $metrics->get($routeKey);
+
+                $requestCount = (int) ($metric->request_count ?? 0);
+                $successCount = (int) ($metric->success_count ?? 0);
+                $failureCount = (int) ($metric->failure_count ?? 0);
+                $lastStatusCode = $metric->last_status_code ?? null;
+
+                $status = 'unknown';
+                $effectiveStatusCode = $lastStatusCode;
+                if ($effectiveStatusCode !== null) {
+                    $status = $effectiveStatusCode >= 500 ? 'failing' : 'healthy';
+                }
+
+                $dailyForRoute = $dailyBucketsByRoute->get($routeKey, []);
+                $usagePoints = $this->applyUsagePointsFallback(
+                    $this->buildDailyUsagePoints($dailyForRoute, $dayKeys),
+                    $metric,
+                    $dayKeys,
+                    $requestCount
+                );
+
+                $rows[] = [
+                    'route_key' => $routeKey,
+                    'method' => $method,
+                    'uri' => '/'.$uri,
+                    'name' => $name,
+                    'status' => $status,
+                    'request_count' => $requestCount,
+                    'success_count' => $successCount,
+                    'failure_count' => $failureCount,
+                    'uptime_percent' => $requestCount > 0 ? round(($successCount / $requestCount) * 100, 2) : null,
+                    'last_status_code' => $effectiveStatusCode,
+                    'avg_response_time_ms' => round((float) ($metric->avg_response_time_ms ?? 0), 2),
+                    'last_response_at' => optional($metric?->last_response_at)->toDateTimeString(),
+                    'last_failure_at' => optional($metric?->last_failure_at)->toDateTimeString(),
+                    'uptime_points' => $this->buildDailyUptimePoints($dailyForRoute, $dayKeys),
+                    'usage_points' => $usagePoints,
+                    'uptime_stats' => $this->buildDailyUptimeStats($dailyForRoute, $dayKeys),
+                ];
             }
-
-            $rows[] = [
-                'route_key' => $routeKey,
-                'method' => $method,
-                'uri' => '/'.$uri,
-                'name' => $name,
-                'status' => $status,
-                'request_count' => $requestCount,
-                'success_count' => $successCount,
-                'failure_count' => $failureCount,
-                'uptime_percent' => $requestCount > 0 ? round(($successCount / $requestCount) * 100, 2) : null,
-                'last_status_code' => $effectiveStatusCode,
-                'avg_response_time_ms' => round((float) ($metric->avg_response_time_ms ?? 0), 2),
-                'last_response_at' => optional($metric?->last_response_at)->toDateTimeString(),
-                'last_failure_at' => optional($metric?->last_failure_at)->toDateTimeString(),
-                'uptime_points' => $this->buildDailyUptimePoints($dailyBucketsByRoute->get($routeKey, []), $dayKeys),
-                'uptime_stats' => $this->buildDailyUptimeStats($dailyBucketsByRoute->get($routeKey, []), $dayKeys),
-            ];
         }
 
         usort($rows, function (array $a, array $b): int {
@@ -299,15 +284,76 @@ class ApiMonitoringController extends Controller
     }
 
     /**
-     * SQL expression to bucket recorded_at by calendar day (driver-specific).
+     * Bucket metric points by app timezone (avoids SQL DATE / timezone mismatches).
+     *
+     * @return \Illuminate\Support\Collection<string, array<string, array{total: int, success: int}>>
      */
-    private function dailyBucketSqlExpression(): string
+    private function buildDailyBucketsByRoute(\Illuminate\Support\Carbon $since)
     {
-        return match (DB::connection()->getDriverName()) {
-            'pgsql' => "DATE_TRUNC('day', recorded_at)",
-            'sqlite' => 'date(recorded_at)',
-            default => 'DATE(recorded_at)',
-        };
+        return ApiEndpointMetricPoint::query()
+            ->where('recorded_at', '>=', $since)
+            ->get(['route_key', 'is_success', 'recorded_at'])
+            ->groupBy('route_key')
+            ->map(function ($points) {
+                $bucket = [];
+                foreach ($points as $point) {
+                    $dayKey = $this->normalizeDayBucketKey($point->recorded_at);
+                    if ($dayKey === '') {
+                        continue;
+                    }
+
+                    if (! isset($bucket[$dayKey])) {
+                        $bucket[$dayKey] = ['total' => 0, 'success' => 0];
+                    }
+
+                    $bucket[$dayKey]['total']++;
+                    if ($point->is_success) {
+                        $bucket[$dayKey]['success']++;
+                    }
+                }
+
+                return $bucket;
+            });
+    }
+
+    /**
+     * When totals exist but per-day points are missing (legacy rows), show a bump on last activity day.
+     *
+     * @param  array<int, int>  $usagePoints
+     * @param  array<int, string>  $dayKeys
+     * @return array<int, int>
+     */
+    private function applyUsagePointsFallback(array $usagePoints, ?ApiEndpointMetric $metric, array $dayKeys, int $requestCount): array
+    {
+        if (array_sum($usagePoints) > 0 || $requestCount <= 0) {
+            return $usagePoints;
+        }
+
+        $targetDay = $metric?->last_response_at
+            ? $this->normalizeDayBucketKey($metric->last_response_at)
+            : $this->normalizeDayBucketKey(now());
+
+        $index = array_search($targetDay, $dayKeys, true);
+        if ($index === false) {
+            $index = count($usagePoints) - 1;
+        }
+
+        $usagePoints[$index] = max((int) ($usagePoints[$index] ?? 0), $requestCount);
+
+        return $usagePoints;
+    }
+
+    private function normalizeDayBucketKey(mixed $value): string
+    {
+        if ($value === null || $value === '') {
+            return '';
+        }
+
+        try {
+            return \Illuminate\Support\Carbon::parse($value)->startOfDay()->format('Y-m-d H:i:s');
+        } catch (\Throwable) {
+            return '';
+        }
     }
 
     /**
@@ -323,6 +369,20 @@ class ApiMonitoringController extends Controller
             }
 
             return round(($daily[$dayKey]['success'] / $daily[$dayKey]['total']) * 100, 2);
+        })->all();
+    }
+
+    /**
+     * Daily request counts for the 30-day activity sparkline (0 = no traffic that day).
+     *
+     * @param  array<string, array{total: int, success: int}>  $daily
+     * @param  array<int, string>  $dayKeys
+     * @return array<int, int>
+     */
+    private function buildDailyUsagePoints(array $daily, array $dayKeys): array
+    {
+        return collect($dayKeys)->map(function (string $dayKey) use ($daily) {
+            return (int) ($daily[$dayKey]['total'] ?? 0);
         })->all();
     }
 

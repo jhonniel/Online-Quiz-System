@@ -92,10 +92,16 @@
                     </form>
                 </div>
 
-                <div class="rounded-lg border border-gray-200 bg-gray-50 p-3">
-                    <p class="text-xs font-semibold text-gray-700">External endpoint</p>
-                    <p class="mt-1 text-xs font-mono text-gray-700 break-all">{{ url('/api/monitoring/endpoints') }}</p>
-                    <p class="mt-2 text-xs text-gray-600">Send API key in header: <span class="font-mono">X-API-Key: your_key_here</span></p>
+                <div class="rounded-lg border border-gray-200 bg-gray-50 p-3 space-y-2">
+                    <p class="text-xs font-semibold text-gray-700">External endpoints (GET)</p>
+                    <p class="text-xs font-mono text-gray-700 break-all">Ping (test key): {{ url('/api/monitoring/ping') }}</p>
+                    <p class="text-xs font-mono text-gray-700 break-all">Metrics: {{ url('/api/monitoring/endpoints') }}</p>
+                    <ol class="text-xs text-gray-600 list-decimal list-inside space-y-1 mt-2">
+                        <li>Set <strong>External API Access</strong> to <strong>Enabled</strong> and save.</li>
+                        <li>Generate and copy the API key (shown once).</li>
+                        <li>Check endpoints under <strong>Allowed APIs</strong> and click <strong>Save Allowed APIs</strong> (or leave unset to allow all API-like routes).</li>
+                    </ol>
+                    <p class="text-xs text-gray-600">Auth: <span class="font-mono">X-API-Key: your_key</span> or <span class="font-mono">Authorization: Bearer your_key</span></p>
                 </div>
 
                 <form method="POST" action="{{ url('/admin/system/api-monitoring/external-allowed-apis') }}" class="rounded-lg border border-gray-200 p-3 space-y-3">
@@ -231,7 +237,10 @@
                             <th class="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wide text-gray-500">Requests</th>
                             <th class="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wide text-gray-500">Failures</th>
                             <th class="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wide text-gray-500">Uptime</th>
-                            <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500">Uptime Monitor (30 days)</th>
+                            <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500">
+                                Activity (30 days)
+                                <span class="block font-normal normal-case text-[10px] text-gray-400">Bumps when this endpoint is used</span>
+                            </th>
                             <th class="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wide text-gray-500">Avg Response (ms)</th>
                             <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500">Last Status</th>
                         </tr>
@@ -257,14 +266,14 @@
                                 <td class="px-4 py-3 text-sm text-right font-semibold text-rose-700" x-text="row.failure_count"></td>
                                 <td class="px-4 py-3 text-sm text-right font-semibold text-gray-800" x-text="row.uptime_percent === null ? '—' : (row.uptime_percent + '%')"></td>
                                 <td class="px-4 py-3 min-w-[140px]">
-                                    <template x-if="hasTrendPoints(row.uptime_points)">
-                                        <div class="w-28 h-10">
+                                    <template x-if="hasActivity(row)">
+                                        <div class="w-28 h-10" :title="usageSparkTitle(row)">
                                             <svg class="w-full h-full" viewBox="0 0 112 40" preserveAspectRatio="none" aria-hidden="true">
-                                                <line x1="0" y1="20" x2="112" y2="20" stroke="#d1d5db" stroke-width="1"></line>
+                                                <line x1="0" y1="38" x2="112" y2="38" stroke="#e5e7eb" stroke-width="1"></line>
                                                 <polyline
-                                                    :points="sparklinePoints(row.uptime_points)"
+                                                    :points="usageSparklinePoints(row)"
                                                     fill="none"
-                                                    stroke="#22c55e"
+                                                    stroke="#6366f1"
                                                     stroke-width="2"
                                                     stroke-linecap="round"
                                                     stroke-linejoin="round">
@@ -272,8 +281,8 @@
                                             </svg>
                                         </div>
                                     </template>
-                                    <template x-if="!hasTrendPoints(row.uptime_points)">
-                                        <span class="text-xs text-gray-400">No trend yet</span>
+                                    <template x-if="!hasActivity(row)">
+                                        <span class="text-xs text-gray-400">No requests yet</span>
                                     </template>
                                 </td>
                                 <td class="px-4 py-3 text-sm text-right font-semibold text-indigo-700" x-text="row.avg_response_time_ms"></td>
@@ -346,31 +355,46 @@
                 }
                 return 'Unknown';
             },
-            sparklinePoints(values) {
+            usageSparklinePoints(row) {
                 const width = 112;
                 const height = 40;
-                const validValues = (values || []).filter((value) => value !== null && value !== undefined);
-                const count = validValues.length;
-                if (count <= 1) {
+                let series = (row?.usage_points || []).map((value) => Math.max(0, Number(value) || 0));
+                if (!series.some((value) => value > 0) && Number(row?.request_count || 0) > 0) {
+                    series = series.map((value, index, all) => (
+                        index === all.length - 1 ? Number(row.request_count) : value
+                    ));
+                }
+                if (series.length === 0) {
                     return '';
                 }
 
-                const stepX = width / (count - 1);
-                const baselineY = height - 6;
-                const maxRise = height - 8;
-                return validValues.map((value, index) => {
-                    const clamped = Math.max(0, Math.min(100, Number(value) || 0));
+                const max = Math.max(...series, 1);
+                const baselineY = height - 4;
+                const maxRise = height - 10;
+                const stepX = series.length > 1 ? width / (series.length - 1) : 0;
+
+                return series.map((count, index) => {
                     const x = (index * stepX).toFixed(2);
-                    // Amplify tiny drops near 100% so the sparkline remains readable.
-                    const dropRatio = (100 - clamped) / 100;
-                    const emphasizedDrop = dropRatio <= 0 ? 0 : Math.pow(dropRatio, 0.35);
-                    const y = Math.max(2, Math.min(height - 2, baselineY - (emphasizedDrop * maxRise))).toFixed(2);
+                    const rise = (count / max) * maxRise;
+                    const y = Math.max(2, baselineY - rise).toFixed(2);
                     return `${x},${y}`;
                 }).join(' ');
             },
-            hasTrendPoints(values) {
-                return (values || []).filter((value) => value !== null && value !== undefined).length > 1;
-            }
+            hasUsagePoints(counts) {
+                return (counts || []).some((value) => Number(value) > 0);
+            },
+            hasActivity(row) {
+                return Number(row?.request_count || 0) > 0 || this.hasUsagePoints(row?.usage_points);
+            },
+            usageSparkTitle(row) {
+                const series = (row?.usage_points || []).map((value) => Math.max(0, Number(value) || 0));
+                let total = series.reduce((sum, value) => sum + value, 0);
+                if (total <= 0 && Number(row?.request_count || 0) > 0) {
+                    total = Number(row.request_count);
+                }
+                const peak = series.length ? Math.max(...series, total) : total;
+                return `${total.toLocaleString()} requests in the last 30 days (peak ${peak.toLocaleString()} / day)`;
+            },
         };
     }
 </script>

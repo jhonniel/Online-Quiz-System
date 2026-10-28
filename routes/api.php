@@ -3,7 +3,11 @@
 use App\Http\Controllers\Api\ExternalApiMonitoringController;
 use Illuminate\Support\Facades\Route;
 
-Route::middleware(['external.api.key'])->group(function () {
-    Route::get('/monitoring/endpoints', [ExternalApiMonitoringController::class, 'endpoints'])
-        ->name('api.external.monitoring.endpoints');
-});
+Route::middleware(['external.api.key'])
+    ->withoutMiddleware(['throttle:api'])
+    ->group(function () {
+        Route::get('/monitoring/ping', [ExternalApiMonitoringController::class, 'ping'])
+            ->name('api.external.monitoring.ping');
+        Route::get('/monitoring/endpoints', [ExternalApiMonitoringController::class, 'endpoints'])
+            ->name('api.external.monitoring.endpoints');
+    });
