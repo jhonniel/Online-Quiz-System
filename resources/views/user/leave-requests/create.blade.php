@@ -357,28 +357,30 @@
         ));
 @endphp
 @if((isset($balances) && $balances) || $showNoBalanceModalOnLoad)
-<div id="no-balance-modal" class="hidden fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50" aria-modal="true" role="dialog" onclick="if (event.target === this) closeNoBalanceModal();">
-    <div class="flex min-h-full items-center justify-center p-4">
-        <div class="relative bg-white rounded-xl shadow-xl max-w-md w-full p-6 mx-auto" onclick="event.stopPropagation();">
-            <div class="flex items-center justify-center w-12 h-12 mx-auto rounded-full bg-amber-100 flex-shrink-0">
-                <svg class="w-6 h-6 text-amber-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path>
-                </svg>
-            </div>
-            <h3 class="mt-4 text-lg font-semibold text-gray-900 text-center">No balance to file for that type of request</h3>
-            <p id="no-balance-modal-message" class="mt-2 text-sm text-gray-600 text-center">
-                @if($noBalanceModalMessage)
-                    {{ $noBalanceModalMessage }}
-                @else
-                    You have no remaining balance for the selected request type. Choose another request type or contact HR if you believe your balance should be updated.
-                @endif
-            </p>
-            <div class="mt-6">
-                <button type="button" onclick="closeNoBalanceModal()"
-                        class="w-full inline-flex justify-center items-center px-4 py-3 border border-transparent text-sm font-medium rounded-lg shadow-sm text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
-                    <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+<div id="no-balance-modal" class="user-portal-modal user-portal-modal--page hidden" aria-modal="true" role="dialog" onclick="if (event.target === this) closeNoBalanceModal();">
+    <div class="user-portal-modal__backdrop" aria-hidden="true"></div>
+    <div class="user-portal-modal__dialog" onclick="event.stopPropagation();">
+        <div class="user-portal-modal__panel">
+            <div class="user-portal-modal__header text-center">
+                <div class="user-portal-modal__icon mx-auto mb-2 flex h-11 w-11 items-center justify-center rounded-full bg-amber-100">
+                    <svg class="h-6 w-6 text-amber-600" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path>
                     </svg>
+                </div>
+                <h3 class="user-portal-modal__title">No balance for this request type</h3>
+            </div>
+            <div class="user-portal-modal__body text-center">
+                <p id="no-balance-modal-message" class="text-sm text-gray-600">
+                    @if($noBalanceModalMessage)
+                        {{ $noBalanceModalMessage }}
+                    @else
+                        You have no remaining balance for the selected request type. Choose another type or contact HR if your balance should be updated.
+                    @endif
+                </p>
+            </div>
+            <div class="user-portal-modal__footer !justify-center">
+                <button type="button" onclick="closeNoBalanceModal()"
+                        class="user-portal-modal__btn user-portal-modal__btn--primary w-full sm:w-auto">
                     OK
                 </button>
             </div>

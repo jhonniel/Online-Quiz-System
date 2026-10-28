@@ -54,7 +54,7 @@
                         throw new Error(data.message || 'Something went wrong. Please try again.');
                     }
                     this.open = false;
-                    document.body.classList.remove('overflow-hidden');
+                    document.body.classList.remove('overflow-hidden', 'user-portal-modal-open');
                     window.location.reload();
                 } catch (e) {
                     this.error = e.message || 'Something went wrong. Please try again.';
@@ -67,30 +67,30 @@
 </script>
 <div
     x-data="employeeSystemAnnouncementModal()"
-    x-init="document.body.classList.add('overflow-hidden')"
+    x-init="document.body.classList.add('overflow-hidden', 'user-portal-modal-open')"
     x-show="open"
     x-cloak
-    class="fixed inset-0 z-[200] flex items-center justify-center p-4 sm:p-6"
+    class="user-portal-modal user-portal-modal--top"
     aria-modal="true"
     role="dialog"
     aria-labelledby="employee-announcement-modal-title"
 >
-    <div class="absolute inset-0 bg-gray-900/60" aria-hidden="true"></div>
-    <div class="relative w-full max-w-2xl rounded-xl shadow-xl">
-        <div class="flex max-h-[85vh] flex-col overflow-hidden rounded-xl border border-gray-200 bg-white">
-            <div class="flex-shrink-0 border-b border-gray-100 px-5 py-4">
-                <h2 id="employee-announcement-modal-title" class="text-base sm:text-lg font-bold text-gray-900 text-center tracking-tight">
+    <div class="user-portal-modal__backdrop" aria-hidden="true"></div>
+    <div class="user-portal-modal__dialog user-portal-modal__dialog--wide">
+        <div class="user-portal-modal__panel">
+            <div class="user-portal-modal__header text-center">
+                <h2 id="employee-announcement-modal-title" class="user-portal-modal__title">
                     {{ $announcement->title }}
                 </h2>
-                <p class="mt-1 text-xs text-gray-600 text-center">
-                    Please read this announcement.
+                <p class="user-portal-modal__subtitle">
+                    Please read this announcement before continuing.
                 </p>
             </div>
             <div
                 tabindex="0"
                 role="region"
                 aria-label="Announcement content"
-                class="flex-1 min-h-0 overflow-y-auto px-5 py-4 custom-scrollbar text-sm text-gray-700 leading-relaxed space-y-4"
+                class="user-portal-modal__body custom-scrollbar space-y-4"
             >
                 <div class="employee-announcement-content space-y-3">{!! $announcementContent !!}</div>
                 @if($announcement->hasFeatureLinks())
@@ -107,8 +107,8 @@
                     </div>
                 @endif
             </div>
-            <div class="flex-shrink-0 border-t border-gray-100 px-5 py-4 space-y-3">
-                <label class="flex items-start gap-3 cursor-pointer select-none">
+            <div class="user-portal-modal__footer flex-col !items-stretch">
+                <label class="flex items-start gap-3 cursor-pointer select-none w-full sm:col-span-full">
                     <input
                         type="checkbox"
                         x-model="agreed"
@@ -118,12 +118,12 @@
                         I have read and agree to this announcement.
                     </span>
                 </label>
-                <p x-show="error" x-text="error" class="text-sm text-red-600" x-cloak></p>
+                <p x-show="error" x-text="error" class="text-sm text-red-600 w-full sm:col-span-full" x-cloak></p>
                 <button
                     type="button"
                     x-on:click="confirm()"
                     :disabled="!agreed || submitting"
-                    class="w-full inline-flex justify-center items-center rounded-lg px-4 py-2.5 text-sm font-semibold text-white bg-indigo-600 hover:bg-indigo-700 shadow-sm transition focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed"
+                    class="user-portal-modal__btn user-portal-modal__btn--primary w-full sm:w-auto sm:ml-auto"
                 >
                     <span x-show="!submitting">I agree</span>
                     <span x-show="submitting" x-cloak>Please wait…</span>

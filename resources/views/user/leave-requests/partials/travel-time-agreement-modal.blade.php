@@ -1,17 +1,17 @@
 <div id="travel-time-agreement-modal"
-     class="hidden fixed inset-0 z-[60]"
+     class="user-portal-modal user-portal-modal--page hidden"
      aria-hidden="true"
      role="dialog"
      aria-labelledby="travel-time-agreement-title">
-    <div class="fixed inset-0 bg-gray-900/50 backdrop-blur-sm" data-travel-agreement-dismiss></div>
-    <div class="fixed inset-0 flex items-center justify-center p-4 pointer-events-none">
-        <div class="relative w-full max-w-lg rounded-xl bg-white shadow-xl border border-gray-200 pointer-events-auto">
-            <div class="px-5 py-4 border-b border-gray-100">
-                <h2 id="travel-time-agreement-title" class="text-base font-semibold text-gray-900">Travel Time Overtime Agreement</h2>
-                <p class="mt-1 text-sm text-gray-500">Review the net overtime calculation and confirm before submitting.</p>
+    <div class="user-portal-modal__backdrop" data-travel-agreement-dismiss></div>
+    <div class="user-portal-modal__dialog">
+        <div class="user-portal-modal__panel">
+            <div class="user-portal-modal__header">
+                <h2 id="travel-time-agreement-title" class="user-portal-modal__title">Travel time overtime</h2>
+                <p class="user-portal-modal__subtitle">Review net hours and confirm before submitting.</p>
             </div>
 
-            <div class="px-5 py-4 space-y-4">
+            <div class="user-portal-modal__body">
                 <div class="rounded-lg border border-indigo-100 bg-indigo-50/60 px-4 py-3 space-y-2 text-sm text-gray-800">
                     <div class="flex justify-between gap-3">
                         <span class="text-gray-600">Travel location</span>
@@ -31,40 +31,38 @@
                     </div>
                 </div>
 
-                <div class="rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-950 leading-relaxed">
+                <div class="mt-4 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-950 leading-relaxed max-h-32 overflow-y-auto custom-scrollbar">
                     <p class="font-semibold mb-1">Terms</p>
                     <p>
-                        The company provides <strong>Food</strong> and <strong>Accommodation</strong> during travel.
-                        Overtime compensation applies only to your <strong>net overtime hours</strong> after travel time is deducted.
-                        Travel time is not compensated as overtime because allocation are provided for that period.
+                        Food and accommodation are provided during travel. Overtime pay applies to <strong>net overtime hours</strong> after travel time is deducted.
                     </p>
                 </div>
 
-                <label class="flex items-start gap-3 cursor-pointer">
+                <label class="mt-4 flex items-start gap-3 cursor-pointer">
                     <input type="checkbox"
                            id="travel-time-agreement-checkbox"
                            class="mt-0.5 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500">
                     <span class="text-sm text-gray-700">
-                        I have read and agree to the travel time overtime terms above.
+                        I agree to the travel time overtime terms above.
                     </span>
                 </label>
                 @error('travel_time_terms_agreed')
-                    <p class="text-sm text-red-600">{{ $message }}</p>
+                    <p class="mt-2 text-sm text-red-600">{{ $message }}</p>
                 @enderror
             </div>
 
-            <div class="px-5 py-4 border-t border-gray-100 flex flex-wrap items-center justify-end gap-2">
+            <div class="user-portal-modal__footer">
                 <button type="button"
                         data-travel-agreement-dismiss
-                        class="inline-flex items-center px-4 py-2 rounded-lg border border-gray-300 bg-white text-sm font-medium text-gray-700 hover:bg-gray-50">
+                        class="user-portal-modal__btn user-portal-modal__btn--secondary">
                     Cancel
                 </button>
                 <button type="button"
                         id="travel-time-agreement-confirm-btn"
                         disabled
-                        class="inline-flex items-center justify-center min-w-[9.5rem] px-4 py-2 rounded-lg bg-indigo-600 text-sm font-medium text-white hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed">
+                        class="user-portal-modal__btn user-portal-modal__btn--primary min-w-[9.5rem]">
                     <svg id="travel-agreement-confirm-spinner"
-                         class="hidden animate-spin h-4 w-4 mr-2"
+                         class="hidden animate-spin h-4 w-4"
                          xmlns="http://www.w3.org/2000/svg"
                          fill="none"
                          viewBox="0 0 24 24"
@@ -72,7 +70,7 @@
                         <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
                         <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
                     </svg>
-                    <span id="travel-agreement-confirm-text">Agree and Submit</span>
+                    <span id="travel-agreement-confirm-text">Agree and submit</span>
                 </button>
             </div>
         </div>

@@ -368,6 +368,35 @@ class LeaveRequest extends Model
     }
 
     /**
+     * Extra type detail for list views (e.g. overtime work type, travel location).
+     *
+     * @return list<string>
+     */
+    public function getTypeDetailLinesAttribute(): array
+    {
+        $lines = [];
+
+        if (! in_array($this->type, ['overtime', 'additional_time'], true)) {
+            return $lines;
+        }
+
+        $workTypeKey = self::parseOvertimeWorkTypeFromReason($this->reason);
+        $workTypeLabel = self::overtimeWorkTypeLabel($workTypeKey);
+        if ($workTypeLabel !== null && $workTypeLabel !== '') {
+            $lines[] = $workTypeLabel;
+        }
+
+        if ($workTypeKey === 'travel_time') {
+            $locationSummary = $this->travelTimeLocationSummaryFromReason();
+            if ($locationSummary !== null && $locationSummary !== '') {
+                $lines[] = $locationSummary;
+            }
+        }
+
+        return $lines;
+    }
+
+    /**
      * @return array<string, string>
      */
     private static function typeLabelMap(): array

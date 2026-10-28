@@ -165,17 +165,21 @@
     </x-user-dashboard-section>
 
     <!-- Upload Modal -->
-    <div id="user-upload-file-modal" class="hidden fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50">
-        <div class="relative top-20 mx-auto p-5 border w-96 shadow-lg rounded-md bg-white">
-            <div class="mt-3">
-                <div class="flex items-center justify-between mb-4">
-                    <h3 class="text-lg font-medium text-gray-900">Upload File</h3>
-                    <button onclick="document.getElementById('user-upload-file-modal').classList.add('hidden')" class="text-gray-400 hover:text-gray-600">
-                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
-                        </svg>
-                    </button>
+    <div id="user-upload-file-modal" class="user-portal-modal user-portal-modal--page hidden">
+        <div class="user-portal-modal__backdrop" onclick="document.getElementById('user-upload-file-modal').classList.add('hidden')"></div>
+        <div class="user-portal-modal__dialog user-portal-modal__dialog--wide">
+            <div class="user-portal-modal__panel">
+                <div class="user-portal-modal__header">
+                    <div class="user-portal-modal__header-row">
+                        <h3 class="user-portal-modal__title">Upload file</h3>
+                        <button type="button" onclick="document.getElementById('user-upload-file-modal').classList.add('hidden')" class="user-portal-modal__close" aria-label="Close">
+                            <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                            </svg>
+                        </button>
+                    </div>
                 </div>
+                <div class="user-portal-modal__body">
                 <!-- Upload Progress (Hidden by default) -->
                 <div id="user-upload-progress-container" class="hidden mb-4">
                     <div class="flex items-center justify-between mb-2">
@@ -202,30 +206,35 @@
                         <textarea name="description" id="user-description" rows="3"
                                   class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500"></textarea>
                     </div>
-                    <div id="user-upload-form-buttons" class="flex justify-end space-x-3">
-                        <button type="button" onclick="document.getElementById('user-upload-file-modal').classList.add('hidden')"
-                                class="px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50">Cancel</button>
-                        <button type="submit" id="user-upload-submit-btn"
-                                class="px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700">Upload</button>
-                    </div>
                 </form>
+                </div>
+                <div class="user-portal-modal__footer">
+                    <button type="button" onclick="document.getElementById('user-upload-file-modal').classList.add('hidden')"
+                            class="user-portal-modal__btn user-portal-modal__btn--secondary">Cancel</button>
+                    <button type="submit" form="user-upload-file-form" id="user-upload-submit-btn"
+                            class="user-portal-modal__btn user-portal-modal__btn--primary">Upload</button>
+                </div>
             </div>
         </div>
     </div>
 
     <!-- Create Folder Modal -->
-    <div id="user-create-folder-modal" class="hidden fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50">
-        <div class="relative top-20 mx-auto p-5 border w-96 shadow-lg rounded-md bg-white">
-            <div class="mt-3">
-                <div class="flex items-center justify-between mb-4">
-                    <h3 class="text-lg font-medium text-gray-900">Create Folder</h3>
-                    <button onclick="document.getElementById('user-create-folder-modal').classList.add('hidden')" class="text-gray-400 hover:text-gray-600">
-                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
-                        </svg>
-                    </button>
+    <div id="user-create-folder-modal" class="user-portal-modal user-portal-modal--page hidden">
+        <div class="user-portal-modal__backdrop" onclick="document.getElementById('user-create-folder-modal').classList.add('hidden')"></div>
+        <div class="user-portal-modal__dialog">
+            <div class="user-portal-modal__panel">
+                <div class="user-portal-modal__header">
+                    <div class="user-portal-modal__header-row">
+                        <h3 class="user-portal-modal__title">Create folder</h3>
+                        <button type="button" onclick="document.getElementById('user-create-folder-modal').classList.add('hidden')" class="user-portal-modal__close" aria-label="Close">
+                            <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                            </svg>
+                        </button>
+                    </div>
                 </div>
-                <form action="{{ url('/files/create-folder') }}" method="POST">
+                <div class="user-portal-modal__body">
+                <form id="user-create-folder-form" action="{{ url('/files/create-folder') }}" method="POST">
                     @csrf
                     <input type="hidden" name="folder_id" value="{{ $currentFolder->id ?? '' }}">
                     <div class="mb-4">
@@ -238,29 +247,34 @@
                         <textarea name="description" id="user-folder-description" rows="3"
                                   class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500"></textarea>
                     </div>
-                    <div class="flex justify-end space-x-3">
-                        <button type="button" onclick="document.getElementById('user-create-folder-modal').classList.add('hidden')"
-                                class="px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50">Cancel</button>
-                        <button type="submit"
-                                class="px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700">Create</button>
-                    </div>
                 </form>
+                </div>
+                <div class="user-portal-modal__footer">
+                    <button type="button" onclick="document.getElementById('user-create-folder-modal').classList.add('hidden')"
+                            class="user-portal-modal__btn user-portal-modal__btn--secondary">Cancel</button>
+                    <button type="submit" form="user-create-folder-form"
+                            class="user-portal-modal__btn user-portal-modal__btn--primary">Create</button>
+                </div>
             </div>
         </div>
     </div>
 
     <!-- Share Modal -->
-    <div id="user-share-modal" class="hidden fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50">
-        <div class="relative top-20 mx-auto p-5 border w-96 shadow-lg rounded-md bg-white">
-            <div class="mt-3">
-                <div class="flex items-center justify-between mb-4">
-                    <h3 class="text-lg font-medium text-gray-900">Share <span id="user-share-item-type"></span></h3>
-                    <button type="button" onclick="document.getElementById('user-share-modal').classList.add('hidden')" class="text-gray-400 hover:text-gray-600">
-                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
-                        </svg>
-                    </button>
+    <div id="user-share-modal" class="user-portal-modal user-portal-modal--page hidden">
+        <div class="user-portal-modal__backdrop" onclick="document.getElementById('user-share-modal').classList.add('hidden')"></div>
+        <div class="user-portal-modal__dialog user-portal-modal__dialog--wide">
+            <div class="user-portal-modal__panel">
+                <div class="user-portal-modal__header">
+                    <div class="user-portal-modal__header-row">
+                        <h3 class="user-portal-modal__title">Share <span id="user-share-item-type"></span></h3>
+                        <button type="button" onclick="document.getElementById('user-share-modal').classList.add('hidden')" class="user-portal-modal__close" aria-label="Close">
+                            <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                            </svg>
+                        </button>
+                    </div>
                 </div>
+                <div class="user-portal-modal__body">
                 <form id="user-share-form" method="POST" action="">
                     @csrf
                     <div id="user-public-share-section" class="mb-4">
@@ -312,21 +326,15 @@
                                 <span class="ml-2 text-sm text-gray-700">Can upload (folders only)</span>
                             </label>
                         </div>
-                        <div class="flex justify-end space-x-3 mb-4">
+                        <div class="flex justify-end">
                             <button type="submit" id="user-share-submit-btn"
-                                    class="px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700">
+                                    class="user-portal-modal__btn user-portal-modal__btn--primary">
                                 Share
                             </button>
                         </div>
                     </div>
-                    <div class="flex justify-end">
-                        <button type="button" onclick="document.getElementById('user-share-modal').classList.add('hidden')"
-                                class="px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50">
-                            Close
-                        </button>
-                    </div>
                 </form>
-                <div class="mt-6 border-t border-gray-200 pt-4">
+                <div class="mt-4 border-t border-gray-200 pt-4">
                     <div class="flex items-center justify-between mb-2">
                         <h4 class="text-sm font-semibold text-gray-900">Shared with</h4>
                         <button type="button" class="text-xs text-indigo-600 hover:text-indigo-800 underline"
@@ -338,6 +346,13 @@
                     <div id="user-shared-users-empty" class="hidden text-sm text-gray-500">Not shared with anyone yet.</div>
                     <div id="user-shared-users-error" class="hidden text-sm text-red-600"></div>
                     <ul id="user-shared-users-list" class="hidden divide-y divide-gray-200 max-h-56 overflow-y-auto"></ul>
+                </div>
+                </div>
+                <div class="user-portal-modal__footer">
+                    <button type="button" onclick="document.getElementById('user-share-modal').classList.add('hidden')"
+                            class="user-portal-modal__btn user-portal-modal__btn--secondary">
+                        Close
+                    </button>
                 </div>
             </div>
         </div>

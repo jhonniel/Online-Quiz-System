@@ -305,7 +305,12 @@
                                 <div class="min-w-0 flex-1">
                                     <p class="mobile-card-title break-words"><x-user-name :user="$request->user" :size="16" /></p>
                                     <p class="mobile-card-subtitle break-all">{{ $request->user->email }}</p>
-                                    <p class="text-sm font-medium text-gray-800 mt-1">{{ $request->type_label }}</p>
+                                    <div class="mt-1">
+                                        <x-leave-request-list-type
+                                            :request="$request"
+                                            primary-class="text-sm font-medium text-gray-800"
+                                        />
+                                    </div>
                                 </div>
                                 <span class="px-2 py-1 inline-flex shrink-0 text-xs leading-5 font-semibold rounded-full {{ $request->status_badge_class }}">
                                     {{ $request->display_status }}
@@ -373,8 +378,8 @@
                                             <div class="text-xs text-gray-500 truncate">{{ $request->user->email }}</div>
                                         </div>
                                     </td>
-                                    <td class="px-4 lg:px-6 py-4 whitespace-nowrap">
-                                        <span class="text-sm text-gray-900">{{ $request->type_label }}</span>
+                                    <td class="px-4 lg:px-6 py-4">
+                                        <x-leave-request-list-type :request="$request" />
                                     </td>
                                     <td class="px-4 lg:px-6 py-4 whitespace-nowrap">
                                         <div class="text-sm text-gray-900">

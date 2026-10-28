@@ -89,7 +89,7 @@
                     }
                     this.open = false;
                     this.detachRulesResize();
-                    document.body.classList.remove('overflow-hidden');
+                    document.body.classList.remove('overflow-hidden', 'user-portal-modal-open');
                 } catch (e) {
                     this.error = e.message || 'Something went wrong. Please try again.';
                 } finally {
@@ -118,17 +118,17 @@
 @endphp
 <div
     x-data="studentRulesRegulationsModal()"
-    x-init="document.body.classList.add('overflow-hidden'); initRulesScrollGate()"
+    x-init="document.body.classList.add('overflow-hidden', 'user-portal-modal-open'); initRulesScrollGate()"
     x-show="open"
     x-cloak
-    class="fixed inset-0 z-[200] flex items-center justify-center p-4 sm:p-6"
+    class="user-portal-modal user-portal-modal--top"
     aria-modal="true"
     role="dialog"
     aria-labelledby="student-rules-modal-title"
 >
-    <div class="absolute inset-0 bg-gray-900/60" aria-hidden="true"></div>
-    <div class="relative w-full max-w-2xl rounded-xl shadow-xl">
-        <div class="flex max-h-[85vh] flex-col overflow-hidden rounded-xl border {{ $modalCard }}">
+    <div class="user-portal-modal__backdrop" aria-hidden="true"></div>
+    <div class="user-portal-modal__dialog user-portal-modal__dialog--wide">
+        <div class="user-portal-modal__panel border {{ $modalCard }}">
             <div class="flex-shrink-0 border-b px-5 py-4 {{ $modalHeader }}">
             @if($studentRulesFinalWarning)
                 <p class="text-center text-sm font-semibold text-red-950 mb-2" role="alert">This is your final warning for violating the rules</p>
@@ -148,7 +148,7 @@
                 tabindex="0"
                 role="region"
                 aria-label="Rules and regulations full text"
-                class="relative flex-1 min-h-0 overflow-y-auto px-5 py-4 custom-scrollbar text-sm {{ $studentRulesFinalWarning ? 'text-red-950' : 'text-gray-700' }} space-y-4 leading-relaxed {{ $modalBody }} outline-none focus-visible:ring-2 focus-visible:ring-offset-0 {{ $studentRulesFinalWarning ? 'focus-visible:ring-red-400' : ($studentRulesViolation ? 'focus-visible:ring-amber-400' : 'focus-visible:ring-indigo-400') }}"
+                class="user-portal-modal__body custom-scrollbar text-sm {{ $studentRulesFinalWarning ? 'text-red-950' : 'text-gray-700' }} space-y-4 leading-relaxed {{ $modalBody }} outline-none focus-visible:ring-2 focus-visible:ring-offset-0 {{ $studentRulesFinalWarning ? 'focus-visible:ring-red-400' : ($studentRulesViolation ? 'focus-visible:ring-amber-400' : 'focus-visible:ring-indigo-400') }}"
             >
             @if(trim($studentRulesHtml) !== '')
                 <div class="student-rules-regulations-html space-y-4">{!! $studentRulesHtml !!}</div>
