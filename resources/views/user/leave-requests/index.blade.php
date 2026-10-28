@@ -72,9 +72,9 @@
     </div>
 
     @if(auth()->user()->role === 'student' && isset($studentTime))
-        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mt-4 pt-4 border-t border-slate-100">
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 mt-4 pt-4 border-t border-slate-100">
             <!-- Total Time from DTR -->
-            <div class="bg-white rounded-lg shadow p-4 border border-indigo-200 sm:col-span-2 lg:col-span-2">
+            <div class="bg-white rounded-lg shadow p-4 border border-indigo-200">
                 <div class="flex items-center">
                     <div class="flex-shrink-0 bg-indigo-100 rounded-lg p-3">
                         <svg class="h-6 w-6 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -94,7 +94,7 @@
             </div>
 
             <!-- Remaining Time Needed -->
-            <div class="bg-white rounded-lg shadow p-4 border border-blue-200 sm:col-span-2 lg:col-span-2">
+            <div class="bg-white rounded-lg shadow p-4 border border-blue-200">
                 <div class="flex items-center">
                     <div class="flex-shrink-0 bg-blue-100 rounded-lg p-3">
                         <svg class="h-6 w-6 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -131,6 +131,8 @@
                     </div>
                 </div>
             </div>
+
+            @include('partials.student-time-estimated-end-date', ['studentTime' => $studentTime])
 
         </div>
     @endif

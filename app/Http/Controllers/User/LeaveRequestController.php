@@ -165,14 +165,14 @@ class LeaveRequestController extends Controller
                 return $sign.sprintf('%02d:%02d', $h, $m);
             };
 
-            $studentTime = [
+            $studentTime = \App\Support\StudentTrainingEstimate::withEstimatedEndDate($user, [
                 'required_hours' => $requiredHours,
                 'required_hours_formatted' => $requiredHours > 0 ? $formatHours($requiredHours) : null,
                 'total_dtr_hours' => $totalDtrHours,
                 'total_dtr_hours_formatted' => $formatHours($totalDtrHours),
                 'remaining_hours' => $remainingHours,
                 'remaining_hours_formatted' => $requiredHours > 0 ? $formatHours($remainingHours) : null,
-            ];
+            ], $totalDtrHours);
         }
 
         return view('user.leave-requests.index', compact(
@@ -676,14 +676,14 @@ class LeaveRequestController extends Controller
                 return $sign.sprintf('%02d:%02d', $h, $m);
             };
 
-            $studentTime = [
+            $studentTime = \App\Support\StudentTrainingEstimate::withEstimatedEndDate($user, [
                 'required_hours' => $requiredHours,
                 'required_hours_formatted' => $requiredHours > 0 ? $formatHours($requiredHours) : null,
                 'total_dtr_hours' => $totalDtrHours,
                 'total_dtr_hours_formatted' => $formatHours($totalDtrHours),
                 'remaining_hours' => $remainingHours,
                 'remaining_hours_formatted' => $requiredHours > 0 ? $formatHours($remainingHours) : null,
-            ];
+            ], $totalDtrHours);
         }
 
         $letterContext = LeaveRequestSignatorySettings::letterContext($leaveRequest->user);

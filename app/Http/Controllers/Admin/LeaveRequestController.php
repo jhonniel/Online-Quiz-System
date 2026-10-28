@@ -857,7 +857,7 @@ class LeaveRequestController extends Controller
                 return $sign.sprintf('%02d:%02d', $h, $m);
             };
 
-            $studentTime = [
+            $studentTime = \App\Support\StudentTrainingEstimate::withEstimatedEndDate($user, [
                 'required_hours' => $requiredHours,
                 'required_hours_formatted' => $requiredHours > 0 ? $formatHours($requiredHours) : null,
                 'total_dtr_hours' => $totalDtrHours,
@@ -865,7 +865,7 @@ class LeaveRequestController extends Controller
                 'remaining_hours' => $remainingHours,
                 'remaining_hours_formatted' => $requiredHours > 0 ? $formatHours($remainingHours) : null,
                 'merits' => $this->studentMeritSummaryForLeaveShow($user, $leaveRequest),
-            ];
+            ], $totalDtrHours);
         }
 
         $letterContext = LeaveRequestSignatorySettings::letterContext($leaveRequest->user);
