@@ -233,7 +233,7 @@
                             <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500">Method</th>
                             <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500">Endpoint</th>
                             <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500">Route Name</th>
-                            <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500">Status</th>
+                            <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500 min-w-[6.75rem] whitespace-nowrap">Status</th>
                             <th class="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wide text-gray-500">Requests</th>
                             <th class="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wide text-gray-500">Failures</th>
                             <th class="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wide text-gray-500">Uptime</th>
@@ -256,9 +256,10 @@
                                 <td class="px-4 py-3 text-xs font-semibold text-gray-700" x-text="row.method"></td>
                                 <td class="px-4 py-3 text-sm font-mono text-gray-900" x-text="row.uri"></td>
                                 <td class="px-4 py-3 text-xs text-gray-600" x-text="row.name || '—'"></td>
-                                <td class="px-4 py-3 whitespace-nowrap">
-                                    <span class="inline-flex items-center whitespace-nowrap px-2 py-0.5 rounded-full text-xs font-semibold leading-none"
+                                <td class="px-4 py-3">
+                                    <span class="inline-flex items-center justify-center whitespace-nowrap px-2.5 py-1 rounded-full text-[11px] font-semibold leading-tight tracking-tight"
                                           :class="statusBadgeClass(row.status)"
+                                          :title="row.last_status_code ? ('HTTP ' + row.last_status_code) : ''"
                                           x-text="formatStatus(row.status)">
                                     </span>
                                 </td>
@@ -354,7 +355,7 @@
                     return 'Healthy';
                 }
                 if (status === 'degraded') {
-                    return '4xx';
+                    return 'Client\u00a0error';
                 }
                 if (status === 'failing') {
                     return 'Failing';
