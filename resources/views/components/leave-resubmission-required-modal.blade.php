@@ -63,6 +63,9 @@
                                 <p class="user-portal-modal__item-title">
                                     #{{ $row['id'] }} — {{ $row['type_label'] }}
                                 </p>
+                                @foreach($row['type_detail_lines'] ?? [] as $detailLine)
+                                    <p class="user-portal-modal__item-meta">{{ $detailLine }}</p>
+                                @endforeach
                                 <p class="user-portal-modal__item-meta">
                                     Last updated: {{ $row['last_updated_formatted'] }} ({{ config('app.timezone') }})
                                 </p>

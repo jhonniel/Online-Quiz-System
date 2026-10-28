@@ -190,7 +190,10 @@
                                     </div>
                                 </td>
                                 <td class="px-3 sm:px-6 py-4">
-                                    <span class="text-xs sm:text-sm text-gray-900">{{ $request->type_label }}</span>
+                                    <x-leave-request-list-type
+                                        :request="$request"
+                                        primary-class="text-xs sm:text-sm font-medium text-gray-900"
+                                    />
                                 </td>
                                 <td class="px-3 sm:px-6 py-4 hidden sm:table-cell">
                                     <div class="text-xs sm:text-sm text-gray-900">

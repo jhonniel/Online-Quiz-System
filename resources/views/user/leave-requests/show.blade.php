@@ -78,7 +78,10 @@
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <div>
                         <label class="block text-sm font-medium text-gray-500 mb-1">Request Type</label>
-                        <p class="text-sm font-semibold text-gray-900">{{ $leaveRequest->type_label }}</p>
+                        <x-leave-request-list-type
+                            :request="$leaveRequest"
+                            primary-class="text-sm font-semibold text-gray-900"
+                        />
                     </div>
 
                     <div>

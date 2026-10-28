@@ -702,7 +702,13 @@
                             <p class="text-sm font-medium text-gray-900 truncate"><x-user-name :user="$leave->user" /></p>
                             <p class="text-xs text-gray-500">{{ $leave->start_date->format('M j') }} – {{ $leave->end_date->format('M j, Y') }}</p>
                         </div>
-                        <span class="text-xs font-medium text-amber-600 bg-amber-50 px-2 py-1 rounded">{{ $leave->type_label }}</span>
+                        <div class="shrink-0 max-w-[8rem] text-right bg-amber-50 px-2 py-1 rounded">
+                            <x-leave-request-list-type
+                                :request="$leave"
+                                primary-class="text-xs font-medium text-amber-700"
+                                detail-class="text-[10px] text-amber-800/80 mt-0.5"
+                            />
+                        </div>
                     </a>
                 @empty
                     <p class="text-sm text-gray-500 text-center py-6">No approved leave (today or future)</p>
@@ -728,7 +734,13 @@
                             <p class="text-sm font-medium text-gray-900 truncate"><x-user-name :user="$leave->user" /></p>
                             <p class="text-xs text-gray-500">{{ $leave->start_date->format('M j') }} – {{ $leave->end_date->format('M j, Y') }}</p>
                         </div>
-                        <span class="text-xs font-medium text-amber-600 bg-amber-50 px-2 py-1 rounded">{{ $leave->type_label }}</span>
+                        <div class="shrink-0 max-w-[8rem] text-right bg-amber-50 px-2 py-1 rounded">
+                            <x-leave-request-list-type
+                                :request="$leave"
+                                primary-class="text-xs font-medium text-amber-700"
+                                detail-class="text-[10px] text-amber-800/80 mt-0.5"
+                            />
+                        </div>
                     </a>
                 @empty
                     <p class="text-sm text-gray-500 text-center py-6">No approved leave (today or future)</p>

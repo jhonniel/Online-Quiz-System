@@ -52,6 +52,7 @@ class LeaveRequestStaleResubmissionService
                 return [
                     'id' => $req->id,
                     'type_label' => $req->type_label,
+                    'type_detail_lines' => $req->type_detail_lines,
                     'edit_url' => route('user.leave-requests.edit', $req),
                     'index_url' => route('user.leave-requests.index'),
                     'last_updated_formatted' => $lastUpdated->format('M j, Y g:i A'),

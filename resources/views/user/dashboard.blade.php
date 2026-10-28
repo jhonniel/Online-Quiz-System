@@ -278,8 +278,12 @@
                 @foreach($studentResubmissionRequests as $resubReq)
                     <div class="flex items-center justify-between bg-white/80 border border-rose-100 rounded-md px-3 py-2">
                         <div>
-                            <p class="text-xs font-semibold text-gray-800">{{ $resubReq->type_label ?? ucfirst(str_replace('_', ' ', (string) $resubReq->type)) }}</p>
-                            <p class="text-[11px] text-gray-600">
+                            <x-leave-request-list-type
+                                :request="$resubReq"
+                                primary-class="text-xs font-semibold text-gray-800"
+                                detail-class="text-[11px] text-gray-500 mt-0.5"
+                            />
+                            <p class="text-[11px] text-gray-600 mt-0.5">
                                 Updated {{ optional($resubReq->updated_at)->format('M j, Y g:i A') ?? '—' }}
                             </p>
                         </div>
@@ -372,8 +376,12 @@
                 @foreach($employeeResubmissionRequests as $resubReq)
                     <div class="flex items-center justify-between bg-white/80 border border-rose-100 rounded-md px-3 py-2">
                         <div>
-                            <p class="text-xs font-semibold text-gray-800">{{ $resubReq->type_label ?? ucfirst(str_replace('_', ' ', (string) $resubReq->type)) }}</p>
-                            <p class="text-[11px] text-gray-600">
+                            <x-leave-request-list-type
+                                :request="$resubReq"
+                                primary-class="text-xs font-semibold text-gray-800"
+                                detail-class="text-[11px] text-gray-500 mt-0.5"
+                            />
+                            <p class="text-[11px] text-gray-600 mt-0.5">
                                 Updated {{ optional($resubReq->updated_at)->format('M j, Y g:i A') ?? '—' }}
                             </p>
                         </div>

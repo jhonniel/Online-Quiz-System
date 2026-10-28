@@ -144,7 +144,11 @@
                         <div class="mobile-card">
                             <div class="flex items-start justify-between gap-3">
                                 <div class="min-w-0 flex-1">
-                                    <p class="mobile-card-title">{{ $request->type_label }}</p>
+                                    <x-leave-request-list-type
+                                        :request="$request"
+                                        primary-class="mobile-card-title"
+                                        detail-class="text-xs text-gray-500 mt-0.5"
+                                    />
                                     <p class="mobile-card-subtitle">
                                         {{ $request->start_date->format('M d, Y') }}
                                         @if($request->end_date && $request->end_date->ne($request->start_date))
@@ -203,8 +207,8 @@
                         <tbody class="bg-white divide-y divide-gray-200">
                             @foreach($leaveRequests as $request)
                                 <tr class="hover:bg-gray-50">
-                                    <td class="px-6 py-4 whitespace-nowrap">
-                                        <span class="text-sm font-medium text-gray-900">{{ $request->type_label }}</span>
+                                    <td class="px-6 py-4">
+                                        <x-leave-request-list-type :request="$request" />
                                     </td>
                                     <td class="px-6 py-4 whitespace-nowrap">
                                         <div class="text-sm text-gray-900">

@@ -386,13 +386,6 @@ class LeaveRequest extends Model
             $lines[] = $workTypeLabel;
         }
 
-        if ($workTypeKey === 'travel_time') {
-            $locationSummary = $this->travelTimeLocationSummaryFromReason();
-            if ($locationSummary !== null && $locationSummary !== '') {
-                $lines[] = $locationSummary;
-            }
-        }
-
         return $lines;
     }
 

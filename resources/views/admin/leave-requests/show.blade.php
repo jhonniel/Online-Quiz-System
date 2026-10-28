@@ -179,9 +179,14 @@
                                 </button>
                             </form>
                         @else
-                            <p class="text-sm font-semibold text-gray-900">
-                                {{ $isTeacherFiledExcused ? 'Official Excused' : $leaveRequest->type_label }}
-                            </p>
+                            @if($isTeacherFiledExcused)
+                                <p class="text-sm font-semibold text-gray-900">Official Excused</p>
+                            @else
+                                <x-leave-request-list-type
+                                    :request="$leaveRequest"
+                                    primary-class="text-sm font-semibold text-gray-900"
+                                />
+                            @endif
                             @if($isTeacherFiledExcused)
                                 <p class="mt-1 text-xs text-gray-500">
                                     Filed by a teacher. Request type cannot be changed.
