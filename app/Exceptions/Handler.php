@@ -96,7 +96,7 @@ class Handler extends ExceptionHandler
             if (in_array($statusCode, [404, 500], true)) {
                 $path = '/' . ltrim((string) $request->path(), '/');
 
-                ErrorLog::create([
+                $errorLog = ErrorLog::create([
                     'status_code' => $statusCode,
                     'exception_class' => get_class($e),
                     'message' => substr($this->publicSafeErrorMessage($e), 0, 1000),
@@ -113,6 +113,7 @@ class Handler extends ExceptionHandler
                         'path' => $path,
                         'method' => (string) $request->method(),
                         'user_id' => Auth::id(),
+                        'error_log_id' => (int) $errorLog->id,
                     ]);
                 } catch (\Throwable) {
                     // ignore graph failures

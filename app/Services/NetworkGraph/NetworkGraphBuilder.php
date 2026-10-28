@@ -51,6 +51,7 @@ class NetworkGraphBuilder
                 'path' => (string) $error->path,
                 'method' => (string) $error->method,
                 'user_id' => $error->user_id,
+                'error_log_id' => (int) $error->id,
             ]);
             $imported++;
         }
@@ -161,24 +162,20 @@ class NetworkGraphBuilder
             ->limit(5)
             ->get();
 
-        $nodes = $users
-            ->concat($pinned)
-            ->concat($roles)
-            ->concat($modules)
-            ->concat($apis)
-            ->concat($errors)
-            ->unique('node_key')
-            ->values();
+        $nodes = $this->ensureAnchorNodes(
+            $users
+                ->concat($pinned)
+                ->concat($roles)
+                ->concat($modules)
+                ->concat($apis)
+                ->concat($errors)
+                ->unique('node_key')
+                ->values()
+        );
 
         $nodeIds = $nodes->pluck('node_key')->all();
 
-        $edges = NetworkGraphEdge::query()
-            ->whereIn('source_node_key', $nodeIds)
-            ->whereIn('target_node_key', $nodeIds)
-            ->orderByRaw("CASE WHEN edge_type = 'user_access' THEN 0 ELSE 1 END")
-            ->orderByDesc('weight')
-            ->limit(55)
-            ->get();
+        $edges = $this->selectConnectedEdges($nodeIds, 55);
 
         return $this->formatPayload($nodes, $edges);
     }
@@ -194,24 +191,270 @@ class NetworkGraphBuilder
             ->limit($maxUserNodes)
             ->get();
 
-        $remaining = max(0, $maxNodes - $userNodes->count());
-        $otherNodes = NetworkGraphNode::query()
-            ->where('node_group', '!=', 'user')
-            ->orderByDesc('hit_count')
-            ->limit($remaining)
-            ->get();
-
-        $nodes = $userNodes->concat($otherNodes);
+        $nodes = $this->ensureAnchorNodes(
+            $userNodes->concat($this->collectSupportingGraphNodes($maxNodes - $userNodes->count()))
+        );
 
         $nodeIds = $nodes->pluck('node_key')->all();
 
-        $edgesQuery = NetworkGraphEdge::query()
-            ->whereIn('source_node_key', $nodeIds)
-            ->whereIn('target_node_key', $nodeIds)
-            ->orderByDesc('weight')
-            ->limit($maxEdges);
+        $edges = $this->selectConnectedEdges($nodeIds, $maxEdges);
 
-        return $this->formatPayload($nodes, $edgesQuery->get());
+        return $this->formatPayload($nodes, $edges);
+    }
+
+    /**
+     * Pull error, log, and infrastructure nodes so activity/error trails stay visible in the graph.
+     *
+     * @return \Illuminate\Support\Collection<int, NetworkGraphNode>
+     */
+    private function collectSupportingGraphNodes(int $budget)
+    {
+        if ($budget <= 0) {
+            return collect();
+        }
+
+        $nodes = collect();
+        $take = function (string $group, int $limit) use (&$nodes, &$budget) {
+            if ($budget <= 0 || $limit <= 0) {
+                return;
+            }
+            $limit = min($limit, $budget);
+            $chunk = NetworkGraphNode::query()
+                ->where('node_group', $group)
+                ->orderByDesc('last_seen_at')
+                ->orderByDesc('hit_count')
+                ->limit($limit)
+                ->get();
+            $nodes = $nodes->concat($chunk);
+            $budget -= $chunk->count();
+        };
+
+        $take('error', 25);
+        $take('error_log', 35);
+        $take('activity_log', 40);
+        $take('activity', 12);
+        $take('role', 8);
+        $take('module', 20);
+        $take('api', 25);
+        $take('status', 10);
+
+        if ($budget > 0) {
+            $existingKeys = $nodes->pluck('node_key')->all();
+            $fill = NetworkGraphNode::query()
+                ->where('node_group', '!=', 'user')
+                ->when($existingKeys !== [], fn ($q) => $q->whereNotIn('node_key', $existingKeys))
+                ->orderByDesc('hit_count')
+                ->limit($budget)
+                ->get();
+            $nodes = $nodes->concat($fill);
+        }
+
+        return $nodes->unique('node_key')->values();
+    }
+
+    /**
+     * Keep System Core in the graph so paths can be traced through the hub.
+     *
+     * @param  \Illuminate\Support\Collection<int, NetworkGraphNode>  $nodes
+     * @return \Illuminate\Support\Collection<int, NetworkGraphNode>
+     */
+    private function ensureAnchorNodes($nodes)
+    {
+        $keys = $nodes->pluck('node_key')->all();
+        if (! in_array('hub:system', $keys, true)) {
+            $hub = NetworkGraphNode::query()->where('node_key', 'hub:system')->first();
+            if ($hub !== null) {
+                $nodes = $nodes->push($hub);
+            }
+        }
+
+        return $nodes->unique('node_key')->values();
+    }
+
+    /**
+     * Prefer edges that preserve traceable paths (user → role/module → API) and merge isolated nodes.
+     *
+     * @param  list<string>  $nodeKeys
+     * @return \Illuminate\Support\Collection<int, NetworkGraphEdge>
+     */
+    private function selectConnectedEdges(array $nodeKeys, int $maxEdges)
+    {
+        if ($nodeKeys === []) {
+            return collect();
+        }
+
+        $maxEdges = max(1, $maxEdges);
+        $priorityOrder = "CASE edge_type
+            WHEN 'user_access' THEN 0
+            WHEN 'user' THEN 1
+            WHEN 'error' THEN 2
+            WHEN 'error_log' THEN 3
+            WHEN 'activity_log' THEN 4
+            WHEN 'domain' THEN 5
+            WHEN 'quiz_attempt' THEN 6
+            WHEN 'application' THEN 7
+            WHEN 'activity' THEN 8
+            ELSE 9 END";
+
+        $pool = NetworkGraphEdge::query()
+            ->whereIn('source_node_key', $nodeKeys)
+            ->whereIn('target_node_key', $nodeKeys)
+            ->orderByRaw($priorityOrder)
+            ->orderByDesc('weight')
+            ->limit(min($maxEdges * 4, 5000))
+            ->get();
+
+        /** @var \Illuminate\Support\Collection<int, NetworkGraphEdge> $selected */
+        $selected = collect();
+        $seen = [];
+
+        $push = function (NetworkGraphEdge $edge) use (&$selected, &$seen, $maxEdges): bool {
+            if ($selected->count() >= $maxEdges) {
+                return false;
+            }
+            $key = $edge->source_node_key.'|'.$edge->target_node_key.'|'.$edge->edge_type;
+            if (isset($seen[$key])) {
+                return false;
+            }
+            $seen[$key] = true;
+            $selected->push($edge);
+
+            return true;
+        };
+
+        foreach ($pool->filter(fn (NetworkGraphEdge $edge) => in_array($edge->edge_type, ['user_access', 'error', 'error_log', 'activity_log'], true)) as $edge) {
+            $push($edge);
+        }
+
+        foreach ($pool as $edge) {
+            if ($edge->source_node_key === 'hub:system' || $edge->target_node_key === 'hub:system') {
+                $push($edge);
+            }
+        }
+
+        foreach ($pool as $edge) {
+            $push($edge);
+        }
+
+        $this->mergeEdgeComponents($nodeKeys, $selected, $seen, $maxEdges, $push);
+        $this->attachOrphanNodes($nodeKeys, $selected, $seen, $maxEdges, $push);
+
+        return $selected->values();
+    }
+
+    /**
+     * @param  list<string>  $nodeKeys
+     * @param  \Illuminate\Support\Collection<int, NetworkGraphEdge>  $selected
+     * @param  array<string, true>  $seen
+     * @param  callable(NetworkGraphEdge): bool  $push
+     */
+    private function mergeEdgeComponents(array $nodeKeys, $selected, array &$seen, int $maxEdges, callable $push): void
+    {
+        $parent = array_combine($nodeKeys, $nodeKeys);
+        if ($parent === false) {
+            return;
+        }
+
+        $find = function (string $node) use (&$parent, &$find): string {
+            if ($parent[$node] !== $node) {
+                $parent[$node] = $find($parent[$node]);
+            }
+
+            return $parent[$node];
+        };
+
+        $union = function (string $a, string $b) use ($find): void {
+            $rootA = $find($a);
+            $rootB = $find($b);
+            if ($rootA !== $rootB) {
+                $parent[$rootB] = $rootA;
+            }
+        };
+
+        foreach ($selected as $edge) {
+            $union($edge->source_node_key, $edge->target_node_key);
+        }
+
+        while ($selected->count() < $maxEdges) {
+            $groups = [];
+            foreach ($nodeKeys as $key) {
+                $groups[$find($key)][] = $key;
+            }
+
+            if (count($groups) <= 1) {
+                break;
+            }
+
+            $roots = array_keys($groups);
+            $merged = false;
+
+            for ($i = 0; $i < count($roots); $i++) {
+                for ($j = $i + 1; $j < count($roots); $j++) {
+                    $groupA = $groups[$roots[$i]];
+                    $groupB = $groups[$roots[$j]];
+
+                    $bridge = NetworkGraphEdge::query()
+                        ->whereIn('source_node_key', $groupA)
+                        ->whereIn('target_node_key', $groupB)
+                        ->orderByDesc('weight')
+                        ->first();
+
+                    if ($bridge === null) {
+                        $bridge = NetworkGraphEdge::query()
+                            ->whereIn('source_node_key', $groupB)
+                            ->whereIn('target_node_key', $groupA)
+                            ->orderByDesc('weight')
+                            ->first();
+                    }
+
+                    if ($bridge !== null && $push($bridge)) {
+                        $union($bridge->source_node_key, $bridge->target_node_key);
+                        $merged = true;
+                        break 2;
+                    }
+                }
+            }
+
+            if (! $merged) {
+                break;
+            }
+        }
+    }
+
+    /**
+     * @param  list<string>  $nodeKeys
+     * @param  \Illuminate\Support\Collection<int, NetworkGraphEdge>  $selected
+     * @param  array<string, true>  $seen
+     * @param  callable(NetworkGraphEdge): bool  $push
+     */
+    private function attachOrphanNodes(array $nodeKeys, $selected, array &$seen, int $maxEdges, callable $push): void
+    {
+        $incident = [];
+        foreach ($selected as $edge) {
+            $incident[$edge->source_node_key] = true;
+            $incident[$edge->target_node_key] = true;
+        }
+
+        foreach ($nodeKeys as $nodeKey) {
+            if (isset($incident[$nodeKey]) || $selected->count() >= $maxEdges) {
+                continue;
+            }
+
+            $bridge = NetworkGraphEdge::query()
+                ->where(function ($query) use ($nodeKey) {
+                    $query->where('source_node_key', $nodeKey)
+                        ->orWhere('target_node_key', $nodeKey);
+                })
+                ->whereIn('source_node_key', $nodeKeys)
+                ->whereIn('target_node_key', $nodeKeys)
+                ->orderByRaw("CASE WHEN source_node_key = 'hub:system' OR target_node_key = 'hub:system' THEN 0 ELSE 1 END")
+                ->orderByDesc('weight')
+                ->first();
+
+            if ($bridge !== null) {
+                $push($bridge);
+            }
+        }
     }
 
     /**
@@ -256,14 +499,18 @@ class NetworkGraphBuilder
             $isUserAccess = $edge->edge_type === 'user_access'
                 || str_starts_with($edge->source_node_key, 'user:')
                 || str_starts_with($edge->source_node_key, 'guest:');
+            $isLogTrail = in_array($edge->edge_type, ['activity_log', 'error_log'], true);
 
             return [
                 'from' => $edge->source_node_key,
                 'to' => $edge->target_node_key,
                 'value' => max(1, (int) $edge->weight),
-                'dashes' => $isUserAccess,
+                'dashes' => $isUserAccess || $isLogTrail,
+                'log_trail' => $isLogTrail,
             ];
         })->values()->all();
+
+        $visEdges = $this->appendSyntheticHubBridges($visNodes, $visEdges);
 
         return [
             'nodes' => $visNodes,
@@ -348,6 +595,42 @@ class NetworkGraphBuilder
             })
             ->values()
             ->all();
+    }
+
+    /**
+     * @param  list<array<string, mixed>>  $visNodes
+     * @param  list<array<string, mixed>>  $visEdges
+     * @return list<array<string, mixed>>
+     */
+    private function appendSyntheticHubBridges(array $visNodes, array $visEdges): array
+    {
+        $nodeIds = array_column($visNodes, 'id');
+        if (! in_array('hub:system', $nodeIds, true)) {
+            return $visEdges;
+        }
+
+        $incident = [];
+        foreach ($visEdges as $edge) {
+            $incident[(string) $edge['from']] = true;
+            $incident[(string) $edge['to']] = true;
+        }
+
+        foreach ($nodeIds as $nodeId) {
+            if ($nodeId === 'hub:system' || isset($incident[$nodeId])) {
+                continue;
+            }
+
+            $visEdges[] = [
+                'from' => $nodeId,
+                'to' => 'hub:system',
+                'value' => 1,
+                'dashes' => true,
+                'bridge' => true,
+            ];
+            $incident[$nodeId] = true;
+        }
+
+        return $visEdges;
     }
 
     private function moduleFromUri(string $uri): string

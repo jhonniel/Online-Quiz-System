@@ -20,6 +20,8 @@ class NetworkGraphRecorder
         'api' => '#14b8a6',
         'error' => '#ef4444',
         'activity' => '#f59e0b',
+        'activity_log' => '#d97706',
+        'error_log' => '#dc2626',
         'status' => '#64748b',
         'user' => '#ec4899',
         'quiz' => '#22c55e',
@@ -82,19 +84,19 @@ class NetworkGraphRecorder
         }
 
         $errorKey = null;
+        $apiKey = 'api:'.$this->slug($routeKey);
         if ($statusCode >= 400) {
             $errorKey = 'error:'.$statusCode.':'.$this->slug($request->path());
             $this->touchNode($errorKey, 'Error '.$statusCode.' · '.$request->path(), 'error', self::GROUP_COLORS['error']);
-            $this->touchEdge('api:'.$this->slug($routeKey), $errorKey, 'error');
+            $this->touchEdge($apiKey, $errorKey, 'error');
             $this->touchEdge($statusKey, $errorKey, 'error');
+            $this->touchEdge('hub:system', $errorKey, 'error');
+            $this->touchEdge('module:'.$module, $errorKey, 'error');
+            $this->touchEdge('role:'.$role, $errorKey, 'error');
         }
 
         $user = $request->user();
-        if ($user instanceof User) {
-            $this->linkUserToAccess($user, $role, $module, 'api:'.$this->slug($routeKey), $errorKey);
-        } elseif ($role === 'applicant') {
-            $this->linkGuestToAccess('guest:applicant', 'Applicants (guest)', $module, 'api:'.$this->slug($routeKey), $errorKey);
-        }
+        $this->linkActorToEndpoint($user, $role, $module, $apiKey, $errorKey);
 
         $quizKey = $this->extractQuizKeyFromUri($uri);
         if ($quizKey !== null) {
@@ -124,7 +126,7 @@ class NetworkGraphRecorder
     }
 
     /**
-     * @param  array{status_code?: int, path?: string, method?: string, user_id?: int|null}  $data
+     * @param  array{status_code?: int, path?: string, method?: string, user_id?: int|null, error_log_id?: int|null}  $data
      */
     public function recordError(array $data): void
     {
@@ -145,13 +147,19 @@ class NetworkGraphRecorder
         $this->touchEdge('module:'.$module, $errorKey, 'error');
         $this->touchEdge($apiKey, $errorKey, 'error');
 
+        $user = null;
         $userId = $data['user_id'] ?? null;
         if ($userId) {
             $user = User::query()->find($userId);
-            if ($user) {
-                $role = $this->resolveRoleKey($user);
-                $this->linkUserToAccess($user, $role, $module, $apiKey, $errorKey);
-            }
+        }
+
+        $role = $user ? $this->resolveRoleKey($user) : 'guest';
+        $this->touchEdge('role:'.$role, $errorKey, 'error');
+        $this->linkActorToEndpoint($user instanceof User ? $user : null, $role, $module, $apiKey, $errorKey);
+
+        $errorLogId = isset($data['error_log_id']) ? (int) $data['error_log_id'] : 0;
+        if ($errorLogId > 0) {
+            $this->linkErrorLogRecord($errorLogId, $statusCode, $path, $module, $errorKey, $apiKey, $user, $role);
         }
     }
 
@@ -181,10 +189,22 @@ class NetworkGraphRecorder
             $this->touchEdge($activityKey, 'module:'.$module, 'activity');
         }
 
+        $logKey = 'activity_log:'.$activity->id;
+        $logLabel = $this->activityLogLabel($activity);
+        $this->touchNode($logKey, $logLabel, 'activity_log', self::GROUP_COLORS['activity_log'], [
+            'activity_log_id' => (int) $activity->id,
+            'activity_type' => $type,
+        ]);
+        $this->touchEdge('hub:system', $logKey, 'activity_log');
+        $this->touchEdge($activityKey, $logKey, 'activity_log');
+        $this->touchEdge($logKey, 'module:'.$module, 'activity_log');
+
         if ($activity->user instanceof User) {
             $this->linkUserToAccess($activity->user, $role, $module, $activityKey);
+            $this->touchEdge('user:'.$activity->user->id, $logKey, 'activity_log');
         } elseif (! $activity->user_id) {
-            $this->linkGuestToAccess('guest:visitor', 'Guests', $module, $activityKey);
+            $this->linkGuestToAccess('guest:visitor', 'Guests (visitor)', $module, $activityKey);
+            $this->touchEdge('guest:visitor', $logKey, 'activity_log');
         }
     }
 
@@ -235,6 +255,70 @@ class NetworkGraphRecorder
         if ($errorKey !== null) {
             $this->touchEdge($guestKey, $errorKey, 'error');
         }
+    }
+
+    public function linkActorToEndpoint(?User $user, string $role, string $module, string $targetKey, ?string $errorKey = null): void
+    {
+        if ($user instanceof User) {
+            $this->linkUserToAccess($user, $role, $module, $targetKey, $errorKey);
+
+            return;
+        }
+
+        if ($role === 'applicant') {
+            $this->linkGuestToAccess('guest:applicant', 'Applicants (guest)', $module, $targetKey, $errorKey);
+
+            return;
+        }
+
+        $this->linkGuestToAccess('guest:visitor', 'Guests (visitor)', $module, $targetKey, $errorKey);
+    }
+
+    public function linkErrorLogRecord(
+        int $errorLogId,
+        int $statusCode,
+        string $path,
+        string $module,
+        string $errorKey,
+        string $apiKey,
+        ?User $user,
+        string $role
+    ): void {
+        $logKey = 'error_log:'.$errorLogId;
+        $shortPath = strlen($path) > 48 ? substr($path, 0, 47).'…' : $path;
+        $this->touchNode($logKey, 'Error log #'.$errorLogId.' · '.$statusCode, 'error_log', self::GROUP_COLORS['error_log'], [
+            'error_log_id' => $errorLogId,
+            'path' => $path,
+        ]);
+        $this->touchEdge('hub:system', $logKey, 'error_log');
+        $this->touchEdge($errorKey, $logKey, 'error_log');
+        $this->touchEdge($apiKey, $logKey, 'error_log');
+        $this->touchEdge('module:'.$module, $logKey, 'error_log');
+
+        if ($user instanceof User) {
+            $this->touchEdge('user:'.$user->id, $logKey, 'error_log');
+            $this->touchEdge('user:'.$user->id, $errorKey, 'error');
+        } elseif ($role === 'applicant') {
+            $this->touchEdge('guest:applicant', $logKey, 'error_log');
+            $this->touchEdge('guest:applicant', $errorKey, 'error');
+        } else {
+            $this->touchEdge('guest:visitor', $logKey, 'error_log');
+            $this->touchEdge('guest:visitor', $errorKey, 'error');
+        }
+    }
+
+    private function activityLogLabel(UserActivity $activity): string
+    {
+        $action = trim((string) ($activity->action ?: ''));
+        $type = trim((string) $activity->activity_type);
+        $base = $action !== '' ? $action : ($type !== '' ? $type : 'Activity');
+
+        return 'Log #'.$activity->id.' · '.$this->shortText($base, 40);
+    }
+
+    private function shortText(string $value, int $max): string
+    {
+        return strlen($value) > $max ? substr($value, 0, $max - 1).'…' : $value;
     }
 
     public function touchNode(string $nodeKey, string $label, string $group, ?string $color = null, array $meta = []): void

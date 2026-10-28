@@ -754,16 +754,21 @@
     }
 
     function buildVisEdges(rawEdges) {
-        return (rawEdges || []).map((e, index) => ({
-            id: `${e.from}|${e.to}|${index}`,
-            from: e.from,
-            to: e.to,
-            value: Math.max(1, Number(e.value || 1)),
-            dashes: !!e.dashes,
-            color: e.dashes ? '#c084fc' : '#94a3b8',
-            width: Math.min(6, Math.max(1, Math.log((e.value || 1) + 1))),
-            hidden: false,
-        }));
+        return (rawEdges || []).map((e, index) => {
+            const isBridge = !!e.bridge;
+            const isLogTrail = !!e.log_trail;
+            const isUserAccess = !!e.dashes && !isBridge && !isLogTrail;
+            return {
+                id: `${e.from}|${e.to}|${index}`,
+                from: e.from,
+                to: e.to,
+                value: Math.max(1, Number(e.value || 1)),
+                dashes: isBridge ? [6, 6] : !!e.dashes,
+                color: isBridge ? '#cbd5e1' : (isLogTrail ? '#f97316' : (isUserAccess ? '#c084fc' : '#64748b')),
+                width: isBridge ? 1 : Math.min(6, Math.max(1, Math.log((e.value || 1) + 1))),
+                hidden: false,
+            };
+        });
     }
 
     function createNetworkOptions(nodeCount) {
@@ -783,13 +788,17 @@
                 },
             },
             edges: {
-                smooth: false,
-                color: {
-                    color: 'rgba(148, 163, 184, 0.24)',
-                    highlight: 'rgba(99, 102, 241, 0.45)',
-                    hover: 'rgba(99, 102, 241, 0.45)',
+                smooth: {
+                    enabled: true,
+                    type: 'continuous',
+                    roundness: 0.12,
                 },
-                width: 0.5,
+                color: {
+                    color: 'rgba(100, 116, 139, 0.55)',
+                    highlight: 'rgba(99, 102, 241, 0.85)',
+                    hover: 'rgba(99, 102, 241, 0.75)',
+                },
+                width: 0.75,
             },
             interaction: {
                 dragView: true,
@@ -808,11 +817,11 @@
                     updateInterval: 40,
                 },
                 forceAtlas2Based: {
-                    gravitationalConstant: -62,
-                    centralGravity: 0.012,
-                    springLength: 64,
-                    springConstant: 0.022,
-                    damping: 0.82,
+                    gravitationalConstant: -48,
+                    centralGravity: 0.028,
+                    springLength: 52,
+                    springConstant: 0.045,
+                    damping: 0.88,
                 },
                 maxVelocity: 9,
                 minVelocity: 0.35,
