@@ -3,6 +3,8 @@
 namespace App\Support;
 
 use App\Models\Dtr;
+use App\Models\LeaveRequest;
+use Illuminate\Support\Carbon;
 
 final class DtrApprovedLeaveRemark
 {
@@ -115,6 +117,133 @@ final class DtrApprovedLeaveRemark
         return null;
     }
 
+    public static function isLeaveRequestNewer(LeaveRequest $candidate, LeaveRequest $existing): bool
+    {
+        $candidateAt = self::leaveRequestSortTimestamp($candidate);
+        $existingAt = self::leaveRequestSortTimestamp($existing);
+
+        if ($candidateAt->gt($existingAt)) {
+            return true;
+        }
+        if ($candidateAt->lt($existingAt)) {
+            return false;
+        }
+
+        return $candidate->id > $existing->id;
+    }
+
+    /**
+     * @param  array<int, array<string, LeaveRequest>>  $map
+     */
+    public static function assignLatestLeaveRequestForDate(array &$map, int $userId, string $dateKey, LeaveRequest $leave): void
+    {
+        if (! isset($map[$userId][$dateKey]) || self::isLeaveRequestNewer($leave, $map[$userId][$dateKey])) {
+            $map[$userId][$dateKey] = $leave;
+        }
+    }
+
+    /**
+     * Latest approved leave request per date for one employee (excludes travel and overtime).
+     *
+     * @return array<string, LeaveRequest>
+     */
+    public static function approvedLeaveRequestMapForUser(
+        int $userId,
+        Carbon $dateFrom,
+        Carbon $dateTo,
+        bool $excludeWeekends = false
+    ): array {
+        $map = [];
+        $approvedLeaves = LeaveRequest::query()
+            ->where('user_id', $userId)
+            ->where('status', 'approved')
+            ->where('type', '!=', 'overtime')
+            ->where('type', '!=', 'travel')
+            ->whereDate('start_date', '<=', $dateTo->toDateString())
+            ->where(function ($q) use ($dateFrom) {
+                $q->whereNull('end_date')
+                    ->orWhereDate('end_date', '>=', $dateFrom->toDateString());
+            })
+            ->get();
+
+        foreach ($approvedLeaves as $leave) {
+            $start = Carbon::parse($leave->start_date);
+            $end = $leave->end_date ? Carbon::parse($leave->end_date) : $start->copy();
+            $period = new \Carbon\CarbonPeriod($start, $end);
+            foreach ($period as $day) {
+                if ($day->lt($dateFrom) || $day->gt($dateTo)) {
+                    continue;
+                }
+                if ($excludeWeekends && $day->isWeekend()) {
+                    continue;
+                }
+                self::assignLatestLeaveRequestForDate($map, $userId, $day->format('Y-m-d'), $leave);
+            }
+        }
+
+        return $map[$userId] ?? [];
+    }
+
+    public static function stripApprovedLeaveLabels(?string $remarks): string
+    {
+        $text = self::normalizeRemarksDisplay($remarks);
+        if ($text === '') {
+            return '';
+        }
+
+        $segments = preg_split('/\s*\|\s*/', $text) ?: [];
+        $kept = [];
+        foreach ($segments as $segment) {
+            $segment = trim((string) $segment);
+            if ($segment === '') {
+                continue;
+            }
+            if (self::extractRemarkLabel($segment) !== null) {
+                continue;
+            }
+            $kept[] = $segment;
+        }
+
+        return implode(' | ', $kept);
+    }
+
+    public static function mergeRemarksWithLatestLeaveRequest(?string $remarks, ?LeaveRequest $leaveRequest): string
+    {
+        $base = self::stripApprovedLeaveLabels($remarks);
+        if (! $leaveRequest instanceof LeaveRequest || ! $leaveRequest->isApproved() || $leaveRequest->type === 'overtime') {
+            return trim($base);
+        }
+
+        if ($leaveRequest->type === 'travel') {
+            return trim($base);
+        }
+
+        $leaveType = (string) $leaveRequest->type;
+        $typeLabel = $leaveRequest->type_label ?? null;
+        $labelParts = [];
+
+        if ($leaveType === 'offset') {
+            $labelParts[] = self::offsetCategoryRemark();
+        }
+
+        $labelParts[] = self::displayRemark($leaveType, $typeLabel);
+
+        $labelSegment = implode(' | ', $labelParts);
+
+        if ($base === '') {
+            return $labelSegment;
+        }
+
+        return $base.' | '.$labelSegment;
+    }
+
+    private static function leaveRequestSortTimestamp(LeaveRequest $leaveRequest): Carbon
+    {
+        $value = $leaveRequest->reviewed_at ?? $leaveRequest->updated_at ?? $leaveRequest->created_at;
+
+        return $value instanceof Carbon ? $value : Carbon::parse($value);
+    }
+
     public static function pdfLabelSpanStyle(?string $leaveType): string
     {
         if ($leaveType === null || $leaveType === '') {
@@ -202,6 +331,21 @@ final class DtrApprovedLeaveRemark
         }
 
         if (preg_match('/^(Travel:\s*.+?)(?:\s*\(Approved:|\s+-|\s*$)/i', $segment, $matches)) {
+            return ['type' => 'travel', 'label' => trim($matches[1])];
+        }
+
+        if (preg_match('/^(Approved Travel Leave)(.*)$/i', $segment, $matches)) {
+            return ['type' => 'travel', 'label' => $matches[1]];
+        }
+
+        if (preg_match('/^(Approved\s+(?:Vacation Leave|Sick Leave))(?:\s*\(|$)/i', $segment, $matches)) {
+            $label = trim($matches[1]);
+            $type = stripos($label, 'Sick') !== false ? 'sick_leave' : 'vacation_leave';
+
+            return ['type' => $type, 'label' => $label];
+        }
+
+        if (preg_match('/^(Travel Leave\s*\([^)]+\))/i', $segment, $matches)) {
             return ['type' => 'travel', 'label' => trim($matches[1])];
         }
 

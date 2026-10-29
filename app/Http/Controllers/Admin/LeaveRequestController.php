@@ -2875,14 +2875,9 @@ class LeaveRequestController extends Controller
             $dtr->total_hours = $newTotal;
             $dtr->overtime_hours = max($newTotal - 8.0, 0);
 
-            // Update remarks to include travel information
-            $existingRemarks = $dtr->remarks ?? '';
             $travelRemark = "Travel Leave ({$hoursPerDay}h)";
-            if (! empty($existingRemarks) && strpos($existingRemarks, $travelRemark) === false) {
-                $dtr->remarks = $existingRemarks.'; '.$travelRemark;
-            } elseif (empty($existingRemarks)) {
-                $dtr->remarks = $travelRemark;
-            }
+            $base = \App\Support\DtrApprovedLeaveRemark::stripApprovedLeaveLabels((string) ($dtr->remarks ?? ''));
+            $dtr->remarks = $base !== '' ? $base.'; '.$travelRemark : $travelRemark;
 
             $dtr->status = 'travel';
 
@@ -2917,20 +2912,10 @@ class LeaveRequestController extends Controller
 
             \App\Support\DtrRecordHours::addOffset($dtr, $offsetHoursPerDay);
 
-            $existingRemarks = trim((string) ($dtr->remarks ?? ''));
-            if ($existingRemarks === '') {
-                $dtr->remarks = $offsetLabel;
-            } elseif (stripos($existingRemarks, 'Offset: Offset') === false && stripos($existingRemarks, 'Leave: Offset') === false && stripos($existingRemarks, 'Offset:') === false) {
-                $dtr->remarks = $existingRemarks.' | '.$offsetLabel;
-            }
-
-            $remarkAfterOffset = trim((string) ($dtr->remarks ?? ''));
-            $approvedOffsetRemark = \App\Support\DtrApprovedLeaveRemark::storedRemark('offset');
-            if (! \App\Support\DtrApprovedLeaveRemark::remarksIncludePhrase($remarkAfterOffset, 'offset')) {
-                $dtr->remarks = $remarkAfterOffset !== ''
-                    ? $remarkAfterOffset.' | '.$approvedOffsetRemark
-                    : $approvedOffsetRemark;
-            }
+            $dtr->remarks = \App\Support\DtrApprovedLeaveRemark::mergeRemarksWithLatestLeaveRequest(
+                (string) ($dtr->remarks ?? ''),
+                $leaveRequest
+            );
 
             if (empty($dtr->status) || $dtr->status === 'present') {
                 $dtr->status = 'on_leave';
@@ -2989,10 +2974,6 @@ class LeaveRequestController extends Controller
 
     private function applyLeaveTimeToDtr(LeaveRequest $leaveRequest): void
     {
-        $leaveTypeLabel = $leaveRequest->type === 'vacation_leave'
-            ? 'Vacation Leave'
-            : ($leaveRequest->type === 'sick_leave' ? 'Sick Leave' : 'Leave');
-
         foreach ($this->iterateLeaveRequestDates($leaveRequest) as $date) {
             $dtr = $this->findOrCreateDtrRecord(
                 (int) $leaveRequest->user_id,
@@ -3008,14 +2989,10 @@ class LeaveRequestController extends Controller
             $dtr->total_hours = $newTotal;
             $dtr->overtime_hours = \App\Support\DtrRecordHours::overtimeFromTotal($newTotal);
 
-            // Update remarks to include leave information
-            $existingRemarks = $dtr->remarks ?? '';
-            $leaveRemark = "Approved {$leaveTypeLabel}";
-            if (! empty($existingRemarks) && strpos($existingRemarks, $leaveRemark) === false) {
-                $dtr->remarks = $existingRemarks.'; '.$leaveRemark;
-            } elseif (empty($existingRemarks)) {
-                $dtr->remarks = $leaveRemark;
-            }
+            $dtr->remarks = \App\Support\DtrApprovedLeaveRemark::mergeRemarksWithLatestLeaveRequest(
+                (string) ($dtr->remarks ?? ''),
+                $leaveRequest
+            );
 
             if (empty($dtr->status)) {
                 $dtr->status = 'on_leave';

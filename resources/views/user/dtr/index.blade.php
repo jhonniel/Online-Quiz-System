@@ -277,36 +277,12 @@
                                         <tbody class="divide-y divide-slate-100 bg-white">
                                             @foreach($week['records'] as $dtr)
                                                 @php
-                                                    // Determine status first
-                                                    if ($dtr->status === 'absent') {
-                                                        $statusLabel = 'Absent';
-                                                        $statusClass = 'bg-red-100 text-red-800';
-                                                        $isCompleted = false;
-                                                    } elseif ($dtr->status === 'holiday') {
-                                                        $statusLabel = 'HOLIDAY';
-                                                        $statusClass = 'bg-sky-100 text-sky-800';
-                                                        $isCompleted = false;
-                                                    } elseif ($dtr->status === 'on_leave') {
-                                                        $statusLabel = 'Leave';
-                                                        $statusClass = 'bg-purple-100 text-purple-800';
-                                                        $isCompleted = true; // Show checkmark for leave entries
-                                                    } elseif ($dtr->status === 'travel') {
-                                                        $statusLabel = 'TRAVEL';
-                                                        $statusClass = 'bg-blue-100 text-blue-800';
-                                                        $isCompleted = true; // Show checkmark for travel entries
-                                                    } else {
-                                                        $totalMinutesForStatus = (int) round(($dtr->total_hours ?? 0) * 60);
-                                                        if ($totalMinutesForStatus < 480) {
-                                                            $statusLabel = 'Under Time';
-                                                            $statusClass = 'bg-yellow-100 text-yellow-800';
-                                                            $isCompleted = false;
-                                                        } else {
-                                                            $statusLabel = 'Completed';
-                                                            $statusClass = 'bg-green-100 text-green-800';
-                                                            $isCompleted = true;
-                                                        }
-                                                    }
-                                                    
+                                                    $userDtrStatus = \App\Support\DtrEmployeeAttendance::resolveUserDtrStatus($dtr);
+                                                    $statusLabel = $userDtrStatus['label'];
+                                                    $statusClass = $userDtrStatus['class'];
+                                                    $isCompleted = $userDtrStatus['is_completed'];
+                                                    $isApprovedWfh = \App\Support\DtrEmployeeAttendance::hasApprovedWorkFromHome($dtr);
+
                                                     // Calculate time values
                                                     $addedHours = \App\Support\DtrAddedTimeFromRemarks::effectiveAddedHours($dtr);
                                                     $leaveHours = \App\Support\DtrEmployeeAttendance::displayedLeaveHours($dtr);
@@ -350,7 +326,7 @@
                                                     </td>
                                                     <td class="px-3 sm:px-6 py-4 whitespace-nowrap">
                                                         <div class="text-sm font-medium text-gray-900">
-                                                            @if($isCompleted && $dtr->status !== 'on_leave' && $dtr->status !== 'travel')
+                                                            @if($isCompleted && ! $isApprovedWfh && $dtr->status !== 'on_leave' && $dtr->status !== 'travel')
                                                                 <svg class="w-5 h-5 text-green-600" fill="currentColor" viewBox="0 0 20 20">
                                                                     <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/>
                                                                 </svg>

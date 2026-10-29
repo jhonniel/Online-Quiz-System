@@ -81,29 +81,9 @@
             <tbody>
                 @foreach($week['records'] as $dtr)
                     @php
-                        // Determine status first
-                        if ($dtr->status === 'travel') {
-                            $statusLabel = 'TRAVEL';
-                            $isCompleted = false;
-                        } elseif ($dtr->status === 'holiday') {
-                            $statusLabel = 'HOLIDAY';
-                            $isCompleted = false;
-                        } elseif ($dtr->status === 'on_leave') {
-                            $statusLabel = 'On Leave';
-                            $isCompleted = false;
-                        } elseif ($dtr->status === 'absent') {
-                            $statusLabel = 'Absent';
-                            $isCompleted = false;
-                        } else {
-                            $totalMinutesForStatus = (int) round(($dtr->total_hours ?? 0) * 60);
-                            if ($totalMinutesForStatus < 480) {
-                                $statusLabel = 'Under Time';
-                                $isCompleted = false;
-                            } else {
-                                $statusLabel = 'Completed';
-                                $isCompleted = true;
-                            }
-                        }
+                        $userDtrStatus = \App\Support\DtrEmployeeAttendance::resolveUserDtrStatus($dtr);
+                        $statusLabel = $userDtrStatus['label'];
+                        $isCompleted = $userDtrStatus['is_completed'];
 
                         // Calculate time values
                         $addedHours = \App\Support\DtrAddedTimeFromRemarks::effectiveAddedHours($dtr);

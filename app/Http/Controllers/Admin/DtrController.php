@@ -194,6 +194,9 @@ class DtrController extends Controller
                     $q->whereNull('end_date')
                       ->orWhereDate('end_date', '>=', $dateFrom->toDateString());
                 })
+                ->orderBy('reviewed_at')
+                ->orderBy('updated_at')
+                ->orderBy('id')
                 ->get();
 
             // Create a map of existing DTRs by user_id and date for quick lookup
@@ -242,12 +245,11 @@ class DtrController extends Controller
                             $entry->setRelation('user', $leave->user);
                             $leaveEntries->push($entry);
                         } else {
-                            $existingRemarks = trim((string) ($existingDtr->remarks ?? ''));
-                            if (stripos($existingRemarks, $approvedTypeRemark) === false) {
-                                $existingDtr->remarks = $existingRemarks !== ''
-                                    ? $existingRemarks . ' | ' . $approvedTypeRemark
-                                    : $approvedTypeRemark;
-                            }
+                            $existingDtr->remarks = DtrApprovedLeaveRemark::mergeRemarksWithLatestLeaveRequest(
+                                (string) ($existingDtr->remarks ?? ''),
+                                $leave
+                            );
+                            $existingDtr->save();
                         }
                     } elseif ($leave->type === 'absent') {
                         // Absent leave: should not add 8 hours, keep 0 hours and mark as absent.
@@ -291,16 +293,11 @@ class DtrController extends Controller
                         $offsetHoursPerDay = $days > 0 ? $totalOffsetHours / $days : $totalOffsetHours;
 
                         if ($existingDtr) {
-                            $existingRemarks = $existingDtr->remarks ?: '';
-                            $offsetLabel = DtrApprovedLeaveRemark::offsetCategoryRemark();
-                            if ($existingRemarks) {
-                                $existingDtr->remarks = $existingRemarks.' | '.$offsetLabel;
-                            } else {
-                                $existingDtr->remarks = $offsetLabel;
-                            }
-                            if (! DtrApprovedLeaveRemark::remarksIncludePhrase((string) ($existingDtr->remarks ?? ''), 'offset', $leave->type_label ?? null)) {
-                                $existingDtr->remarks .= ' | '.$approvedTypeRemark;
-                            }
+                            $existingDtr->remarks = DtrApprovedLeaveRemark::mergeRemarksWithLatestLeaveRequest(
+                                (string) ($existingDtr->remarks ?? ''),
+                                $leave
+                            );
+                            $existingDtr->save();
                         } else {
                             // Fallback when approval sync did not create a row yet
                             $entry = Dtr::firstOrCreate(
@@ -347,25 +344,22 @@ class DtrController extends Controller
                             if ($existingDtr->status !== 'travel') {
                                 $existingDtr->status = 'travel';
                             }
-                            $existingRemarks = trim((string) ($existingDtr->remarks ?? ''));
-                            if (stripos($existingRemarks, $approvedTypeRemark) === false) {
-                                $existingDtr->remarks = $existingRemarks !== ''
-                                    ? $existingRemarks . ' | ' . $approvedTypeRemark
-                                    : $approvedTypeRemark;
-                            }
+                            $existingDtr->remarks = DtrApprovedLeaveRemark::mergeRemarksWithLatestLeaveRequest(
+                                (string) ($existingDtr->remarks ?? ''),
+                                $leave
+                            );
+                            $existingDtr->save();
                         }
                     } elseif ($leave->type === 'work_from_home') {
                         // Work From Home should not auto-create 8h DTR entries.
                         // DTR hours for WFH are expected to come from imported/actual records.
                         // Preserve imported remarks and append approved request type for visibility.
                         if ($existingDtr) {
-                            $existingRemarks = trim((string) ($existingDtr->remarks ?? ''));
-                            if (! DtrApprovedLeaveRemark::remarksIncludePhrase($existingRemarks, 'work_from_home', $leave->type_label ?? null)) {
-                                $existingDtr->remarks = $existingRemarks !== ''
-                                    ? $existingRemarks.' | '.$approvedTypeRemark
-                                    : $approvedTypeRemark;
-                                $existingDtr->save();
-                            }
+                            $existingDtr->remarks = DtrApprovedLeaveRemark::mergeRemarksWithLatestLeaveRequest(
+                                (string) ($existingDtr->remarks ?? ''),
+                                $leave
+                            );
+                            $existingDtr->save();
                         }
                         continue;
                     } else {
@@ -387,12 +381,11 @@ class DtrController extends Controller
                             $entry->setRelation('user', $leave->user);
                             $leaveEntries->push($entry);
                         } else {
-                            $existingRemarks = trim((string) ($existingDtr->remarks ?? ''));
-                            if (stripos($existingRemarks, $approvedTypeRemark) === false) {
-                                $existingDtr->remarks = $existingRemarks !== ''
-                                    ? $existingRemarks . ' | ' . $approvedTypeRemark
-                                    : $approvedTypeRemark;
-                            }
+                            $existingDtr->remarks = DtrApprovedLeaveRemark::mergeRemarksWithLatestLeaveRequest(
+                                (string) ($existingDtr->remarks ?? ''),
+                                $leave
+                            );
+                            $existingDtr->save();
                         }
                     }
                 }
@@ -3066,15 +3059,10 @@ class DtrController extends Controller
                         continue;
                     }
                     $dateKey = $day->format('Y-m-d');
-                    // Separate travel requests from other leave requests
                     if ($leave->type === 'travel') {
-                        if (!isset($travelRequestMap[$leave->user_id][$dateKey])) {
-                            $travelRequestMap[$leave->user_id][$dateKey] = $leave;
-                        }
+                        DtrApprovedLeaveRemark::assignLatestLeaveRequestForDate($travelRequestMap, $leave->user_id, $dateKey, $leave);
                     } else {
-                        if (!isset($leaveRequestMap[$leave->user_id][$dateKey])) {
-                            $leaveRequestMap[$leave->user_id][$dateKey] = $leave;
-                        }
+                        DtrApprovedLeaveRemark::assignLatestLeaveRequestForDate($leaveRequestMap, $leave->user_id, $dateKey, $leave);
                     }
                 }
             }
@@ -3095,15 +3083,10 @@ class DtrController extends Controller
                         continue;
                     }
                     $dateKey = $day->format('Y-m-d');
-                    // Separate travel requests from other leave requests
                     if ($leave->type === 'travel') {
-                        if (!isset($travelRequestMap[$leave->user_id][$dateKey])) {
-                            $travelRequestMap[$leave->user_id][$dateKey] = $leave;
-                        }
+                        DtrApprovedLeaveRemark::assignLatestLeaveRequestForDate($travelRequestMap, $leave->user_id, $dateKey, $leave);
                     } else {
-                        if (!isset($leaveRequestMap[$leave->user_id][$dateKey])) {
-                            $leaveRequestMap[$leave->user_id][$dateKey] = $leave;
-                        }
+                        DtrApprovedLeaveRemark::assignLatestLeaveRequestForDate($leaveRequestMap, $leave->user_id, $dateKey, $leave);
                     }
                 }
             }

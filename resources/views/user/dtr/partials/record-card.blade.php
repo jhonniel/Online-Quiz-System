@@ -1,33 +1,10 @@
 @php
     $dtr = $record;
-    if ($dtr->status === 'absent') {
-        $statusLabel = 'Absent';
-        $statusClass = 'bg-red-100 text-red-800';
-        $isCompleted = false;
-    } elseif ($dtr->status === 'holiday') {
-        $statusLabel = 'HOLIDAY';
-        $statusClass = 'bg-sky-100 text-sky-800';
-        $isCompleted = false;
-    } elseif ($dtr->status === 'on_leave') {
-        $statusLabel = 'Leave';
-        $statusClass = 'bg-purple-100 text-purple-800';
-        $isCompleted = true;
-    } elseif ($dtr->status === 'travel') {
-        $statusLabel = 'TRAVEL';
-        $statusClass = 'bg-blue-100 text-blue-800';
-        $isCompleted = true;
-    } else {
-        $totalMinutesForStatus = (int) round(\App\Support\DtrEmployeeAttendance::displayedDailyTotal($dtr) * 60);
-        if ($totalMinutesForStatus < 480) {
-            $statusLabel = 'Under Time';
-            $statusClass = 'bg-yellow-100 text-yellow-800';
-            $isCompleted = false;
-        } else {
-            $statusLabel = 'Completed';
-            $statusClass = 'bg-green-100 text-green-800';
-            $isCompleted = true;
-        }
-    }
+    $userDtrStatus = \App\Support\DtrEmployeeAttendance::resolveUserDtrStatus($dtr);
+    $statusLabel = $userDtrStatus['label'];
+    $statusClass = $userDtrStatus['class'];
+    $isCompleted = $userDtrStatus['is_completed'];
+    $isApprovedWfh = \App\Support\DtrEmployeeAttendance::hasApprovedWorkFromHome($dtr);
 
     $workedHours = \App\Support\DtrEmployeeAttendance::displayedHubstaffHours($dtr);
     $leaveHours = \App\Support\DtrEmployeeAttendance::displayedLeaveHours($dtr);
@@ -53,7 +30,7 @@
     </div>
     <dl class="mobile-card-kv">
         <dt>Hubstaff Hours</dt>
-        <dd>{{ $isCompleted ? 'Complete' : ($workedMinutes > 0 ? $workedFormatted : '00:00') }}</dd>
+        <dd>{{ ($isCompleted && ! $isApprovedWfh && ($dtr->status ?? '') !== 'on_leave' && ($dtr->status ?? '') !== 'travel') ? 'Complete' : ($workedMinutes > 0 ? $workedFormatted : '00:00') }}</dd>
         @if($leaveMinutes > 0)
             @php $leaveTypeLabel = \App\Support\DtrEmployeeAttendance::displayedLeaveTypeLabel($dtr); @endphp
             <dt>Leave/Offset{{ $leaveTypeLabel ? ' ('.$leaveTypeLabel.')' : '' }}</dt>

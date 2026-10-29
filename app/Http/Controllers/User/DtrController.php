@@ -158,6 +158,16 @@ class DtrController extends Controller
                         return $item->date;
                     })->values();
             }
+
+            $leaveRequestByDate = DtrApprovedLeaveRemark::approvedLeaveRequestMapForUser(
+                (int) $user->id,
+                $dateFrom,
+                $dateTo,
+                false
+            );
+            foreach ($dtrs as $dtr) {
+                $dtr->leave_request = $leaveRequestByDate[$dtr->date->format('Y-m-d')] ?? null;
+            }
         }
 
         $totalRecords = $dtrs->count();
@@ -618,6 +628,16 @@ class DtrController extends Controller
                 $dtrs = $dtrs->merge($syntheticEntries)->sortBy(function ($item) {
                     return $item->date;
                 })->values();
+            }
+
+            $leaveRequestByDate = DtrApprovedLeaveRemark::approvedLeaveRequestMapForUser(
+                (int) $user->id,
+                $dateFrom,
+                $dateTo,
+                $excludeWeekends
+            );
+            foreach ($dtrs as $dtr) {
+                $dtr->leave_request = $leaveRequestByDate[$dtr->date->format('Y-m-d')] ?? null;
             }
         }
 

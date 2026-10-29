@@ -106,26 +106,16 @@
                         $totalFormatted = \App\Support\DtrEmployeeAttendance::formatTotalHoursColumn($dtr);
                         $totalMinutes = (int) round(\App\Support\DtrEmployeeAttendance::displayedTotalHoursForColumn($dtr) * 60);
 
-                        // Build remarks with leave request info (excluding overtime type)
-                        // Only show approved leave requests
-                        $remarks = $dtr->remarks ?: '';
-                        
-                        // Check for travel request (only approved)
                         $dateKey = $dtr->date->format('Y-m-d');
                         $employeeId = $dtr->user_id;
-                        
-                        // Check if this DTR has an approved leave request
-                        $hasApprovedLeave = false;
-                        $approvedLeaveType = null;
-                        $approvedLeave = null;
-                        $leaveReq = $leaveRequestMap[$employeeId][$dateKey] ?? ($dtr->leave_request ?? null);
-                        if ($leaveReq instanceof \App\Models\LeaveRequest && $leaveReq->isApproved()) {
-                            $hasApprovedLeave = true;
-                            $approvedLeaveType = $leaveReq->type ?? null;
-                            $approvedLeave = $leaveReq;
-                        }
 
-                        $statusLabel = \App\Support\DtrEmployeeAttendance::resolveAdminExportStatusLabel($dtr, $leaveReq instanceof \App\Models\LeaveRequest ? $leaveReq : null);
+                        $leaveReq = $leaveRequestMap[$employeeId][$dateKey] ?? ($dtr->leave_request ?? null);
+                        $approvedLeave = ($leaveReq instanceof \App\Models\LeaveRequest && $leaveReq->isApproved())
+                            ? $leaveReq
+                            : null;
+
+                        $statusLabel = \App\Support\DtrEmployeeAttendance::resolveAdminExportStatusLabel($dtr, $approvedLeave);
+
                         $travelRequest = null;
                         if (isset($travelRequestMap[$employeeId][$dateKey])) {
                             $tempTravel = $travelRequestMap[$employeeId][$dateKey];
@@ -133,35 +123,17 @@
                                 $travelRequest = $tempTravel;
                             }
                         }
-                        
+
+                        $remarks = \App\Support\DtrApprovedLeaveRemark::stripApprovedLeaveLabels($dtr->remarks ?: '');
+
                         if ($travelRequest) {
                             $travelTypeLabel = $travelRequest->type_label ?? 'Travel';
-                            $travelText = 'Travel: ' . $travelTypeLabel;
-                            if ($remarks) {
-                                $remarks = $remarks . ' | ' . $travelText;
-                            } else {
-                                $remarks = $travelText;
-                            }
+                            $travelText = 'Travel: '.$travelTypeLabel;
+                            $remarks = $remarks !== '' ? $remarks.' | '.$travelText : $travelText;
                         } elseif ($approvedLeave) {
-                            $leaveType = (string) ($approvedLeave->type ?? '');
-                            $leaveTypeLabel = $approvedLeave->type_label ?? ucfirst(str_replace('_', ' ', $leaveType));
-                            $leaveText = \App\Support\DtrApprovedLeaveRemark::displayRemark($leaveType, $leaveTypeLabel);
-                            if (! \App\Support\DtrApprovedLeaveRemark::remarksIncludePhrase((string) $remarks, $leaveType, $leaveTypeLabel)) {
-                                if ($remarks) {
-                                    $remarks = $remarks.' | '.$leaveText;
-                                } else {
-                                    $remarks = $leaveText;
-                                }
-                            }
-                        }
-                        
-                        // If status is travel but no approved travel request found, add travel note
-                        if ($dtr->status === 'travel' && !$travelRequest && strpos($remarks, 'Travel') === false) {
-                            if ($remarks) {
-                                $remarks = $remarks . ' | Travel';
-                            } else {
-                                $remarks = 'Travel';
-                            }
+                            $remarks = \App\Support\DtrApprovedLeaveRemark::mergeRemarksWithLatestLeaveRequest($remarks, $approvedLeave);
+                        } elseif ($dtr->status === 'travel' && ! $travelRequest && stripos($remarks, 'Travel') === false) {
+                            $remarks = $remarks !== '' ? $remarks.' | Travel' : 'Travel';
                         }
 
                         $remarksDisplayHtml = \App\Support\DtrApprovedLeaveRemark::pdfRemarksHtml($remarks);

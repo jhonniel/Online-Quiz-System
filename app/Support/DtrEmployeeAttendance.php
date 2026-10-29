@@ -211,10 +211,58 @@ final class DtrEmployeeAttendance
     }
 
     /**
+     * Employee/student DTR list — aligned with admin rules (WFH and approved leave → Completed, not Under Time).
+     *
+     * @return array{label: string, class: string, is_completed: bool}
+     */
+    public static function resolveUserDtrStatus(Dtr $dtr, ?LeaveRequest $leaveRequest = null): array
+    {
+        $leaveRequest = $leaveRequest ?? ($dtr->leave_request ?? null);
+
+        if (($dtr->status ?? '') === 'absent') {
+            return ['label' => 'Absent', 'class' => 'bg-red-100 text-red-800', 'is_completed' => false];
+        }
+        if (($dtr->status ?? '') === 'holiday') {
+            return ['label' => 'HOLIDAY', 'class' => 'bg-sky-100 text-sky-800', 'is_completed' => false];
+        }
+        if (($dtr->status ?? '') === 'travel') {
+            return ['label' => 'TRAVEL', 'class' => 'bg-blue-100 text-blue-800', 'is_completed' => true];
+        }
+
+        if (self::hasApprovedWorkFromHome($dtr, $leaveRequest)) {
+            return ['label' => 'Completed', 'class' => 'bg-green-100 text-green-800', 'is_completed' => true];
+        }
+
+        $approvedType = $leaveRequest?->type;
+        $hasApprovedLeave = $leaveRequest instanceof LeaveRequest && $leaveRequest->isApproved();
+
+        if ($hasApprovedLeave && $approvedType !== 'absent' && $approvedType !== 'overtime') {
+            if (in_array($approvedType, ['vacation_leave', 'sick_leave'], true)) {
+                return ['label' => 'Leave', 'class' => 'bg-purple-100 text-purple-800', 'is_completed' => true];
+            }
+
+            return ['label' => 'Completed', 'class' => 'bg-green-100 text-green-800', 'is_completed' => true];
+        }
+
+        if (($dtr->status ?? '') === 'on_leave') {
+            return ['label' => 'Leave', 'class' => 'bg-purple-100 text-purple-800', 'is_completed' => true];
+        }
+
+        $totalMinutes = (int) round(self::displayedTotalHoursForColumn($dtr) * 60);
+        if ($totalMinutes < self::STANDARD_DAY_MINUTES) {
+            return ['label' => 'Under Time', 'class' => 'bg-yellow-100 text-yellow-800', 'is_completed' => false];
+        }
+
+        return ['label' => 'Completed', 'class' => 'bg-green-100 text-green-800', 'is_completed' => true];
+    }
+
+    /**
      * @return array{label: string, class: string}
      */
     public static function resolveAdminIndexStatus(Dtr $dtr, ?LeaveRequest $leaveRequest = null): array
     {
+        $leaveRequest = $leaveRequest ?? ($dtr->leave_request ?? null);
+
         if (self::hasApprovedWorkFromHome($dtr, $leaveRequest)) {
             return ['label' => 'Completed', 'class' => 'bg-green-100 text-green-800'];
         }
