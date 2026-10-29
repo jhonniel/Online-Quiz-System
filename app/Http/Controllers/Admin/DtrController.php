@@ -13,6 +13,7 @@ use App\Models\Department;
 use App\Models\LeaveRequest;
 use App\Services\StudentOjtPostCompletionService;
 use App\Support\DtrAddedTimeFromRemarks;
+use App\Support\DtrApprovedLeaveRemark;
 use App\Support\DtrHolidayCalendar;
 use App\Support\DtrRecordHours;
 use App\Support\RequestQueryInteger;
@@ -207,7 +208,10 @@ class DtrController extends Controller
                 $start = Carbon::parse($leave->start_date);
                 $end = $leave->end_date ? Carbon::parse($leave->end_date) : $start->copy();
                 $period = new \Carbon\CarbonPeriod($start, $end);
-                $approvedTypeRemark = 'Approved Leave: ' . ($leave->type_label ?? ucfirst(str_replace('_', ' ', $leave->type)));
+                $approvedTypeRemark = DtrApprovedLeaveRemark::storedRemark(
+                    (string) $leave->type,
+                    $leave->type_label ?? null
+                );
 
                 foreach ($period as $day) {
                     if ($day->lt($dateFrom) || $day->gt($dateTo)) {
@@ -354,9 +358,9 @@ class DtrController extends Controller
                         // Preserve imported remarks and append approved request type for visibility.
                         if ($existingDtr) {
                             $existingRemarks = trim((string) ($existingDtr->remarks ?? ''));
-                            if (stripos($existingRemarks, $approvedTypeRemark) === false) {
+                            if (! DtrApprovedLeaveRemark::remarksIncludePhrase($existingRemarks, 'work_from_home', $leave->type_label ?? null)) {
                                 $existingDtr->remarks = $existingRemarks !== ''
-                                    ? $existingRemarks . ' | ' . $approvedTypeRemark
+                                    ? $existingRemarks.' | '.$approvedTypeRemark
                                     : $approvedTypeRemark;
                                 $existingDtr->save();
                             }

@@ -466,31 +466,9 @@
                                                     </td>
                                                     <td class="px-3 py-2 whitespace-nowrap">
                                                         @php
-                                                            // Explicitly show Absent / Leave when applicable
-                                                            if ($dtr->status === 'absent') {
-                                                                $statusLabel = 'ABSENT';
-                                                                $statusClass = 'bg-red-100 text-red-800';
-                                                            } elseif ($dtr->status === 'holiday') {
-                                                                $statusLabel = 'HOLIDAY';
-                                                                $statusClass = 'bg-sky-100 text-sky-800';
-                                                            } elseif ($dtr->status === 'on_leave') {
-                                                                $statusLabel = $dtr->leave_type_label ?? 'Leave';
-                                                                $statusClass = 'bg-purple-100 text-purple-800';
-                                                            } elseif ($dtr->status === 'travel') {
-                                                                $statusLabel = 'Travel';
-                                                                $statusClass = 'bg-blue-100 text-blue-800';
-                                                            } else {
-                                                                // Otherwise, show Under Time or Completed based on total hours
-                                                                $rawEffectiveTotal = $workedHours + $addedHours + $leaveHours;
-                                                                $totalMinutesForStatus = (int) round($rawEffectiveTotal * 60);
-                                                                if ($totalMinutesForStatus < 480) {
-                                                                    $statusLabel = 'Under Time';
-                                                                    $statusClass = 'bg-yellow-100 text-yellow-800';
-                                                                } else {
-                                                                    $statusLabel = 'Completed';
-                                                                    $statusClass = 'bg-green-100 text-green-800';
-                                                                }
-                                                            }
+                                                            $indexStatus = \App\Support\DtrEmployeeAttendance::resolveAdminIndexStatus($dtr);
+                                                            $statusLabel = $indexStatus['label'];
+                                                            $statusClass = $indexStatus['class'];
                                                         @endphp
                                                         <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full {{ $statusClass }}">
                                                             {{ $statusLabel }}
@@ -521,8 +499,9 @@
                                                     @unless($hrDtrLimitedView)
                                                     <td class="px-3 py-2">
                                                         <div class="flex flex-wrap items-center gap-2">
-                                                            <div class="text-sm text-gray-500 max-w-xs truncate" title="{{ $dtr->remarks }}">
-                                                                {{ $dtr->remarks ?: '-' }}
+                                                            @php $dtrRemarksDisplay = \App\Support\DtrApprovedLeaveRemark::normalizeRemarksDisplay($dtr->remarks); @endphp
+                                                            <div class="text-sm text-gray-500 max-w-xs truncate" title="{{ $dtrRemarksDisplay }}">
+                                                                {{ $dtrRemarksDisplay ?: '-' }}
                                                             </div>
                                                             @if($canManageEmployeeDtr && $extraMinutes > 0 && $dtr->exists && $dtr->id)
                                                                 <button type="button"

@@ -7,6 +7,7 @@ use App\Models\Dtr;
 use App\Models\LeaveRequest;
 use App\Models\DtrTimeRequest;
 use App\Services\LeaveRequestIncompleteAttendanceOvertimeService;
+use App\Support\DtrApprovedLeaveRemark;
 use App\Support\DtrHolidayCalendar;
 use App\Support\TimeRequestOvertimeLeaveImport;
 use Illuminate\Http\Request;
@@ -90,7 +91,10 @@ class DtrController extends Controller
                         'total_hours' => 0,
                         'overtime_hours' => 0,
                         'status' => 'on_leave',
-                        'remarks' => 'Approved Leave: ' . ($leave->type_label ?? ucfirst(str_replace('_', ' ', $leave->type))),
+                        'remarks' => DtrApprovedLeaveRemark::storedRemark(
+                            (string) $leave->type,
+                            $leave->type_label ?? null
+                        ),
                     ]);
                     $entry->setRelation('user', $user);
                     $leaveEntries->push($entry);
@@ -553,7 +557,10 @@ class DtrController extends Controller
                         'total_hours' => 0,
                         'overtime_hours' => 0,
                         'status' => 'on_leave',
-                        'remarks' => 'Approved Leave: ' . ($leave->type_label ?? ucfirst(str_replace('_', ' ', $leave->type))),
+                        'remarks' => DtrApprovedLeaveRemark::storedRemark(
+                            (string) $leave->type,
+                            $leave->type_label ?? null
+                        ),
                     ]);
                     $entry->setRelation('user', $user);
                     $leaveEntries->push($entry);

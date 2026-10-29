@@ -111,35 +111,14 @@
                         $hasApprovedLeave = false;
                         $approvedLeaveType = null;
                         $approvedLeave = null;
-                        if (isset($leaveRequestMap[$employeeId][$dateKey])) {
-                            $leaveReq = $leaveRequestMap[$employeeId][$dateKey];
-                            if ($leaveReq->status === 'approved') {
-                                $hasApprovedLeave = true;
-                                $approvedLeaveType = $leaveReq->type ?? null;
-                                $approvedLeave = $leaveReq;
-                            }
+                        $leaveReq = $leaveRequestMap[$employeeId][$dateKey] ?? ($dtr->leave_request ?? null);
+                        if ($leaveReq instanceof \App\Models\LeaveRequest && $leaveReq->isApproved()) {
+                            $hasApprovedLeave = true;
+                            $approvedLeaveType = $leaveReq->type ?? null;
+                            $approvedLeave = $leaveReq;
                         }
-                        
-                        // Status logic: same as DTR list
-                        if ($dtr->status === 'travel') {
-                            $statusLabel = 'Travel';
-                        } elseif ($dtr->status === 'holiday') {
-                            $statusLabel = 'HOLIDAY';
-                        } elseif ($dtr->status === 'absent' || $approvedLeaveType === 'absent') {
-                            $statusLabel = 'ABSENT';
-                        } elseif ($hasApprovedLeave || $dtr->status === 'on_leave') {
-                            // On Leave counts as Completed
-                            $statusLabel = 'Completed';
-                        } else {
-                            // Otherwise, show Under Time or Completed based on total hours
-                            $rawEffectiveTotal = $workedHours + $addedHours + $leaveHours;
-                            $totalMinutesForStatus = (int) round($rawEffectiveTotal * 60);
-                            if ($totalMinutesForStatus < 480) {
-                                $statusLabel = 'Under Time';
-                            } else {
-                                $statusLabel = 'Completed';
-                            }
-                        }
+
+                        $statusLabel = \App\Support\DtrEmployeeAttendance::resolveAdminExportStatusLabel($dtr, $leaveReq instanceof \App\Models\LeaveRequest ? $leaveReq : null);
                         $travelRequest = null;
                         if (isset($travelRequestMap[$employeeId][$dateKey])) {
                             $tempTravel = $travelRequestMap[$employeeId][$dateKey];
@@ -157,15 +136,12 @@
                                 $remarks = $travelText;
                             }
                         } elseif ($approvedLeave) {
-                            $leaveTypeLabel = $approvedLeave->type_label ?? ucfirst(str_replace('_', ' ', $approvedLeave->type));
-                            $leaveText = 'Leave: ' . $leaveTypeLabel;
-                            $legacyLeaveText = 'Approved Leave: ' . $leaveTypeLabel;
-                            if (
-                                stripos((string) $remarks, $leaveText) === false
-                                && stripos((string) $remarks, $legacyLeaveText) === false
-                            ) {
+                            $leaveType = (string) ($approvedLeave->type ?? '');
+                            $leaveTypeLabel = $approvedLeave->type_label ?? ucfirst(str_replace('_', ' ', $leaveType));
+                            $leaveText = \App\Support\DtrApprovedLeaveRemark::displayRemark($leaveType, $leaveTypeLabel);
+                            if (! \App\Support\DtrApprovedLeaveRemark::remarksIncludePhrase((string) $remarks, $leaveType, $leaveTypeLabel)) {
                                 if ($remarks) {
-                                    $remarks = $remarks . ' | ' . $leaveText;
+                                    $remarks = $remarks.' | '.$leaveText;
                                 } else {
                                     $remarks = $leaveText;
                                 }
@@ -222,7 +198,7 @@
                             @endif
                         </td>
                         <td class="center"@if($statusLabel === 'Under Time') style="color: #DC2626; font-weight: bold;"@endif>{{ $statusLabel }}</td>
-                        <td>{{ $remarks ?: '-' }}</td>
+                        <td>{{ \App\Support\DtrApprovedLeaveRemark::normalizeRemarksDisplay($remarks) ?: '-' }}</td>
                     </tr>
                 @endforeach
             </tbody>
@@ -390,7 +366,7 @@
                             <td class="right">{{ $totalFormatted }}</td>
                             <td class="center">{{ ($leave->type ?? '') === 'absent' ? 'Absent' : 'Completed' }}</td>
                             <td>
-                                Leave: {{ $leaveTypeLabel }}
+                                {{ \App\Support\DtrApprovedLeaveRemark::displayRemark((string) ($leave->type ?? ''), $leaveTypeLabel) }}
                                 @if($approvalTime)
                                     (Approved: {{ $approvalTime }})
                                 @endif

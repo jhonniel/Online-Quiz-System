@@ -3,6 +3,7 @@
 namespace App\Support;
 
 use App\Models\Dtr;
+use App\Models\LeaveRequest;
 use Carbon\Carbon;
 
 final class DtrEmployeeAttendance
@@ -151,6 +152,91 @@ final class DtrEmployeeAttendance
         return false;
     }
 
+    public static function hasApprovedWorkFromHome(Dtr $dtr, ?LeaveRequest $leaveRequest = null): bool
+    {
+        foreach ([$leaveRequest, $dtr->leave_request ?? null] as $candidate) {
+            if ($candidate instanceof LeaveRequest
+                && $candidate->isApproved()
+                && $candidate->type === 'work_from_home') {
+                return true;
+            }
+        }
+
+        $remarks = (string) ($dtr->remarks ?? '');
+        $label = strtolower((string) ($dtr->leave_type_label ?? ''));
+
+        if (str_contains($label, 'work from home') || str_contains($label, 'work_from_home')) {
+            return (bool) preg_match('/Approved Leave:|Leave:/i', $remarks);
+        }
+
+        return (bool) preg_match('/Approved:\s*Work From Home\b/i', $remarks)
+            || (bool) preg_match('/Approved Leave:\s*Work From Home\b/i', $remarks)
+            || (bool) preg_match('/Leave:\s*Work From Home\b/i', $remarks);
+    }
+
+    /**
+     * Status label for admin DTR PDF export (uppercase variants where applicable).
+     */
+    public static function resolveAdminExportStatusLabel(Dtr $dtr, ?LeaveRequest $leaveRequest = null): string
+    {
+        $approvedType = $leaveRequest?->type;
+        $hasApprovedLeave = $leaveRequest instanceof LeaveRequest && $leaveRequest->isApproved();
+
+        if (($dtr->status ?? '') === 'travel') {
+            return 'Travel';
+        }
+        if (($dtr->status ?? '') === 'holiday') {
+            return 'HOLIDAY';
+        }
+        if (($dtr->status ?? '') === 'absent' || $approvedType === 'absent') {
+            return 'ABSENT';
+        }
+        if ($hasApprovedLeave && $approvedType !== 'absent') {
+            return 'Completed';
+        }
+        if (self::hasApprovedWorkFromHome($dtr, $leaveRequest)) {
+            return 'Completed';
+        }
+        if (($dtr->status ?? '') === 'on_leave') {
+            return 'Completed';
+        }
+
+        $worked = self::displayedHubstaffHours($dtr);
+        $added = DtrAddedTimeFromRemarks::effectiveAddedHours($dtr);
+        $leave = self::displayedLeaveHours($dtr);
+        $totalMinutes = (int) round(($worked + $added + $leave) * 60);
+
+        return $totalMinutes < self::STANDARD_DAY_MINUTES ? 'Under Time' : 'Completed';
+    }
+
+    /**
+     * @return array{label: string, class: string}
+     */
+    public static function resolveAdminIndexStatus(Dtr $dtr, ?LeaveRequest $leaveRequest = null): array
+    {
+        if (self::hasApprovedWorkFromHome($dtr, $leaveRequest)) {
+            return ['label' => 'Completed', 'class' => 'bg-green-100 text-green-800'];
+        }
+
+        if (($dtr->status ?? '') === 'on_leave') {
+            return [
+                'label' => $dtr->leave_type_label ?? 'Leave',
+                'class' => 'bg-purple-100 text-purple-800',
+            ];
+        }
+
+        $exportLabel = self::resolveAdminExportStatusLabel($dtr, $leaveRequest);
+
+        return match ($exportLabel) {
+            'ABSENT' => ['label' => 'ABSENT', 'class' => 'bg-red-100 text-red-800'],
+            'HOLIDAY' => ['label' => 'HOLIDAY', 'class' => 'bg-sky-100 text-sky-800'],
+            'Travel' => ['label' => 'Travel', 'class' => 'bg-blue-100 text-blue-800'],
+            'Under Time' => ['label' => 'Under Time', 'class' => 'bg-yellow-100 text-yellow-800'],
+            'Completed' => ['label' => 'Completed', 'class' => 'bg-green-100 text-green-800'],
+            default => ['label' => $exportLabel, 'class' => 'bg-gray-100 text-gray-800'],
+        };
+    }
+
     /**
      * Hours that count toward weekly/export totals (max 8:00 per day; time over 8:00 is excluded).
      */
@@ -199,6 +285,10 @@ final class DtrEmployeeAttendance
      */
     public static function dailyColumnDeficitMinutes(Dtr $dtr): int
     {
+        if (self::hasApprovedWorkFromHome($dtr)) {
+            return 0;
+        }
+
         $totalMinutes = (int) round(self::displayedTotalHoursForColumn($dtr) * 60);
 
         if ($totalMinutes <= 0 || $totalMinutes >= self::STANDARD_DAY_MINUTES) {
