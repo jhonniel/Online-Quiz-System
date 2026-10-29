@@ -192,13 +192,10 @@ final class DtrEmployeeAttendance
         if (($dtr->status ?? '') === 'absent' || $approvedType === 'absent') {
             return 'ABSENT';
         }
-        if ($hasApprovedLeave && $approvedType !== 'absent') {
+        if ($hasApprovedLeave && $approvedType !== 'absent' && $approvedType !== 'work_from_home') {
             return 'Completed';
         }
-        if (self::hasApprovedWorkFromHome($dtr, $leaveRequest)) {
-            return 'Completed';
-        }
-        if (($dtr->status ?? '') === 'on_leave') {
+        if (($dtr->status ?? '') === 'on_leave' && ! self::hasApprovedWorkFromHome($dtr, $leaveRequest)) {
             return 'Completed';
         }
 
@@ -211,7 +208,7 @@ final class DtrEmployeeAttendance
     }
 
     /**
-     * Employee/student DTR list — aligned with admin rules (WFH and approved leave → Completed, not Under Time).
+     * Employee/student DTR list — aligned with admin export status rules.
      *
      * @return array{label: string, class: string, is_completed: bool}
      */
@@ -229,10 +226,6 @@ final class DtrEmployeeAttendance
             return ['label' => 'TRAVEL', 'class' => 'bg-blue-100 text-blue-800', 'is_completed' => true];
         }
 
-        if (self::hasApprovedWorkFromHome($dtr, $leaveRequest)) {
-            return ['label' => 'Completed', 'class' => 'bg-green-100 text-green-800', 'is_completed' => true];
-        }
-
         $approvedType = $leaveRequest?->type;
         $hasApprovedLeave = $leaveRequest instanceof LeaveRequest && $leaveRequest->isApproved();
 
@@ -241,10 +234,12 @@ final class DtrEmployeeAttendance
                 return ['label' => 'Leave', 'class' => 'bg-purple-100 text-purple-800', 'is_completed' => true];
             }
 
-            return ['label' => 'Completed', 'class' => 'bg-green-100 text-green-800', 'is_completed' => true];
+            if ($approvedType !== 'work_from_home') {
+                return ['label' => 'Completed', 'class' => 'bg-green-100 text-green-800', 'is_completed' => true];
+            }
         }
 
-        if (($dtr->status ?? '') === 'on_leave') {
+        if (($dtr->status ?? '') === 'on_leave' && ! self::hasApprovedWorkFromHome($dtr, $leaveRequest)) {
             return ['label' => 'Leave', 'class' => 'bg-purple-100 text-purple-800', 'is_completed' => true];
         }
 
@@ -263,11 +258,7 @@ final class DtrEmployeeAttendance
     {
         $leaveRequest = $leaveRequest ?? ($dtr->leave_request ?? null);
 
-        if (self::hasApprovedWorkFromHome($dtr, $leaveRequest)) {
-            return ['label' => 'Completed', 'class' => 'bg-green-100 text-green-800'];
-        }
-
-        if (($dtr->status ?? '') === 'on_leave') {
+        if (($dtr->status ?? '') === 'on_leave' && ! self::hasApprovedWorkFromHome($dtr, $leaveRequest)) {
             return [
                 'label' => $dtr->leave_type_label ?? 'Leave',
                 'class' => 'bg-purple-100 text-purple-800',
@@ -334,10 +325,6 @@ final class DtrEmployeeAttendance
      */
     public static function dailyColumnDeficitMinutes(Dtr $dtr): int
     {
-        if (self::hasApprovedWorkFromHome($dtr)) {
-            return 0;
-        }
-
         $totalMinutes = (int) round(self::displayedTotalHoursForColumn($dtr) * 60);
 
         if ($totalMinutes <= 0 || $totalMinutes >= self::STANDARD_DAY_MINUTES) {
