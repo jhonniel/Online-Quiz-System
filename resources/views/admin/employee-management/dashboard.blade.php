@@ -118,7 +118,7 @@
             <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
                 <div>
                     <h2 class="text-base font-semibold text-gray-900">All Employees Data</h2>
-                    <p class="text-sm text-gray-500">Complete employee list with status and leave request totals.</p>
+                    <p class="text-sm text-gray-500">Active employees with leave days filed this year (Overtime and Additional Time not included).</p>
                 </div>
                 <div class="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 w-full sm:w-auto">
                     <div class="inline-flex rounded-lg border border-gray-200 bg-white p-1 w-full sm:w-auto">
@@ -155,7 +155,7 @@
                         <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500">Department</th>
                         <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500">University</th>
                         <th class="px-4 py-3 text-center text-xs font-semibold uppercase tracking-wide text-gray-500">Status</th>
-                        <th class="px-4 py-3 text-center text-xs font-semibold uppercase tracking-wide text-gray-500">Total Leaves</th>
+                        <th class="px-4 py-3 text-center text-xs font-semibold uppercase tracking-wide text-gray-500">Total Leave Days</th>
                         <th class="px-4 py-3 text-center text-xs font-semibold uppercase tracking-wide text-gray-500">Pending</th>
                         <th class="px-4 py-3 text-center text-xs font-semibold uppercase tracking-wide text-gray-500">Approved</th>
                         <th class="px-4 py-3 text-center text-xs font-semibold uppercase tracking-wide text-gray-500">Rejected</th>
@@ -198,7 +198,7 @@
                             <td class="px-4 py-3 text-center text-sm font-semibold {{ str_starts_with($overtimeFormatted, '-') ? 'text-rose-700' : 'text-emerald-700' }}">{{ $overtimeFormatted }}</td>
                             <td x-show="employeeViewMode === 'detailed'" x-cloak class="px-4 py-3 text-xs text-gray-700 min-w-[360px]">
                                 <div class="grid grid-cols-2 xl:grid-cols-3 gap-1.5">
-                                    @foreach($typeLabels as $typeKey => $typeLabel)
+                                    @foreach($employeesTableTypeLabels as $typeKey => $typeLabel)
                                         <span class="inline-flex items-center justify-between rounded-md border border-gray-200 bg-gray-50 px-2 py-1">
                                             <span class="truncate mr-2">{{ $typeLabel }}</span>
                                             <span class="font-semibold text-indigo-700">{{ (int) ($employeeTypeCounts[$employee->id][$typeKey] ?? 0) }}</span>
@@ -230,7 +230,7 @@
             <div class="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-3">
                 <div>
                     <h2 class="text-base font-semibold text-gray-900">Leave Request Days by Employee</h2>
-                    <p class="text-sm text-gray-500">Total leave-request days per employee, grouped by leave type.</p>
+                    <p class="text-sm text-gray-500">Total leave-request days per active employee, grouped by leave type.</p>
                 </div>
                 <div class="flex flex-col sm:flex-row sm:items-center gap-1.5 w-full lg:w-auto">
                     <form method="GET" action="{{ url('/admin/employee-dashboard') }}" class="w-full lg:w-auto grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-6 gap-1.5 items-end">

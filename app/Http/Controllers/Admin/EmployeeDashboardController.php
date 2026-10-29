@@ -7,6 +7,7 @@ use App\Models\LeaveBalance;
 use App\Models\LeaveRequest;
 use App\Models\User;
 use App\Support\AdminScopedDashboardCharts;
+use App\Support\StaffLeaveCredits;
 use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\Request;
@@ -90,31 +91,29 @@ class EmployeeDashboardController extends Controller
             ->get();
 
         $employees = (clone $employeeQuery)
+            ->where('is_active', true)
             ->with(['department:id,name', 'university:id,name'])
             ->orderBy('name')
-            ->get(['id', 'name', 'email', 'department_id', 'university_id', 'is_active', 'created_at']);
+            ->get([
+                'id', 'name', 'email', 'role', 'department_id', 'university_id', 'is_active', 'created_at',
+                'date_hired', 'auto_tenure_leave_credits_enabled',
+            ]);
 
-        // All Employees Data: counts should be for the current year only.
-        $leaveBaseQueryForEmployeesTable = (clone $leaveBaseQuery)
-            ->whereYear('start_date', $currentYear);
-
-        $employeeLeaveStats = (clone $leaveBaseQueryForEmployeesTable)
-            ->select(
-                'user_id',
-                DB::raw('COUNT(*) as total'),
-                DB::raw("SUM(CASE WHEN status = 'pending' THEN 1 ELSE 0 END) as pending"),
-                DB::raw("SUM(CASE WHEN status = 'approved' THEN 1 ELSE 0 END) as approved"),
-                DB::raw("SUM(CASE WHEN status = 'rejected' THEN 1 ELSE 0 END) as rejected")
-            )
-            ->groupBy('user_id')
-            ->get()
-            ->keyBy('user_id');
-
-        $employeeTypeRaw = (clone $leaveBaseQueryForEmployeesTable)
-            ->select('user_id', 'type', DB::raw('COUNT(*) as total'))
-            ->groupBy('user_id', 'type')
-            ->get()
+        // All Employees Data: leave days filed in the current year. Overtime and Additional Time
+        // are hours credited, not days off, so they are not counted as leave.
+        $timeCreditTypes = ['overtime', 'additional_time'];
+        $employeesTableRequests = (clone $leaveBaseQuery)
+            ->whereYear('start_date', $currentYear)
+            ->whereNotIn('type', $timeCreditTypes)
+            ->get(['user_id', 'type', 'status', 'start_date', 'end_date'])
             ->groupBy('user_id');
+
+        $employeeLeaveStats = $employeesTableRequests->map(fn ($requests) => (object) [
+            'total' => (int) $requests->sum->days,
+            'pending' => (int) $requests->where('status', 'pending')->sum->days,
+            'approved' => (int) $requests->where('status', 'approved')->sum->days,
+            'rejected' => (int) $requests->where('status', 'rejected')->sum->days,
+        ]);
 
         $typeLabels = [
             'vacation_leave' => 'Vacation Leave',
@@ -236,12 +235,13 @@ class EmployeeDashboardController extends Controller
                 ->values();
         }
 
-        // Per employee, include all leave types with zero defaults.
+        // Per employee leave days by type (current year), with zero defaults.
+        $employeesTableTypeLabels = array_diff_key($typeLabels, array_flip($timeCreditTypes));
         $employeeTypeCounts = [];
         foreach ($employees as $employee) {
-            $rows = collect($employeeTypeRaw->get($employee->id, []))->keyBy('type');
-            $employeeTypeCounts[$employee->id] = collect(array_keys($typeLabels))->mapWithKeys(function ($type) use ($rows) {
-                return [$type => (int) (($rows->get($type)->total ?? 0))];
+            $requests = collect($employeesTableRequests->get($employee->id, []));
+            $employeeTypeCounts[$employee->id] = collect(array_keys($employeesTableTypeLabels))->mapWithKeys(function ($type) use ($requests) {
+                return [$type => (int) $requests->where('type', $type)->sum->days];
             })->all();
         }
 
@@ -296,13 +296,14 @@ class EmployeeDashboardController extends Controller
 
         $employeeBalances = [];
         foreach ($employees as $employee) {
-            $leaveBalance = LeaveBalance::firstOrCreateWithCarryover(
+            LeaveBalance::firstOrCreateWithCarryover(
                 (int) $employee->id,
                 (int) $currentYear,
                 (float) $defaultVacation,
                 (float) $defaultSick
             );
-            $allowance = (float) $leaveBalance->vacation_allowance + (float) $leaveBalance->sick_allowance;
+            // Same allowance the employee sees on their own Leave page (tenure-based unless an admin set a custom balance).
+            $allowance = StaffLeaveCredits::effectiveAllowance($employee, (int) $currentYear);
             $used = (int) ($usedLeaveByUser[$employee->id] ?? 0);
             $leaveRemaining = max($allowance - $used, 0);
 
@@ -335,6 +336,7 @@ class EmployeeDashboardController extends Controller
             'approvedDaysByType' => $approvedDaysByType,
             'employeeLeaveDaysByType' => $employeeLeaveDaysByType,
             'typeLabels' => $typeLabels,
+            'employeesTableTypeLabels' => $employeesTableTypeLabels,
             'recentLeaveRequests' => $recentLeaveRequests,
             'employees' => $employees,
             'employeeLeaveStats' => $employeeLeaveStats,
