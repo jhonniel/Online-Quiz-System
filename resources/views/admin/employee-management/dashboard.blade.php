@@ -181,21 +181,16 @@
                             $b = $employeeBalances[$employee->id] ?? null;
                             $leaveRemaining = $b['leave_remaining'] ?? 0;
                             $overtimeFormatted = $b['overtime_formatted'] ?? '00:00';
-                            $ledgerUrl = fn (string $tab) => $canViewEmployeeLedger
-                                ? route('admin.employee-records.show', ['employee' => $employee->id, 'tab' => $tab, 'from' => 'employee-dashboard'])
-                                : null;
+                            $ledgerUrl = route('admin.employee-dashboard.ledger', $employee);
                         @endphp
                         <tr class="hover:bg-gray-50/70 transition-colors">
                             <td class="px-4 py-3">
-                                @if($canViewEmployeeLedger)
-                                    <a href="{{ $ledgerUrl('leave') }}" class="group block" title="View leave and overtime ledger">
-                                        <div class="text-sm font-semibold text-indigo-700 group-hover:underline"><x-user-name :user="$employee" /></div>
-                                        <div class="text-xs text-gray-500">#{{ $employee->id }} · View ledger</div>
-                                    </a>
-                                @else
-                                    <div class="text-sm font-semibold text-gray-900"><x-user-name :user="$employee" /></div>
-                                    <div class="text-xs text-gray-500">#{{ $employee->id }}</div>
-                                @endif
+                                <button type="button"
+                                        @click="$dispatch('open-employee-ledger', { url: @js($ledgerUrl), tab: 'leave', name: @js($employee->name) })"
+                                        class="group block text-left" title="View leave and overtime ledger">
+                                    <div class="text-sm font-semibold text-indigo-700 group-hover:underline"><x-user-name :user="$employee" /></div>
+                                    <div class="text-xs text-gray-500">#{{ $employee->id }} · View ledger</div>
+                                </button>
                             </td>
                             <td class="px-4 py-3 text-sm text-gray-700">{{ $employee->email }}</td>
                             <td class="px-4 py-3 text-sm text-gray-700">{{ $employee->department->name ?? '—' }}</td>
@@ -211,18 +206,14 @@
                             <td class="px-4 py-3 text-center text-sm font-medium text-rose-700">{{ $rejected }}</td>
                             @php $leaveRemainingLabel = rtrim(rtrim(number_format((float) $leaveRemaining, 2, '.', ''), '0'), '.'); @endphp
                             <td class="px-4 py-3 text-center text-sm font-semibold text-gray-900">
-                                @if($canViewEmployeeLedger)
-                                    <a href="{{ $ledgerUrl('leave') }}" class="hover:underline" title="View leave credit ledger">{{ $leaveRemainingLabel }}</a>
-                                @else
-                                    {{ $leaveRemainingLabel }}
-                                @endif
+                                <button type="button"
+                                        @click="$dispatch('open-employee-ledger', { url: @js($ledgerUrl), tab: 'leave', name: @js($employee->name) })"
+                                        class="hover:underline" title="View leave credit ledger">{{ $leaveRemainingLabel }}</button>
                             </td>
                             <td class="px-4 py-3 text-center text-sm font-semibold {{ str_starts_with($overtimeFormatted, '-') ? 'text-rose-700' : 'text-emerald-700' }}">
-                                @if($canViewEmployeeLedger)
-                                    <a href="{{ $ledgerUrl('overtime') }}" class="hover:underline" title="View overtime ledger">{{ $overtimeFormatted }}</a>
-                                @else
-                                    {{ $overtimeFormatted }}
-                                @endif
+                                <button type="button"
+                                        @click="$dispatch('open-employee-ledger', { url: @js($ledgerUrl), tab: 'overtime', name: @js($employee->name) })"
+                                        class="hover:underline" title="View overtime ledger">{{ $overtimeFormatted }}</button>
                             </td>
                             <td x-show="employeeViewMode === 'detailed'" x-cloak class="px-4 py-3 text-xs text-gray-700 min-w-[360px]">
                                 <div class="grid grid-cols-2 xl:grid-cols-3 gap-1.5">
@@ -349,15 +340,12 @@
                         @endphp
                         <tr class="hover:bg-gray-50/70 transition-colors">
                             <td class="px-4 py-3 text-sm">
-                                @if($canViewEmployeeLedger)
-                                    <a href="{{ route('admin.employee-records.show', ['employee' => $employee->id, 'tab' => 'leave', 'from' => 'employee-dashboard']) }}" class="group block" title="View leave and overtime ledger">
-                                        <div class="font-medium text-indigo-700 group-hover:underline"><x-user-name :user="$employee" /></div>
-                                        <div class="text-xs text-gray-500">{{ $employee->email }}</div>
-                                    </a>
-                                @else
-                                    <div class="font-medium text-gray-900"><x-user-name :user="$employee" /></div>
+                                <button type="button"
+                                        @click="$dispatch('open-employee-ledger', { url: @js(route('admin.employee-dashboard.ledger', $employee)), tab: 'leave', name: @js($employee->name) })"
+                                        class="group block text-left" title="View leave and overtime ledger">
+                                    <div class="font-medium text-indigo-700 group-hover:underline"><x-user-name :user="$employee" /></div>
                                     <div class="text-xs text-gray-500">{{ $employee->email }}</div>
-                                @endif
+                                </button>
                             </td>
                             @foreach($typeLabels as $typeKey => $typeLabel)
                                 <td class="px-4 py-3 text-sm text-right font-semibold text-rose-700 whitespace-nowrap">
@@ -380,5 +368,7 @@
         </div>
     </div>
 </div>
+
+@include('admin.employee-management.partials.employee-ledger-modal')
 @endsection
 

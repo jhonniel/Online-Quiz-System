@@ -52,6 +52,58 @@ final class EmployeeRecordsLedger
     }
 
     /**
+     * Summary and ledgers for one employee, formatted for display (Employee Dashboard modal).
+     *
+     * @return array<string, mixed>
+     */
+    public static function modalPayload(User $employee, ?int $year): array
+    {
+        $userId = (int) $employee->id;
+        $summaryYear = $year ?? (int) now()->year;
+        $leave = self::leaveCreditSummary($userId, $summaryYear);
+        $overtime = self::overtimeSummary($userId);
+
+        $format = fn (array $entry) => [
+            'date' => $entry['date']->format('M j, Y'),
+            'direction' => $entry['direction'],
+            'amount' => $entry['amount_label'],
+            'description' => $entry['description'],
+            'reference' => $entry['reference'],
+            'balance_after' => is_string($entry['balance_after'] ?? null)
+                ? $entry['balance_after']
+                : number_format((float) ($entry['balance_after'] ?? 0), 2),
+        ];
+
+        return [
+            'employee' => [
+                'name' => $employee->name,
+                'email' => $employee->email,
+                'is_active' => (bool) $employee->is_active,
+            ],
+            'year' => $year === null ? 'all' : $year,
+            'summary_year' => $summaryYear,
+            'leave_summary' => [
+                'allowance' => number_format($leave['allowance'], 2),
+                'used' => number_format($leave['used'], 2),
+                'remaining' => number_format($leave['remaining'], 2),
+            ],
+            'overtime_summary' => [
+                'balance' => $overtime['formatted'],
+                'earned' => self::formatMinutes($overtime['earned_minutes']),
+                'offset' => self::formatMinutes($overtime['offset_minutes']),
+                'is_negative' => $overtime['minutes'] < 0,
+            ],
+            'leave_ledger' => array_map($format, self::leaveCreditLedger($userId, $year)),
+            'overtime_ledger' => array_map($format, self::overtimeLedger($userId, $year)),
+            'offset_ledger' => array_map($format, self::offsetLedger($userId, $year)),
+            'requests_ledger' => array_map(
+                fn (array $request) => $request + ['url' => route('admin.leave-requests.show', $request['id'])],
+                self::leaveRequests($employee, $year)
+            ),
+        ];
+    }
+
+    /**
      * @return array{minutes: int, formatted: string, earned_minutes: int, offset_minutes: int}
      */
     public static function overtimeSummary(int $userId): array
@@ -314,6 +366,48 @@ final class EmployeeRecordsLedger
     }
 
     /**
+     * Every leave request the employee filed (all types and statuses), newest first.
+     *
+     * @return list<array{
+     *     id: int,
+     *     type_label: string,
+     *     period: string,
+     *     duration: string,
+     *     status: string,
+     *     status_label: string,
+     *     filed_at: string,
+     *     reviewed_by: string|null,
+     *     reviewed_at: string|null
+     * }>
+     */
+    public static function leaveRequests(User $employee, ?int $year = null): array
+    {
+        $requests = LeaveRequest::query()
+            ->with('reviewer:id,name')
+            ->where('user_id', $employee->id)
+            ->when($year !== null, fn ($query) => $query->whereYear('start_date', $year))
+            ->orderByDesc('start_date')
+            ->orderByDesc('id')
+            ->get();
+
+        return $requests->map(function (LeaveRequest $request) use ($employee) {
+            $request->setRelation('user', $employee);
+
+            return [
+                'id' => (int) $request->id,
+                'type_label' => $request->type_label,
+                'period' => self::dateRangeLabel($request),
+                'duration' => self::requestDurationLabel($request),
+                'status' => self::requestStatusKey($request),
+                'status_label' => $request->display_status,
+                'filed_at' => $request->created_at?->format('M j, Y') ?? '—',
+                'reviewed_by' => $request->reviewer?->name,
+                'reviewed_at' => $request->reviewed_at?->format('M j, Y'),
+            ];
+        })->all();
+    }
+
+    /**
      * @return \Illuminate\Support\Collection<int, LeaveRequestLog>
      */
     public static function offsetActivityLogs(int $userId, ?int $year = null): Collection
@@ -422,6 +516,38 @@ final class EmployeeRecordsLedger
     {
         return $request->parseOffsetHoursToDeductMinutes()
             ?? (int) round(((float) $request->days * 8) * 60);
+    }
+
+    /**
+     * Overtime and offset are measured in hours; every other type in days.
+     */
+    private static function requestDurationLabel(LeaveRequest $request): string
+    {
+        if ($request->type === 'overtime') {
+            $minutes = self::overtimeMinutesFromRequest($request);
+
+            return $minutes > 0 ? self::formatMinutes($minutes).' hrs' : '—';
+        }
+
+        if ($request->type === 'offset') {
+            return self::formatMinutes(self::offsetMinutesFromRequest($request)).' hrs';
+        }
+
+        $days = (int) $request->days;
+
+        return $days.' '.($days === 1 ? 'day' : 'days');
+    }
+
+    /**
+     * Status bucket for badge colors (resubmission and for-more-verification are still open).
+     */
+    private static function requestStatusKey(LeaveRequest $request): string
+    {
+        if ($request->status === 'pending' && $request->reviewed_at) {
+            return 'resubmission';
+        }
+
+        return (string) $request->status;
     }
 
     private static function dateRangeLabel(LeaveRequest $request): string

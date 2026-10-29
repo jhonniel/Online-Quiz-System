@@ -86,13 +86,13 @@ class EmployeeRecordsController extends Controller
         $year = $allYears ? null : (int) $yearInput;
         $summaryYear = $year ?? (int) now()->year;
         $tab = (string) $request->input('tab', 'leave');
-        $fromEmployeeDashboard = $request->input('from') === 'employee-dashboard';
 
         $leaveSummary = EmployeeRecordsLedger::leaveCreditSummary((int) $employee->id, $summaryYear);
         $overtimeSummary = EmployeeRecordsLedger::overtimeSummary((int) $employee->id);
         $leaveLedger = EmployeeRecordsLedger::leaveCreditLedger((int) $employee->id, $year);
         $overtimeLedger = EmployeeRecordsLedger::overtimeLedger((int) $employee->id, $year);
         $offsetLedger = EmployeeRecordsLedger::offsetLedger((int) $employee->id, $year);
+        $leaveRequests = EmployeeRecordsLedger::leaveRequests($employee, $year);
         $activityLogs = EmployeeRecordsLedger::activityLogs((int) $employee->id, $year);
         $offsetActivityLogs = EmployeeRecordsLedger::offsetActivityLogs((int) $employee->id, $year);
 
@@ -107,9 +107,9 @@ class EmployeeRecordsController extends Controller
             'leaveLedger',
             'overtimeLedger',
             'offsetLedger',
+            'leaveRequests',
             'activityLogs',
-            'offsetActivityLogs',
-            'fromEmployeeDashboard'
+            'offsetActivityLogs'
         ));
     }
 }

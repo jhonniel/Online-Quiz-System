@@ -8,6 +8,7 @@ use App\Models\LeaveRequest;
 use App\Models\User;
 use App\Support\AdminScopedDashboardCharts;
 use App\Support\DtrApprovedLeaveRemark;
+use App\Support\EmployeeRecordsLedger;
 use App\Support\StaffLeaveCredits;
 use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Builder;
@@ -19,14 +20,7 @@ class EmployeeDashboardController extends Controller
     public function index(Request $request)
     {
         $authUser = auth()->user();
-
-        if (!$authUser->isAdmin() && !$authUser->canAccessEmployeeManagement()) {
-            abort(403, 'Access denied. You do not have permission to access Employee Management.');
-        }
-
-        $allowedDepartmentIds = $authUser->canAccessEmployeeManagement()
-            ? $authUser->getAllowedDepartmentIds()
-            : null;
+        $allowedDepartmentIds = $this->authorizeDashboardAccess($authUser);
 
         $employeeQuery = User::query()
             ->where('role', 'employee');
@@ -368,7 +362,6 @@ class EmployeeDashboardController extends Controller
             'recentLeaveRequests' => $recentLeaveRequests,
             'employees' => $tableEmployees,
             'showInactiveEmployees' => $showInactiveEmployees,
-            'canViewEmployeeLedger' => $authUser->canAccessAnalyticsFeature('employee_records'),
             'employeeLeaveStats' => $employeeLeaveStats,
             'employeeTypeCounts' => $employeeTypeCounts,
             'employeeBalances' => $employeeBalances,
@@ -378,6 +371,43 @@ class EmployeeDashboardController extends Controller
             'leaveDaysTypes' => $validLeaveDaysTypes,
             'leaveDaysEmployees' => $leaveDaysEmployees,
         ]);
+    }
+
+    /**
+     * Leave credit and overtime ledger for one employee, shown in the dashboard modal.
+     */
+    public function ledger(Request $request, User $employee)
+    {
+        $allowedDepartmentIds = $this->authorizeDashboardAccess($request->user());
+
+        if ($employee->role !== 'employee') {
+            abort(404);
+        }
+        if ($allowedDepartmentIds !== null && ! in_array((int) $employee->department_id, array_map('intval', $allowedDepartmentIds), true)) {
+            abort(403, 'You do not have access to this employee.');
+        }
+
+        $yearInput = (string) $request->query('year', (string) now()->year);
+        $year = $yearInput === 'all' ? null : (int) $yearInput;
+        if ($year !== null && $year <= 0) {
+            $year = (int) now()->year;
+        }
+
+        return response()->json(EmployeeRecordsLedger::modalPayload($employee, $year));
+    }
+
+    /**
+     * @return list<int>|null Department IDs the user is limited to, or null for all departments.
+     */
+    private function authorizeDashboardAccess(?User $authUser): ?array
+    {
+        if (! $authUser || (! $authUser->isAdmin() && ! $authUser->canAccessEmployeeManagement())) {
+            abort(403, 'Access denied. You do not have permission to access Employee Management.');
+        }
+
+        return $authUser->canAccessEmployeeManagement()
+            ? $authUser->getAllowedDepartmentIds()
+            : null;
     }
 
     /**

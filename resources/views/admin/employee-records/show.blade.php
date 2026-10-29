@@ -4,6 +4,7 @@
 @php
     $tabs = [
         'leave' => 'Leave credits',
+        'requests' => 'Leave requests',
         'overtime' => 'Overtime logs',
         'offset' => 'Offset logs',
         'activity' => 'Request logs',
@@ -29,9 +30,9 @@
                     </p>
                 </div>
             </div>
-            <a href="{{ $fromEmployeeDashboard ? route('admin.employee-dashboard.index') : route('admin.employee-records.index', ['year' => $yearParam]) }}"
+            <a href="{{ route('admin.employee-records.index', ['year' => $yearParam]) }}"
                class="inline-flex w-full sm:w-auto items-center justify-center px-4 py-2.5 text-sm font-medium bg-white/10 backdrop-blur-sm border border-white/20 rounded-lg text-white hover:bg-white/20 min-h-[44px] touch-manipulation">
-                {{ $fromEmployeeDashboard ? 'Back to Employee Dashboard' : 'Back to Employee Records' }}
+                Back to Employee Records
             </a>
         </div>
     </div>
@@ -65,9 +66,6 @@
     <div class="bg-white rounded-lg shadow border border-gray-200 p-4 sm:p-6">
         <form method="GET" action="{{ route('admin.employee-records.show', $employee) }}" class="flex flex-col sm:flex-row sm:items-end gap-3">
             <input type="hidden" name="tab" value="{{ $tab }}">
-            @if($fromEmployeeDashboard)
-                <input type="hidden" name="from" value="employee-dashboard">
-            @endif
             <div class="min-w-[10rem]">
                 <label for="year" class="block text-sm font-medium text-gray-700 mb-1.5">Year</label>
                 <select name="year" id="year" class="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">
@@ -85,7 +83,7 @@
         <div class="border-b border-gray-200 overflow-x-auto">
             <nav class="flex min-w-max px-2 sm:px-4" aria-label="Ledger tabs">
                 @foreach($tabs as $key => $label)
-                    <a href="{{ route('admin.employee-records.show', array_filter(['employee' => $employee->id, 'year' => $yearParam, 'tab' => $key, 'from' => $fromEmployeeDashboard ? 'employee-dashboard' : null])) }}"
+                    <a href="{{ route('admin.employee-records.show', ['employee' => $employee->id, 'year' => $yearParam, 'tab' => $key]) }}"
                        class="px-4 py-3 text-sm font-medium border-b-2 whitespace-nowrap {{ $tab === $key ? 'border-indigo-600 text-indigo-700' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300' }}">
                         {{ $label }}
                     </a>
@@ -333,6 +331,82 @@
                     <div class="text-center py-10 text-sm text-gray-500">No offset request activity for {{ $yearLabel }}.</div>
                 @endif
             </div>
+        @elseif($tab === 'requests')
+            @php
+                $statusBadgeClasses = [
+                    'approved' => 'bg-green-100 text-green-800',
+                    'rejected' => 'bg-red-100 text-red-800',
+                    'pending' => 'bg-amber-100 text-amber-800',
+                    'resubmission' => 'bg-amber-100 text-amber-800',
+                    'for_more_verification' => 'bg-orange-100 text-orange-800',
+                ];
+            @endphp
+            <div class="px-4 sm:px-6 py-4 border-b border-gray-100 bg-gray-50/50">
+                <p class="text-sm text-gray-600">
+                    Every leave request filed in {{ $yearLabel }}, of any type and status ({{ count($leaveRequests) }} total).
+                </p>
+            </div>
+            @if(count($leaveRequests) > 0)
+                <div class="md:hidden mobile-card-list">
+                    @foreach($leaveRequests as $leaveRequest)
+                        <div class="mobile-card">
+                            <div class="flex items-start justify-between gap-3">
+                                <div>
+                                    <p class="text-sm font-semibold text-gray-900">{{ $leaveRequest['type_label'] }}</p>
+                                    <p class="text-xs text-gray-500 mt-0.5">{{ $leaveRequest['period'] }} · {{ $leaveRequest['duration'] }}</p>
+                                </div>
+                                <span class="shrink-0 px-2 py-1 rounded-full text-xs font-semibold {{ $statusBadgeClasses[$leaveRequest['status']] ?? 'bg-gray-100 text-gray-700' }}">
+                                    {{ $leaveRequest['status_label'] }}
+                                </span>
+                            </div>
+                            <p class="text-xs text-gray-500 mt-2">
+                                Filed {{ $leaveRequest['filed_at'] }}
+                                @if($leaveRequest['reviewed_by']) · Reviewed by {{ $leaveRequest['reviewed_by'] }}@endif
+                            </p>
+                            <a href="{{ url('/admin/leave-requests/' . $leaveRequest['id']) }}" class="inline-block mt-2 text-xs font-medium text-indigo-600">View request #{{ $leaveRequest['id'] }}</a>
+                        </div>
+                    @endforeach
+                </div>
+                <div class="hidden md:block overflow-x-auto">
+                    <table class="min-w-full divide-y divide-gray-200">
+                        <thead class="bg-gray-50">
+                            <tr>
+                                <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Type</th>
+                                <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Period</th>
+                                <th class="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase">Duration</th>
+                                <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Status</th>
+                                <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Filed</th>
+                                <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Reviewed by</th>
+                                <th class="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase">Request</th>
+                            </tr>
+                        </thead>
+                        <tbody class="divide-y divide-gray-100">
+                            @foreach($leaveRequests as $leaveRequest)
+                                <tr class="hover:bg-gray-50">
+                                    <td class="px-4 py-3 text-sm text-gray-900">{{ $leaveRequest['type_label'] }}</td>
+                                    <td class="px-4 py-3 text-sm text-gray-700 whitespace-nowrap">{{ $leaveRequest['period'] }}</td>
+                                    <td class="px-4 py-3 text-sm text-right text-gray-700 tabular-nums whitespace-nowrap">{{ $leaveRequest['duration'] }}</td>
+                                    <td class="px-4 py-3 text-sm">
+                                        <span class="px-2 py-1 rounded-full text-xs font-semibold {{ $statusBadgeClasses[$leaveRequest['status']] ?? 'bg-gray-100 text-gray-700' }}">
+                                            {{ $leaveRequest['status_label'] }}
+                                        </span>
+                                    </td>
+                                    <td class="px-4 py-3 text-sm text-gray-500 whitespace-nowrap">{{ $leaveRequest['filed_at'] }}</td>
+                                    <td class="px-4 py-3 text-sm text-gray-500">
+                                        {{ $leaveRequest['reviewed_by'] ?? '—' }}
+                                        @if($leaveRequest['reviewed_at'])<div class="text-xs text-gray-400">{{ $leaveRequest['reviewed_at'] }}</div>@endif
+                                    </td>
+                                    <td class="px-4 py-3 text-sm text-right">
+                                        <a href="{{ url('/admin/leave-requests/' . $leaveRequest['id']) }}" class="text-indigo-600 hover:text-indigo-900">#{{ $leaveRequest['id'] }}</a>
+                                    </td>
+                                </tr>
+                            @endforeach
+                        </tbody>
+                    </table>
+                </div>
+            @else
+                <div class="text-center py-12 text-sm text-gray-500">No leave requests filed in {{ $yearLabel }}.</div>
+            @endif
         @else
             <div class="px-4 sm:px-6 py-4 border-b border-gray-100 bg-gray-50/50">
                 <p class="text-sm text-gray-600">Activity log for leave requests in {{ $yearLabel }} (approvals, rejections, updates, and adjustments).</p>

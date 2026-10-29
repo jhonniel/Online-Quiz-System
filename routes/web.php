@@ -551,6 +551,7 @@ Route::prefix('admin')->middleware(['auth', 'admin', 'admin.totp'])->group(funct
     Route::middleware(['admin.permission:employee_management'])->group(function () {
         Route::middleware(['admin.subfeature:employee_management,employee_dashboard'])->group(function () {
             Route::get('/employee-dashboard', [EmployeeDashboardController::class, 'index'])->name('admin.employee-dashboard.index');
+            Route::get('/employee-dashboard/employees/{employee}/ledger', [EmployeeDashboardController::class, 'ledger'])->name('admin.employee-dashboard.ledger');
         });
 
         Route::middleware(['admin.subfeature:employee_management,kpi_dashboard'])->group(function () {
