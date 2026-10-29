@@ -48,7 +48,7 @@
     <div style="margin-bottom: 10px; padding: 6px 8px; border: 1px solid #E5E7EB; background: #FAFAFA;">
         <div style="font-weight: bold; font-size: 9px; margin-bottom: 4px; color: #374151;">Approved leave — color key</div>
         @foreach(\App\Support\DtrApprovedLeaveRemark::pdfLegend() as $legendItem)
-            <span style="display: inline-block; margin: 2px 5px 2px 0; padding: 2px 6px; font-size: 7.5px; border: 1px solid #D1D5DB; background-color: {{ $legendItem['bg'] }}; color: {{ $legendItem['color'] }};">{{ $legendItem['label'] }}</span>
+            <span style="display: inline-block; margin: 2px 8px 2px 0; font-size: 7.5px; color: {{ $legendItem['color'] }}; font-weight: 600;">{{ $legendItem['label'] }}</span>
         @endforeach
     </div>
 
@@ -170,8 +170,7 @@
                             $remarks,
                             $travelRequest !== null
                         );
-                        $pdfRowStyle = \App\Support\DtrApprovedLeaveRemark::pdfRowStyle($pdfLeaveType);
-                        $pdfRemarksStyle = \App\Support\DtrApprovedLeaveRemark::pdfRemarksCellStyle($pdfLeaveType);
+                        $pdfRemarksStyle = \App\Support\DtrApprovedLeaveRemark::pdfRemarksTextStyle($pdfLeaveType);
                         $remarksDisplay = \App\Support\DtrApprovedLeaveRemark::normalizeRemarksDisplay($remarks) ?: '-';
                     @endphp
                     @php
@@ -195,7 +194,7 @@
                             $totalMinutes = 480;
                         }
                     @endphp
-                    <tr @if($pdfRowStyle !== '') style="{{ $pdfRowStyle }}" @endif>
+                    <tr>
                         <td>{{ $dtr->date->format('M d, Y') }}</td>
                         <td>{{ $dtr->date->format('D') }}</td>
                         <td class="right">{{ $workedMinutes > 0 ? $workedFormatted : '00:00' }}</td>
@@ -374,10 +373,9 @@
                             $totalM = $totalMinutes % 60;
                             $totalFormatted = sprintf('%02d:%02d', $totalH, $totalM);
                             $pdfLeaveType = \App\Support\DtrApprovedLeaveRemark::inferApprovedLeaveType((string) ($leave->type ?? ''), $dtrRecord, null, false);
-                            $pdfRowStyle = \App\Support\DtrApprovedLeaveRemark::pdfRowStyle($pdfLeaveType);
-                            $pdfRemarksStyle = \App\Support\DtrApprovedLeaveRemark::pdfRemarksCellStyle($pdfLeaveType);
+                            $pdfRemarksStyle = \App\Support\DtrApprovedLeaveRemark::pdfRemarksTextStyle($pdfLeaveType);
                         @endphp
-                        <tr @if($pdfRowStyle !== '') style="{{ $pdfRowStyle }}" @endif>
+                        <tr>
                             <td>{{ $leaveDate->format('M d, Y') }}</td>
                             <td>{{ $leaveDate->format('D') }}</td>
                             <td class="right">{{ $workedFormatted }}</td>
@@ -456,10 +454,9 @@
                             $totalM = $totalMinutes % 60;
                             $totalFormatted = sprintf('%02d:%02d', $totalH, $totalM);
                             $pdfLeaveType = \App\Support\DtrApprovedLeaveRemark::inferApprovedLeaveType(null, $dtrRecord, 'Travel', true);
-                            $pdfRowStyle = \App\Support\DtrApprovedLeaveRemark::pdfRowStyle($pdfLeaveType);
-                            $pdfRemarksStyle = \App\Support\DtrApprovedLeaveRemark::pdfRemarksCellStyle($pdfLeaveType);
+                            $pdfRemarksStyle = \App\Support\DtrApprovedLeaveRemark::pdfRemarksTextStyle($pdfLeaveType);
                         @endphp
-                        <tr @if($pdfRowStyle !== '') style="{{ $pdfRowStyle }}" @endif>
+                        <tr>
                             <td>{{ $travelDate->format('M d, Y') }}</td>
                             <td>{{ $travelDate->format('D') }}</td>
                             <td class="right">{{ $workedFormatted }}</td>

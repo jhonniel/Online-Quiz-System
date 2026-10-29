@@ -115,7 +115,7 @@ final class DtrApprovedLeaveRemark
         return null;
     }
 
-    public static function pdfRowStyle(?string $leaveType): string
+    public static function pdfRemarksTextStyle(?string $leaveType): string
     {
         if ($leaveType === null || $leaveType === '') {
             return '';
@@ -123,18 +123,7 @@ final class DtrApprovedLeaveRemark
 
         $palette = self::pdfPalette()[$leaveType] ?? self::pdfPalette()['default'];
 
-        return 'background-color: '.$palette['bg'].'; color: '.$palette['color'].';';
-    }
-
-    public static function pdfRemarksCellStyle(?string $leaveType): string
-    {
-        if ($leaveType === null || $leaveType === '') {
-            return '';
-        }
-
-        $palette = self::pdfPalette()[$leaveType] ?? self::pdfPalette()['default'];
-
-        return 'background-color: '.$palette['bg'].'; color: '.$palette['color'].'; font-weight: 600; border-left: 3px solid '.$palette['color'].';';
+        return 'color: '.$palette['color'].'; font-weight: 600;';
     }
     /**
      * Remark line stored on DTR rows when an approved request is linked (admin index / import).
