@@ -7,6 +7,7 @@ use App\Models\LeaveBalance;
 use App\Models\LeaveRequest;
 use App\Models\User;
 use App\Support\AdminScopedDashboardCharts;
+use App\Support\DtrApprovedLeaveRemark;
 use App\Support\StaffLeaveCredits;
 use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Builder;
@@ -90,14 +91,17 @@ class EmployeeDashboardController extends Controller
             ->take(10)
             ->get();
 
-        $employees = (clone $employeeQuery)
-            ->where('is_active', true)
+        // All Employees Data lists active employees unless "Show inactive" is on; Leave Request Days is always active only.
+        $showInactiveEmployees = $request->boolean('show_inactive');
+        $tableEmployees = (clone $employeeQuery)
+            ->when(! $showInactiveEmployees, fn ($q) => $q->where('is_active', true))
             ->with(['department:id,name', 'university:id,name'])
             ->orderBy('name')
             ->get([
                 'id', 'name', 'email', 'role', 'department_id', 'university_id', 'is_active', 'created_at',
                 'date_hired', 'auto_tenure_leave_credits_enabled',
             ]);
+        $employees = $tableEmployees->where('is_active', true)->values();
 
         // All Employees Data: leave days filed in the current year. Overtime and Additional Time
         // are hours credited, not days off, so they are not counted as leave.
@@ -110,12 +114,13 @@ class EmployeeDashboardController extends Controller
 
         $employeeLeaveStats = $employeesTableRequests->map(fn ($requests) => (object) [
             'total' => (int) $requests->sum->days,
-            'pending' => (int) $requests->where('status', 'pending')->sum->days,
+            'pending' => (int) $requests->whereIn('status', ['pending', 'for_more_verification'])->sum->days,
             'approved' => (int) $requests->where('status', 'approved')->sum->days,
             'rejected' => (int) $requests->where('status', 'rejected')->sum->days,
         ]);
 
         $typeLabels = [
+            'leave' => 'Leave',
             'vacation_leave' => 'Vacation Leave',
             'sick_leave' => 'Sick Leave',
             'work_from_home' => 'Work From Home',
@@ -161,44 +166,67 @@ class EmployeeDashboardController extends Controller
             ];
         });
 
-        // Per employee, leave-request days for each type (all statuses).
+        // Per employee, approved leave days for each type, counting only days inside the From/To range.
+        $rangeStart = $leaveDaysStartDate !== '' ? Carbon::parse($leaveDaysStartDate)->startOfDay() : null;
+        $rangeEnd = $leaveDaysEndDate !== '' ? Carbon::parse($leaveDaysEndDate)->startOfDay() : null;
+
         $leaveDaysQuery = LeaveRequest::query()
             ->whereIn('user_id', $employeeIds)
             ->where('status', 'approved');
-        if ($leaveDaysStartDate !== '') {
-            $leaveDaysQuery->whereDate('start_date', '>=', $leaveDaysStartDate);
+        if ($rangeEnd !== null) {
+            $leaveDaysQuery->whereDate('start_date', '<=', $rangeEnd->toDateString());
         }
-        if ($leaveDaysEndDate !== '') {
-            $leaveDaysQuery->whereDate('start_date', '<=', $leaveDaysEndDate);
+        if ($rangeStart !== null) {
+            $leaveDaysQuery->where(function ($q) use ($rangeStart) {
+                $q->whereDate('end_date', '>=', $rangeStart->toDateString())
+                    ->orWhere(function ($single) use ($rangeStart) {
+                        $single->whereNull('end_date')
+                            ->whereDate('start_date', '>=', $rangeStart->toDateString());
+                    });
+            });
         }
         $validLeaveDaysTypes = array_values(array_filter($leaveDaysTypes, function ($type) use ($typeLabels) {
             return array_key_exists($type, $typeLabels);
         }));
-        if (!empty($validLeaveDaysTypes)) {
-            $leaveDaysQuery->whereIn('type', $validLeaveDaysTypes);
-        }
         $leaveRequestsByEmployee = $leaveDaysQuery
-            ->get(['user_id', 'type', 'start_date', 'end_date'])
+            ->get(['id', 'user_id', 'type', 'start_date', 'end_date', 'reviewed_at', 'created_at', 'updated_at'])
             ->groupBy('user_id');
 
         $employeeLeaveDaysByType = [];
         foreach ($employees as $employee) {
-            $requests = collect($leaveRequestsByEmployee->get($employee->id, []))
-                ->groupBy('type')
-                ->map(function ($typedRequests) {
-                    return (int) $typedRequests->sum(function ($request) {
-                        $start = Carbon::parse($request->start_date);
-                        $end = $request->end_date ? Carbon::parse($request->end_date) : $start;
+            $daysByType = array_fill_keys(array_keys($typeLabels), 0);
+            $latestByDate = [];
 
-                        return $start->diffInDays($end) + 1;
-                    });
-                });
+            foreach ($leaveRequestsByEmployee->get($employee->id, []) as $leaveRequest) {
+                foreach ($this->leaveRequestDatesWithin($leaveRequest, $rangeStart, $rangeEnd) as $dateKey) {
+                    if (in_array($leaveRequest->type, $timeCreditTypes, true)) {
+                        if (array_key_exists($leaveRequest->type, $daysByType)) {
+                            $daysByType[$leaveRequest->type]++;
+                        }
 
-            $employeeLeaveDaysByType[$employee->id] = collect(array_keys($typeLabels))
-                ->mapWithKeys(function ($type) use ($requests) {
-                    return [$type => (int) ($requests[$type] ?? 0)];
-                })
-                ->all();
+                        continue;
+                    }
+
+                    // When a leave type was changed by filing again for the same day, only the latest counts.
+                    DtrApprovedLeaveRemark::assignLatestLeaveRequestForDate($latestByDate, (int) $employee->id, $dateKey, $leaveRequest);
+                }
+            }
+
+            foreach ($latestByDate[$employee->id] ?? [] as $leaveRequest) {
+                if (array_key_exists($leaveRequest->type, $daysByType)) {
+                    $daysByType[$leaveRequest->type]++;
+                }
+            }
+
+            if (! empty($validLeaveDaysTypes)) {
+                foreach (array_keys($daysByType) as $type) {
+                    if (! in_array($type, $validLeaveDaysTypes, true)) {
+                        $daysByType[$type] = 0;
+                    }
+                }
+            }
+
+            $employeeLeaveDaysByType[$employee->id] = $daysByType;
         }
 
         $leaveDaysEmployees = $employees->map(function ($employee) use ($employeeLeaveDaysByType) {
@@ -238,7 +266,7 @@ class EmployeeDashboardController extends Controller
         // Per employee leave days by type (current year), with zero defaults.
         $employeesTableTypeLabels = array_diff_key($typeLabels, array_flip($timeCreditTypes));
         $employeeTypeCounts = [];
-        foreach ($employees as $employee) {
+        foreach ($tableEmployees as $employee) {
             $requests = collect($employeesTableRequests->get($employee->id, []));
             $employeeTypeCounts[$employee->id] = collect(array_keys($employeesTableTypeLabels))->mapWithKeys(function ($type) use ($requests) {
                 return [$type => (int) $requests->where('type', $type)->sum->days];
@@ -295,7 +323,7 @@ class EmployeeDashboardController extends Controller
         }
 
         $employeeBalances = [];
-        foreach ($employees as $employee) {
+        foreach ($tableEmployees as $employee) {
             LeaveBalance::firstOrCreateWithCarryover(
                 (int) $employee->id,
                 (int) $currentYear,
@@ -338,7 +366,9 @@ class EmployeeDashboardController extends Controller
             'typeLabels' => $typeLabels,
             'employeesTableTypeLabels' => $employeesTableTypeLabels,
             'recentLeaveRequests' => $recentLeaveRequests,
-            'employees' => $employees,
+            'employees' => $tableEmployees,
+            'showInactiveEmployees' => $showInactiveEmployees,
+            'canViewEmployeeLedger' => $authUser->canAccessAnalyticsFeature('employee_records'),
             'employeeLeaveStats' => $employeeLeaveStats,
             'employeeTypeCounts' => $employeeTypeCounts,
             'employeeBalances' => $employeeBalances,
@@ -348,6 +378,33 @@ class EmployeeDashboardController extends Controller
             'leaveDaysTypes' => $validLeaveDaysTypes,
             'leaveDaysEmployees' => $leaveDaysEmployees,
         ]);
+    }
+
+    /**
+     * Calendar days of a leave request, limited to the optional range.
+     *
+     * @return list<string> Y-m-d keys
+     */
+    private function leaveRequestDatesWithin(LeaveRequest $leaveRequest, ?Carbon $rangeStart, ?Carbon $rangeEnd): array
+    {
+        $start = Carbon::parse($leaveRequest->start_date)->startOfDay();
+        $end = $leaveRequest->end_date ? Carbon::parse($leaveRequest->end_date)->startOfDay() : $start->copy();
+        if ($end->lt($start)) {
+            $end = $start->copy();
+        }
+        if ($rangeStart !== null && $start->lt($rangeStart)) {
+            $start = $rangeStart->copy();
+        }
+        if ($rangeEnd !== null && $end->gt($rangeEnd)) {
+            $end = $rangeEnd->copy();
+        }
+
+        $dates = [];
+        for ($day = $start->copy(); $day->lte($end); $day->addDay()) {
+            $dates[] = $day->toDateString();
+        }
+
+        return $dates;
     }
 }
 

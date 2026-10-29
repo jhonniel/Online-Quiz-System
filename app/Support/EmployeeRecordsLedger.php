@@ -34,7 +34,11 @@ final class EmployeeRecordsLedger
             $defaultSick
         );
 
-        $allowance = (float) $leaveBalance->vacation_allowance + (float) $leaveBalance->sick_allowance;
+        // Same allowance the employee sees on their own Leave page (tenure-based unless an admin set a custom balance).
+        $user = User::find($userId);
+        $allowance = $user
+            ? StaffLeaveCredits::effectiveAllowance($user, $year)
+            : (float) $leaveBalance->vacation_allowance + (float) $leaveBalance->sick_allowance;
         $used = (float) self::sumApprovedLeaveCreditDays($userId, $year);
 
         return [

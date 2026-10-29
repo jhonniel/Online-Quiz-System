@@ -118,7 +118,7 @@
             <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
                 <div>
                     <h2 class="text-base font-semibold text-gray-900">All Employees Data</h2>
-                    <p class="text-sm text-gray-500">Active employees with leave days filed this year (Overtime and Additional Time not included).</p>
+                    <p class="text-sm text-gray-500">{{ $showInactiveEmployees ? 'Active and inactive employees' : 'Active employees' }} with leave days filed this year (Overtime and Additional Time not included).</p>
                 </div>
                 <div class="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 w-full sm:w-auto">
                     <div class="inline-flex rounded-lg border border-gray-200 bg-white p-1 w-full sm:w-auto">
@@ -135,6 +135,11 @@
                             Detailed per-type
                         </button>
                     </div>
+                    <a href="{{ request()->fullUrlWithQuery(['show_inactive' => $showInactiveEmployees ? null : 1]) }}"
+                       @click="localStorage.setItem('admin.employeeDashboard.employeesOpen', 'true')"
+                       class="inline-flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-lg border text-xs font-semibold {{ $showInactiveEmployees ? 'border-rose-200 bg-rose-50 text-rose-700 hover:bg-rose-100' : 'border-gray-200 bg-white text-gray-700 hover:bg-gray-50' }}">
+                        {{ $showInactiveEmployees ? 'Hide inactive' : 'Show inactive' }}
+                    </a>
                     <button type="button"
                             @click="toggleEmployeesOpen()"
                             class="inline-flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-lg border border-gray-200 bg-white text-gray-700 text-xs font-semibold hover:bg-gray-50">
@@ -176,11 +181,21 @@
                             $b = $employeeBalances[$employee->id] ?? null;
                             $leaveRemaining = $b['leave_remaining'] ?? 0;
                             $overtimeFormatted = $b['overtime_formatted'] ?? '00:00';
+                            $ledgerUrl = fn (string $tab) => $canViewEmployeeLedger
+                                ? route('admin.employee-records.show', ['employee' => $employee->id, 'tab' => $tab, 'from' => 'employee-dashboard'])
+                                : null;
                         @endphp
                         <tr class="hover:bg-gray-50/70 transition-colors">
                             <td class="px-4 py-3">
-                                <div class="text-sm font-semibold text-gray-900"><x-user-name :user="$employee" /></div>
-                                <div class="text-xs text-gray-500">#{{ $employee->id }}</div>
+                                @if($canViewEmployeeLedger)
+                                    <a href="{{ $ledgerUrl('leave') }}" class="group block" title="View leave and overtime ledger">
+                                        <div class="text-sm font-semibold text-indigo-700 group-hover:underline"><x-user-name :user="$employee" /></div>
+                                        <div class="text-xs text-gray-500">#{{ $employee->id }} · View ledger</div>
+                                    </a>
+                                @else
+                                    <div class="text-sm font-semibold text-gray-900"><x-user-name :user="$employee" /></div>
+                                    <div class="text-xs text-gray-500">#{{ $employee->id }}</div>
+                                @endif
                             </td>
                             <td class="px-4 py-3 text-sm text-gray-700">{{ $employee->email }}</td>
                             <td class="px-4 py-3 text-sm text-gray-700">{{ $employee->department->name ?? '—' }}</td>
@@ -194,8 +209,21 @@
                             <td class="px-4 py-3 text-center text-sm font-medium text-amber-700">{{ $pending }}</td>
                             <td class="px-4 py-3 text-center text-sm font-medium text-emerald-700">{{ $approved }}</td>
                             <td class="px-4 py-3 text-center text-sm font-medium text-rose-700">{{ $rejected }}</td>
-                            <td class="px-4 py-3 text-center text-sm font-semibold text-gray-900">{{ rtrim(rtrim(number_format((float) $leaveRemaining, 2, '.', ''), '0'), '.') }}</td>
-                            <td class="px-4 py-3 text-center text-sm font-semibold {{ str_starts_with($overtimeFormatted, '-') ? 'text-rose-700' : 'text-emerald-700' }}">{{ $overtimeFormatted }}</td>
+                            @php $leaveRemainingLabel = rtrim(rtrim(number_format((float) $leaveRemaining, 2, '.', ''), '0'), '.'); @endphp
+                            <td class="px-4 py-3 text-center text-sm font-semibold text-gray-900">
+                                @if($canViewEmployeeLedger)
+                                    <a href="{{ $ledgerUrl('leave') }}" class="hover:underline" title="View leave credit ledger">{{ $leaveRemainingLabel }}</a>
+                                @else
+                                    {{ $leaveRemainingLabel }}
+                                @endif
+                            </td>
+                            <td class="px-4 py-3 text-center text-sm font-semibold {{ str_starts_with($overtimeFormatted, '-') ? 'text-rose-700' : 'text-emerald-700' }}">
+                                @if($canViewEmployeeLedger)
+                                    <a href="{{ $ledgerUrl('overtime') }}" class="hover:underline" title="View overtime ledger">{{ $overtimeFormatted }}</a>
+                                @else
+                                    {{ $overtimeFormatted }}
+                                @endif
+                            </td>
                             <td x-show="employeeViewMode === 'detailed'" x-cloak class="px-4 py-3 text-xs text-gray-700 min-w-[360px]">
                                 <div class="grid grid-cols-2 xl:grid-cols-3 gap-1.5">
                                     @foreach($employeesTableTypeLabels as $typeKey => $typeLabel)
@@ -235,6 +263,9 @@
                 <div class="flex flex-col sm:flex-row sm:items-center gap-1.5 w-full lg:w-auto">
                     <form method="GET" action="{{ url('/admin/employee-dashboard') }}" class="w-full lg:w-auto grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-6 gap-1.5 items-end">
                         <input type="hidden" name="leave_days_filter" value="1">
+                        @if($showInactiveEmployees)
+                            <input type="hidden" name="show_inactive" value="1">
+                        @endif
                         <div class="min-w-0">
                             <label for="leave_days_start_date" class="block text-[10px] text-gray-500 mb-0.5">From</label>
                             <input id="leave_days_start_date" name="leave_days_start_date" type="date" value="{{ $leaveDaysStartDate ?? '' }}" class="h-8 w-full rounded-md border-gray-300 text-xs focus:border-indigo-500 focus:ring-indigo-500">
@@ -318,8 +349,15 @@
                         @endphp
                         <tr class="hover:bg-gray-50/70 transition-colors">
                             <td class="px-4 py-3 text-sm">
-                                <div class="font-medium text-gray-900"><x-user-name :user="$employee" /></div>
-                                <div class="text-xs text-gray-500">{{ $employee->email }}</div>
+                                @if($canViewEmployeeLedger)
+                                    <a href="{{ route('admin.employee-records.show', ['employee' => $employee->id, 'tab' => 'leave', 'from' => 'employee-dashboard']) }}" class="group block" title="View leave and overtime ledger">
+                                        <div class="font-medium text-indigo-700 group-hover:underline"><x-user-name :user="$employee" /></div>
+                                        <div class="text-xs text-gray-500">{{ $employee->email }}</div>
+                                    </a>
+                                @else
+                                    <div class="font-medium text-gray-900"><x-user-name :user="$employee" /></div>
+                                    <div class="text-xs text-gray-500">{{ $employee->email }}</div>
+                                @endif
                             </td>
                             @foreach($typeLabels as $typeKey => $typeLabel)
                                 <td class="px-4 py-3 text-sm text-right font-semibold text-rose-700 whitespace-nowrap">
