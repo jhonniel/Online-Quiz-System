@@ -86,6 +86,7 @@ final class DtrEmployeeAttendance
 
         return (bool) preg_match('/Leave:\s*Offset\b/i', $remarks)
             || (bool) preg_match('/Approved Leave:\s*Offset\b/i', $remarks)
+            || (bool) preg_match('/Approved:\s*Offset\b/i', $remarks)
             || (bool) preg_match('/\bOffset:\s*(Offset|Leave)\b/i', $remarks);
     }
 

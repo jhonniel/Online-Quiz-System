@@ -292,14 +292,14 @@ class DtrController extends Controller
 
                         if ($existingDtr) {
                             $existingRemarks = $existingDtr->remarks ?: '';
-                            $offsetLabel = 'Leave: Offset';
+                            $offsetLabel = DtrApprovedLeaveRemark::offsetCategoryRemark();
                             if ($existingRemarks) {
-                                $existingDtr->remarks = $existingRemarks . ' | ' . $offsetLabel;
+                                $existingDtr->remarks = $existingRemarks.' | '.$offsetLabel;
                             } else {
                                 $existingDtr->remarks = $offsetLabel;
                             }
-                            if (stripos((string) ($existingDtr->remarks ?? ''), $approvedTypeRemark) === false) {
-                                $existingDtr->remarks .= ' | ' . $approvedTypeRemark;
+                            if (! DtrApprovedLeaveRemark::remarksIncludePhrase((string) ($existingDtr->remarks ?? ''), 'offset', $leave->type_label ?? null)) {
+                                $existingDtr->remarks .= ' | '.$approvedTypeRemark;
                             }
                         } else {
                             // Fallback when approval sync did not create a row yet
@@ -313,7 +313,9 @@ class DtrController extends Controller
                                     'total_hours' => $offsetHoursPerDay,
                                     'overtime_hours' => DtrRecordHours::overtimeFromTotal($offsetHoursPerDay),
                                     'status' => 'on_leave',
-                                    'remarks' => 'Leave: Offset',
+                                    'remarks' => DtrApprovedLeaveRemark::offsetCategoryRemark()
+                                        .' | '
+                                        .DtrApprovedLeaveRemark::storedRemark('offset'),
                                 ]
                             );
                             $entry->leave_type_label = $leave->type_label ?? 'Offset';

@@ -13,6 +13,10 @@ final class DtrApprovedLeaveRemark
             return 'Approved: Work From Home';
         }
 
+        if ($leaveType === 'offset') {
+            return 'Approved: Offset';
+        }
+
         $label = trim($typeLabel ?? '') !== ''
             ? trim($typeLabel)
             : ucfirst(str_replace('_', ' ', $leaveType));
@@ -43,7 +47,17 @@ final class DtrApprovedLeaveRemark
             $phrases[] = 'Leave: Work From Home';
         }
 
+        if ($leaveType === 'offset') {
+            $phrases[] = 'Approved Leave: Offset';
+            $phrases[] = 'Leave: Offset';
+        }
+
         return array_values(array_unique($phrases));
+    }
+
+    public static function offsetCategoryRemark(): string
+    {
+        return 'Offset: Offset';
     }
 
     public static function remarksIncludePhrase(string $remarks, string $leaveType, ?string $typeLabel = null): bool
@@ -69,7 +83,18 @@ final class DtrApprovedLeaveRemark
 
         $text = str_ireplace('Approved Leave: Work From Home', 'Approved: Work From Home', $text);
         $text = str_ireplace('Leave: Work From Home', 'Approved: Work From Home', $text);
+        $text = str_ireplace('Approved Leave: Offset', 'Approved: Offset', $text);
+        $text = str_ireplace('Leave: Offset', 'Approved: Offset', $text);
+        $text = str_ireplace('Offset: Offset | Offset: Offset', 'Offset: Offset | Approved: Offset', $text);
 
         return $text;
+    }
+
+    /**
+     * Persist normalized remark text (e.g. after loading legacy DTR rows).
+     */
+    public static function normalizeRemarksForStorage(?string $remarks): string
+    {
+        return self::normalizeRemarksDisplay($remarks);
     }
 }

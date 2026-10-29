@@ -2906,7 +2906,7 @@ class LeaveRequestController extends Controller
 
         $dayCount = max(1, $this->leaveRequestInclusiveDayCount($leaveRequest));
         $offsetHoursPerDay = $totalOffsetHours / $dayCount;
-        $offsetLabel = 'Leave: Offset';
+        $offsetLabel = \App\Support\DtrApprovedLeaveRemark::offsetCategoryRemark();
 
         foreach ($this->iterateLeaveRequestDates($leaveRequest) as $date) {
             $dtr = $this->findOrCreateDtrRecord(
@@ -2920,8 +2920,16 @@ class LeaveRequestController extends Controller
             $existingRemarks = trim((string) ($dtr->remarks ?? ''));
             if ($existingRemarks === '') {
                 $dtr->remarks = $offsetLabel;
-            } elseif (stripos($existingRemarks, 'Leave: Offset') === false && stripos($existingRemarks, 'Offset:') === false) {
+            } elseif (stripos($existingRemarks, 'Offset: Offset') === false && stripos($existingRemarks, 'Leave: Offset') === false && stripos($existingRemarks, 'Offset:') === false) {
                 $dtr->remarks = $existingRemarks.' | '.$offsetLabel;
+            }
+
+            $remarkAfterOffset = trim((string) ($dtr->remarks ?? ''));
+            $approvedOffsetRemark = \App\Support\DtrApprovedLeaveRemark::storedRemark('offset');
+            if (! \App\Support\DtrApprovedLeaveRemark::remarksIncludePhrase($remarkAfterOffset, 'offset')) {
+                $dtr->remarks = $remarkAfterOffset !== ''
+                    ? $remarkAfterOffset.' | '.$approvedOffsetRemark
+                    : $approvedOffsetRemark;
             }
 
             if (empty($dtr->status) || $dtr->status === 'present') {
@@ -2960,7 +2968,7 @@ class LeaveRequestController extends Controller
             if ($existingRemarks !== '') {
                 $dtr->remarks = trim(preg_replace('/\s*\|\s*Leave:\s*Offset[^|]*/i', '', $existingRemarks) ?? $existingRemarks);
                 $dtr->remarks = trim(preg_replace('/\s*\|\s*Offset:[^|]*/i', '', (string) $dtr->remarks) ?? $dtr->remarks);
-                $dtr->remarks = trim(str_replace(['Leave: Offset', 'Offset: Offset'], '', (string) $dtr->remarks));
+                $dtr->remarks = trim(str_replace(['Approved: Offset', 'Approved Leave: Offset', 'Leave: Offset', 'Offset: Offset'], '', (string) $dtr->remarks));
             }
 
             $dtr->save();
