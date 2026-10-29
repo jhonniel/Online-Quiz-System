@@ -45,13 +45,6 @@
         <div class="footer-inner">Page <span class="page"></span> of <span class="topage"></span></div>
     </footer>
 
-    <div style="margin-bottom: 10px; padding: 6px 8px; border: 1px solid #E5E7EB; background: #FAFAFA;">
-        <div style="font-weight: bold; font-size: 9px; margin-bottom: 4px; color: #374151;">Approved leave — color key</div>
-        @foreach(\App\Support\DtrApprovedLeaveRemark::pdfLegend() as $legendItem)
-            <span style="display: inline-block; margin: 2px 8px 2px 0; font-size: 7.5px; color: {{ $legendItem['color'] }}; font-weight: 600;">{{ $legendItem['label'] }}</span>
-        @endforeach
-    </div>
-
     @foreach($groupedByEmployee as $employeeGroup)
         <div class="employee-header">
             <div class="employee-name">
@@ -136,7 +129,7 @@
                             $remarks = $remarks !== '' ? $remarks.' | Travel' : 'Travel';
                         }
 
-                        $remarksDisplayHtml = \App\Support\DtrApprovedLeaveRemark::pdfRemarksHtml($remarks);
+                        $remarksDisplayHtml = \App\Support\DtrApprovedLeaveRemark::pdfRemarksHtml($remarks, $extraMinutes > 0);
                     @endphp
                     @php
                         // Force absent display to 00:00 in PDF table.

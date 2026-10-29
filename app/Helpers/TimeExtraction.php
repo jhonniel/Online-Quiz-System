@@ -88,12 +88,10 @@ class TimeExtraction
 
         $totalMinutes = 0.0;
         $matched = [];
-
-        // Build word pattern for reuse
-        $wordPattern = '(?:' . implode('|', array_keys(self::$wordNumbers)) . ')';
+        $patterns = self::durationPatterns();
 
         // 0. "one and a half hr", "two and half hours", "one and half hr" (word number + and + half/quarter + hour)
-        if (preg_match_all('/\b(' . $wordPattern . ')\s+and\s+(?:a\s+)?(half|quarter)\s*(?:h(?:(?:ou)?r)?s?)\b/i', $text, $matches, PREG_SET_ORDER)) {
+        if (preg_match_all($patterns['word_and_fraction'], $text, $matches, PREG_SET_ORDER)) {
             foreach ($matches as $m) {
                 $wholeNum = self::$wordNumbers[strtolower($m[1])] ?? 0;
                 $frac = self::$fractionWords[$m[2]] ?? 0;
@@ -103,7 +101,7 @@ class TimeExtraction
         }
 
         // 0b. Numeric "1 and a half hr", "2 and half hours"
-        if (preg_match_all('/\b(\d+)\s+and\s+(?:a\s+)?(half|quarter)\s*(?:h(?:(?:ou)?r)?s?)\b/i', $text, $matches, PREG_SET_ORDER)) {
+        if (preg_match_all($patterns['number_and_fraction'], $text, $matches, PREG_SET_ORDER)) {
             foreach ($matches as $m) {
                 $wholeNum = (int) $m[1];
                 $frac = self::$fractionWords[$m[2]] ?? 0;
@@ -113,7 +111,7 @@ class TimeExtraction
         }
 
         // 1. "half hour", "quarter hour", "half an hour"
-        if (preg_match_all('/\b(half|quarter)(?:\s+an?)?\s+hour/i', $text, $matches, PREG_SET_ORDER)) {
+        if (preg_match_all($patterns['fraction_hour'], $text, $matches, PREG_SET_ORDER)) {
             foreach ($matches as $m) {
                 if (!self::alreadyMatched($m[0], $matched)) {
                     $frac = self::$fractionWords[$m[1]] ?? 0;
@@ -127,7 +125,7 @@ class TimeExtraction
         // Values like 9:20 ("abot 9:20") or 5:00 ("until 5:00") are clock times, not durations.
         // Only treat H:MM as a duration when H is 0–4 (e.g. 1:30 = 90m, 4:15 = 4h15m). Use "5h",
         // "5 hours", or "5hr 30m" for five or more hours.
-        if (preg_match_all('/\b(\d{1,2}):(\d{1,2})\b/', $text, $matches, PREG_SET_ORDER)) {
+        if (preg_match_all($patterns['colon'], $text, $matches, PREG_SET_ORDER)) {
             foreach ($matches as $m) {
                 $h = (int) $m[1];
                 $min = (int) $m[2];
@@ -143,7 +141,7 @@ class TimeExtraction
         }
 
         // 3. Compact format: 1h30m, 2h15m (no space)
-        if (preg_match_all('/\b(\d+)\s*h\s*(\d+)\s*m(?:in(?:ute)?s?)?\b/i', $text, $matches, PREG_SET_ORDER)) {
+        if (preg_match_all($patterns['compact'], $text, $matches, PREG_SET_ORDER)) {
             foreach ($matches as $m) {
                 $totalMinutes += (int) $m[1] * 60 + (int) $m[2];
                 $matched[] = $m[0];
@@ -151,7 +149,7 @@ class TimeExtraction
         }
 
         // 4. Hours with optional decimals (e.g. 1.5h, 1.5 hours, 2 hrs, 1h)
-        if (preg_match_all('/\b(\d+(?:\.\d+)?)\s*(?:h(?:(?:ou)?r)?s?)\b/i', $text, $matches, PREG_SET_ORDER)) {
+        if (preg_match_all($patterns['hours'], $text, $matches, PREG_SET_ORDER)) {
             foreach ($matches as $m) {
                 // Avoid double-counting if already matched in compact format
                 if (!self::alreadyMatched($m[0], $matched)) {
@@ -162,7 +160,7 @@ class TimeExtraction
         }
 
         // 5. Minutes (e.g. 30m, 30 min, 45 minutes, 90 minutes)
-        if (preg_match_all('/\b(\d+(?:\.\d+)?)\s*(?:m(?:in(?:ute)?s?)?)\b/i', $text, $matches, PREG_SET_ORDER)) {
+        if (preg_match_all($patterns['minutes'], $text, $matches, PREG_SET_ORDER)) {
             foreach ($matches as $m) {
                 if (!self::alreadyMatched($m[0], $matched)) {
                     $totalMinutes += (float) $m[1];
@@ -172,7 +170,7 @@ class TimeExtraction
         }
 
         // 6. Combined word hours and minutes: "one hr three mins", "two hours fifteen minutes"
-        if (preg_match_all('/\b((' . $wordPattern . ')(?:\s+' . $wordPattern . ')?)\s*(?:h(?:(?:ou)?r)?s?)\s+((' . $wordPattern . ')(?:\s+' . $wordPattern . ')?)\s*(?:m(?:in(?:ute)?s?)?)\b/i', $text, $matches, PREG_SET_ORDER)) {
+        if (preg_match_all($patterns['word_hours_minutes'], $text, $matches, PREG_SET_ORDER)) {
             foreach ($matches as $m) {
                 if (!self::alreadyMatched($m[0], $matched)) {
                     $hrs = self::parseWordNumberPhrase($m[1]);
@@ -184,7 +182,7 @@ class TimeExtraction
         }
 
         // 7. Word-based hours: "one hour", "two hrs", "three hours"
-        if (preg_match_all('/\b((' . $wordPattern . ')(?:\s+' . $wordPattern . ')?)\s*(?:h(?:(?:ou)?r)?s?)\b/i', $text, $matches, PREG_SET_ORDER)) {
+        if (preg_match_all($patterns['word_hours'], $text, $matches, PREG_SET_ORDER)) {
             foreach ($matches as $m) {
                 if (!self::alreadyMatched($m[0], $matched)) {
                     $num = self::parseWordNumberPhrase($m[1]);
@@ -195,7 +193,7 @@ class TimeExtraction
         }
 
         // 8. Word-based minutes: "thirty mins", "fifteen minutes", "three mins"
-        if (preg_match_all('/\b((' . $wordPattern . ')(?:\s+' . $wordPattern . ')?)\s*(?:m(?:in(?:ute)?s?)?)\b/i', $text, $matches, PREG_SET_ORDER)) {
+        if (preg_match_all($patterns['word_minutes'], $text, $matches, PREG_SET_ORDER)) {
             foreach ($matches as $m) {
                 if (!self::alreadyMatched($m[0], $matched)) {
                     $num = self::parseWordNumberPhrase($m[1]);
@@ -206,7 +204,7 @@ class TimeExtraction
         }
 
         // 9. "an hour", "a minute"
-        if (preg_match_all('/\b(?:an?|one)\s+(hour|hr|minute|min)\b/i', $text, $matches, PREG_SET_ORDER)) {
+        if (preg_match_all($patterns['article_unit'], $text, $matches, PREG_SET_ORDER)) {
             foreach ($matches as $m) {
                 if (!self::alreadyMatched($m[0], $matched)) {
                     $unit = strtolower($m[1]);
@@ -217,6 +215,87 @@ class TimeExtraction
         }
 
         return round($totalMinutes / 60, 4);
+    }
+
+    /**
+     * Byte ranges in the original text of the duration phrases counted by fromText().
+     *
+     * @return list<array{0: int, 1: int}> [offset, length], sorted and non-overlapping
+     */
+    public static function durationSpans(?string $text): array
+    {
+        if ($text === null || trim($text) === '') {
+            return [];
+        }
+
+        // Same-length normalization so match offsets map back onto the original text.
+        $search = preg_replace('/[-_,;]/', ' ', strtolower($text));
+        $patterns = self::durationPatterns();
+        $dedupedSteps = ['fraction_hour', 'hours', 'minutes', 'word_hours_minutes', 'word_hours', 'word_minutes', 'article_unit'];
+
+        $matched = [];
+        $spans = [];
+        foreach ($patterns as $step => $pattern) {
+            if (! preg_match_all($pattern, $search, $matches, PREG_SET_ORDER | PREG_OFFSET_CAPTURE)) {
+                continue;
+            }
+
+            foreach ($matches as $m) {
+                [$phrase, $offset] = $m[0];
+
+                if ($step === 'colon' && ((int) $m[2][0] > 59 || (int) $m[1][0] >= 5)) {
+                    continue;
+                }
+                if (in_array($step, $dedupedSteps, true) && self::alreadyMatched($phrase, $matched)) {
+                    continue;
+                }
+
+                $matched[] = $phrase;
+                $spans[] = [$offset, strlen($phrase)];
+            }
+        }
+
+        usort($spans, fn (array $a, array $b) => $a[0] <=> $b[0]);
+
+        $merged = [];
+        foreach ($spans as [$offset, $length]) {
+            $last = count($merged) - 1;
+            if ($last >= 0 && $offset <= $merged[$last][0] + $merged[$last][1]) {
+                $end = max($merged[$last][0] + $merged[$last][1], $offset + $length);
+                $merged[$last][1] = $end - $merged[$last][0];
+
+                continue;
+            }
+            $merged[] = [$offset, $length];
+        }
+
+        return $merged;
+    }
+
+    /**
+     * Ordered duration patterns shared by fromText() and durationSpans().
+     *
+     * @return array<string, string>
+     */
+    private static function durationPatterns(): array
+    {
+        $word = '(?:' . implode('|', array_keys(self::$wordNumbers)) . ')';
+        $hourUnit = '(?:h(?:(?:ou)?r)?s?)';
+        $minuteUnit = '(?:m(?:in(?:ute)?s?)?)';
+
+        return [
+            'word_and_fraction' => '/\b(' . $word . ')\s+and\s+(?:a\s+)?(half|quarter)\s*' . $hourUnit . '\b/i',
+            'number_and_fraction' => '/\b(\d+)\s+and\s+(?:a\s+)?(half|quarter)\s*' . $hourUnit . '\b/i',
+            'fraction_hour' => '/\b(half|quarter)(?:\s+an?)?\s+hour/i',
+            'colon' => '/\b(\d{1,2}):(\d{1,2})\b/',
+            'compact' => '/\b(\d+)\s*h\s*(\d+)\s*m(?:in(?:ute)?s?)?\b/i',
+            'hours' => '/\b(\d+(?:\.\d+)?)\s*' . $hourUnit . '\b/i',
+            'minutes' => '/\b(\d+(?:\.\d+)?)\s*' . $minuteUnit . '\b/i',
+            'word_hours_minutes' => '/\b((' . $word . ')(?:\s+' . $word . ')?)\s*' . $hourUnit . '\s+((' . $word . ')(?:\s+' . $word . ')?)\s*' . $minuteUnit . '\b/i',
+            'word_hours' => '/\b((' . $word . ')(?:\s+' . $word . ')?)\s*' . $hourUnit . '\b/i',
+            'word_minutes' => '/\b((' . $word . ')(?:\s+' . $word . ')?)\s*' . $minuteUnit . '\b/i',
+            'article_unit' => '/\b(?:an?|one)\s+(hour|hr|minute|min)\b/i',
+        ];
     }
 
     /**

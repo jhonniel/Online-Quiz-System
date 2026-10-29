@@ -27,34 +27,6 @@ final class DtrApprovedLeaveRemark
         ];
     }
 
-    /**
-     * @return list<array{label: string, bg: string, color: string}>
-     */
-    public static function pdfLegend(): array
-    {
-        $order = [
-            'vacation_leave',
-            'sick_leave',
-            'work_from_home',
-            'offset',
-            'travel',
-            'absent',
-            'excused',
-            'additional_time',
-            'holiday',
-            'default',
-        ];
-        $palette = self::pdfPalette();
-        $legend = [];
-        foreach ($order as $key) {
-            if (isset($palette[$key])) {
-                $legend[] = $palette[$key];
-            }
-        }
-
-        return $legend;
-    }
-
     public static function inferApprovedLeaveType(
         ?string $requestType,
         ?Dtr $dtr = null,
@@ -272,8 +244,9 @@ final class DtrApprovedLeaveRemark
 
     /**
      * Color only approved-leave label phrases in remarks; other text stays default.
+     * When $boldAddedTime is true, durations counted as Added Time are bolded.
      */
-    public static function pdfRemarksHtml(?string $remarks): string
+    public static function pdfRemarksHtml(?string $remarks, bool $boldAddedTime = false): string
     {
         $text = self::normalizeRemarksDisplay($remarks);
         if ($text === '') {
@@ -287,7 +260,7 @@ final class DtrApprovedLeaveRemark
             if ($segment === '') {
                 continue;
             }
-            $htmlSegments[] = self::pdfHighlightRemarkSegment($segment);
+            $htmlSegments[] = self::pdfHighlightRemarkSegment($segment, $boldAddedTime);
         }
 
         if ($htmlSegments === []) {
@@ -297,11 +270,11 @@ final class DtrApprovedLeaveRemark
         return implode(' | ', $htmlSegments);
     }
 
-    private static function pdfHighlightRemarkSegment(string $segment): string
+    private static function pdfHighlightRemarkSegment(string $segment, bool $boldAddedTime): string
     {
         $labelInfo = self::extractRemarkLabel($segment);
         if ($labelInfo === null) {
-            return e($segment);
+            return self::pdfBoldAddedTimeHtml($segment, $boldAddedTime);
         }
 
         $style = self::pdfLabelSpanStyle($labelInfo['type']);
@@ -309,7 +282,29 @@ final class DtrApprovedLeaveRemark
         $labelLength = strlen($label);
         $rest = substr($segment, $labelLength);
 
-        return '<span style="'.$style.'">'.e($label).'</span>'.e($rest);
+        return '<span style="'.$style.'">'.e($label).'</span>'.self::pdfBoldAddedTimeHtml($rest, $boldAddedTime);
+    }
+
+    private static function pdfBoldAddedTimeHtml(string $text, bool $boldAddedTime): string
+    {
+        if (! $boldAddedTime) {
+            return e($text);
+        }
+
+        $spans = DtrAddedTimeFromRemarks::spansInRemarks($text);
+        if ($spans === []) {
+            return e($text);
+        }
+
+        $html = '';
+        $cursor = 0;
+        foreach ($spans as [$offset, $length]) {
+            $html .= e(substr($text, $cursor, $offset - $cursor));
+            $html .= '<strong>'.e(substr($text, $offset, $length)).'</strong>';
+            $cursor = $offset + $length;
+        }
+
+        return $html.e(substr($text, $cursor));
     }
 
     /**

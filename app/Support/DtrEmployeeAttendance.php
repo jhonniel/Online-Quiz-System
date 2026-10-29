@@ -55,6 +55,11 @@ final class DtrEmployeeAttendance
         }
 
         if (self::hasApprovedVacationOrSickLeave($dtr)) {
+            $requestType = self::approvedLeaveRequestType($dtr);
+            if ($requestType !== null) {
+                return $requestType === 'sick_leave' ? 'Sick Leave' : 'Vacation Leave';
+            }
+
             $label = strtolower((string) ($dtr->leave_type_label ?? ''));
             $remarks = (string) ($dtr->remarks ?? '');
             if (str_contains($label, 'sick') || preg_match('/Sick Leave|Sick\b/i', $remarks)) {
@@ -71,10 +76,17 @@ final class DtrEmployeeAttendance
         return null;
     }
 
+    /**
+     * Vacation and sick leave credit is stored in offset_hours too, so offset_hours alone does not mean Offset.
+     */
     public static function isOffsetLeave(Dtr $dtr): bool
     {
-        if ((float) ($dtr->offset_hours ?? 0) > 0) {
+        $requestType = self::approvedLeaveRequestType($dtr);
+        if ($requestType === 'offset') {
             return true;
+        }
+        if ($requestType === 'vacation_leave' || $requestType === 'sick_leave') {
+            return false;
         }
 
         $remarks = (string) ($dtr->remarks ?? '');
@@ -84,10 +96,48 @@ final class DtrEmployeeAttendance
             return true;
         }
 
-        return (bool) preg_match('/Leave:\s*Offset\b/i', $remarks)
-            || (bool) preg_match('/Approved Leave:\s*Offset\b/i', $remarks)
-            || (bool) preg_match('/Approved:\s*Offset\b/i', $remarks)
-            || (bool) preg_match('/\bOffset:\s*(Offset|Leave)\b/i', $remarks);
+        if (preg_match('/Leave:\s*Offset\b/i', $remarks)
+            || preg_match('/Approved Leave:\s*Offset\b/i', $remarks)
+            || preg_match('/Approved:\s*Offset\b/i', $remarks)
+            || preg_match('/\bOffset:\s*(Offset|Leave)\b/i', $remarks)) {
+            return true;
+        }
+
+        if (self::indicatesVacationOrSickLeave($dtr)) {
+            return false;
+        }
+
+        return (float) ($dtr->offset_hours ?? 0) > 0;
+    }
+
+    /**
+     * Type of the approved leave request linked to this row, limited to offset / vacation / sick.
+     */
+    private static function approvedLeaveRequestType(Dtr $dtr): ?string
+    {
+        $leaveRequest = $dtr->leave_request ?? null;
+        if (! $leaveRequest instanceof LeaveRequest || ! $leaveRequest->isApproved()) {
+            return null;
+        }
+
+        return in_array($leaveRequest->type, ['offset', 'vacation_leave', 'sick_leave'], true)
+            ? $leaveRequest->type
+            : null;
+    }
+
+    private static function indicatesVacationOrSickLeave(Dtr $dtr): bool
+    {
+        $remarks = (string) ($dtr->remarks ?? '');
+        $label = strtolower((string) ($dtr->leave_type_label ?? ''));
+
+        if (preg_match('/Approved\s+(Vacation Leave|Sick Leave)\b/i', $remarks)
+            || preg_match('/Approved Leave:\s*(Vacation Leave|Sick Leave|Vacation|Sick)\b/i', $remarks)
+            || preg_match('/\b(vacation_leave|sick_leave|Vacation Leave|Sick Leave)\b/i', $remarks)) {
+            return true;
+        }
+
+        return ($dtr->status ?? '') === 'on_leave'
+            && (str_contains($label, 'vacation') || str_contains($label, 'sick'));
     }
 
     /**
@@ -129,28 +179,11 @@ final class DtrEmployeeAttendance
             return false;
         }
 
-        $remarks = (string) ($dtr->remarks ?? '');
-        $label = strtolower((string) ($dtr->leave_type_label ?? ''));
-
-        if (preg_match('/Approved\s+(Vacation Leave|Sick Leave)\b/i', $remarks)) {
+        if (self::approvedLeaveRequestType($dtr) !== null) {
             return true;
         }
 
-        if (preg_match('/Approved Leave:\s*(Vacation Leave|Sick Leave|Vacation|Sick Leave|Sick)\b/i', $remarks)) {
-            return true;
-        }
-
-        if (preg_match('/\b(vacation_leave|sick_leave|Vacation Leave|Sick Leave)\b/i', $remarks)) {
-            return true;
-        }
-
-        if (($dtr->status ?? '') === 'on_leave') {
-            if (str_contains($label, 'vacation') || str_contains($label, 'sick')) {
-                return true;
-            }
-        }
-
-        return false;
+        return self::indicatesVacationOrSickLeave($dtr);
     }
 
     public static function hasApprovedWorkFromHome(Dtr $dtr, ?LeaveRequest $leaveRequest = null): bool

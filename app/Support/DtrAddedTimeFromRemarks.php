@@ -23,6 +23,16 @@ final class DtrAddedTimeFromRemarks
     }
 
     /**
+     * Byte ranges of the remark phrases counted by {@see decimalFromRemarks()}.
+     *
+     * @return list<array{0: int, 1: int}> [offset, length]
+     */
+    public static function spansInRemarks(?string $remarks): array
+    {
+        return SmartTimeParser::durationSpans($remarks);
+    }
+
+    /**
      * Optional HH:MM (or smart text) from the Added Time column, when not already only in remarks.
      */
     public static function decimalFromAddedColumn(?string $value): float
