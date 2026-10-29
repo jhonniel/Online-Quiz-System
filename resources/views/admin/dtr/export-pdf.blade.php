@@ -164,14 +164,7 @@
                             }
                         }
 
-                        $pdfLeaveType = \App\Support\DtrApprovedLeaveRemark::inferApprovedLeaveType(
-                            $approvedLeaveType,
-                            $dtr,
-                            $remarks,
-                            $travelRequest !== null
-                        );
-                        $pdfRemarksStyle = \App\Support\DtrApprovedLeaveRemark::pdfRemarksTextStyle($pdfLeaveType);
-                        $remarksDisplay = \App\Support\DtrApprovedLeaveRemark::normalizeRemarksDisplay($remarks) ?: '-';
+                        $remarksDisplayHtml = \App\Support\DtrApprovedLeaveRemark::pdfRemarksHtml($remarks);
                     @endphp
                     @php
                         // Force absent display to 00:00 in PDF table.
@@ -214,7 +207,7 @@
                             @endif
                         </td>
                         <td class="center"@if($statusLabel === 'Under Time') style="color: #DC2626; font-weight: bold;"@endif>{{ $statusLabel }}</td>
-                        <td @if($pdfRemarksStyle !== '') style="{{ $pdfRemarksStyle }}" @endif>{{ $remarksDisplay }}</td>
+                        <td>{!! $remarksDisplayHtml !!}</td>
                     </tr>
                 @endforeach
             </tbody>
@@ -372,8 +365,6 @@
                             $totalH = intdiv($totalMinutes, 60);
                             $totalM = $totalMinutes % 60;
                             $totalFormatted = sprintf('%02d:%02d', $totalH, $totalM);
-                            $pdfLeaveType = \App\Support\DtrApprovedLeaveRemark::inferApprovedLeaveType((string) ($leave->type ?? ''), $dtrRecord, null, false);
-                            $pdfRemarksStyle = \App\Support\DtrApprovedLeaveRemark::pdfRemarksTextStyle($pdfLeaveType);
                         @endphp
                         <tr>
                             <td>{{ $leaveDate->format('M d, Y') }}</td>
@@ -383,8 +374,8 @@
                             <td class="right">00:00</td>
                             <td class="right">{{ $totalFormatted }}</td>
                             <td class="center">{{ ($leave->type ?? '') === 'absent' ? 'Absent' : 'Completed' }}</td>
-                            <td @if($pdfRemarksStyle !== '') style="{{ $pdfRemarksStyle }}" @endif>
-                                {{ \App\Support\DtrApprovedLeaveRemark::displayRemark((string) ($leave->type ?? ''), $leaveTypeLabel) }}
+                            <td>
+                                {!! \App\Support\DtrApprovedLeaveRemark::pdfRemarkLabelHtml((string) ($leave->type ?? ''), $leaveTypeLabel) !!}
                                 @if($approvalTime)
                                     (Approved: {{ $approvalTime }})
                                 @endif
@@ -453,8 +444,6 @@
                             $totalH = intdiv($totalMinutes, 60);
                             $totalM = $totalMinutes % 60;
                             $totalFormatted = sprintf('%02d:%02d', $totalH, $totalM);
-                            $pdfLeaveType = \App\Support\DtrApprovedLeaveRemark::inferApprovedLeaveType(null, $dtrRecord, 'Travel', true);
-                            $pdfRemarksStyle = \App\Support\DtrApprovedLeaveRemark::pdfRemarksTextStyle($pdfLeaveType);
                         @endphp
                         <tr>
                             <td>{{ $travelDate->format('M d, Y') }}</td>
@@ -464,8 +453,8 @@
                             <td class="right">00:00</td>
                             <td class="right">{{ $totalFormatted }}</td>
                             <td class="center">Travel</td>
-                            <td @if($pdfRemarksStyle !== '') style="{{ $pdfRemarksStyle }}" @endif>
-                                Travel Leave
+                            <td>
+                                {!! \App\Support\DtrApprovedLeaveRemark::pdfFixedLabelHtml('Travel Leave', 'travel') !!}
                                 @if($approvalTime)
                                     (Approved: {{ $approvalTime }})
                                 @endif

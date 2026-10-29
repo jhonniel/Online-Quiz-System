@@ -115,7 +115,7 @@ final class DtrApprovedLeaveRemark
         return null;
     }
 
-    public static function pdfRemarksTextStyle(?string $leaveType): string
+    public static function pdfLabelSpanStyle(?string $leaveType): string
     {
         if ($leaveType === null || $leaveType === '') {
             return '';
@@ -124,6 +124,133 @@ final class DtrApprovedLeaveRemark
         $palette = self::pdfPalette()[$leaveType] ?? self::pdfPalette()['default'];
 
         return 'color: '.$palette['color'].'; font-weight: 600;';
+    }
+
+    public static function pdfRemarkLabelHtml(string $leaveType, ?string $typeLabel = null): string
+    {
+        $label = self::displayRemark($leaveType, $typeLabel);
+        $style = self::pdfLabelSpanStyle($leaveType);
+
+        return '<span style="'.$style.'">'.e($label).'</span>';
+    }
+
+    public static function pdfFixedLabelHtml(string $labelText, string $leaveType): string
+    {
+        $style = self::pdfLabelSpanStyle($leaveType);
+
+        return '<span style="'.$style.'">'.e($labelText).'</span>';
+    }
+
+    /**
+     * Color only approved-leave label phrases in remarks; other text stays default.
+     */
+    public static function pdfRemarksHtml(?string $remarks): string
+    {
+        $text = self::normalizeRemarksDisplay($remarks);
+        if ($text === '') {
+            return '-';
+        }
+
+        $segments = preg_split('/\s*\|\s*/', $text) ?: [];
+        $htmlSegments = [];
+        foreach ($segments as $segment) {
+            $segment = trim((string) $segment);
+            if ($segment === '') {
+                continue;
+            }
+            $htmlSegments[] = self::pdfHighlightRemarkSegment($segment);
+        }
+
+        if ($htmlSegments === []) {
+            return '-';
+        }
+
+        return implode(' | ', $htmlSegments);
+    }
+
+    private static function pdfHighlightRemarkSegment(string $segment): string
+    {
+        $labelInfo = self::extractRemarkLabel($segment);
+        if ($labelInfo === null) {
+            return e($segment);
+        }
+
+        $style = self::pdfLabelSpanStyle($labelInfo['type']);
+        $label = $labelInfo['label'];
+        $labelLength = strlen($label);
+        $rest = substr($segment, $labelLength);
+
+        return '<span style="'.$style.'">'.e($label).'</span>'.e($rest);
+    }
+
+    /**
+     * @return array{type: string, label: string}|null
+     */
+    private static function extractRemarkLabel(string $segment): ?array
+    {
+        $segment = trim($segment);
+        if ($segment === '') {
+            return null;
+        }
+
+        if (strcasecmp($segment, 'Travel') === 0) {
+            return ['type' => 'travel', 'label' => $segment];
+        }
+
+        if (preg_match('/^(Travel Leave)(.*)$/i', $segment, $matches)) {
+            return ['type' => 'travel', 'label' => $matches[1]];
+        }
+
+        if (preg_match('/^(Travel:\s*.+?)(?:\s*\(Approved:|\s+-|\s*$)/i', $segment, $matches)) {
+            return ['type' => 'travel', 'label' => trim($matches[1])];
+        }
+
+        $fixedPhrases = [
+            'Approved: Work From Home' => 'work_from_home',
+            'Approved: Offset' => 'offset',
+            'Offset: Offset' => 'offset',
+        ];
+        foreach ($fixedPhrases as $phrase => $type) {
+            if (stripos($segment, $phrase) === 0) {
+                return ['type' => $type, 'label' => substr($segment, 0, strlen($phrase))];
+            }
+        }
+
+        if (preg_match('/^(Approved Leave:\s*.+?)(?:\s*\(Approved:|\s+-|\s*$)/i', $segment, $matches)) {
+            $label = trim($matches[1]);
+            $inner = preg_replace('/^Approved Leave:\s*/i', '', $label);
+
+            return [
+                'type' => self::inferTypeFromDisplayLabel($inner) ?? 'default',
+                'label' => $label,
+            ];
+        }
+
+        if (preg_match('/^Approved Leave:\s*.+$/i', $segment)) {
+            $inner = preg_replace('/^Approved Leave:\s*/i', '', $segment);
+
+            return [
+                'type' => self::inferTypeFromDisplayLabel($inner) ?? 'default',
+                'label' => $segment,
+            ];
+        }
+
+        return null;
+    }
+
+    private static function inferTypeFromDisplayLabel(string $label): ?string
+    {
+        $label = trim($label);
+        if ($label === '') {
+            return null;
+        }
+
+        $slug = strtolower(str_replace(' ', '_', $label));
+        if (isset(self::pdfPalette()[$slug])) {
+            return $slug;
+        }
+
+        return self::inferApprovedLeaveType(null, null, 'Approved Leave: '.$label, false);
     }
     /**
      * Remark line stored on DTR rows when an approved request is linked (admin index / import).
