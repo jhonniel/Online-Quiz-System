@@ -92,7 +92,7 @@ class LeaveRequestController extends Controller
             $approvedOvertimeRequests = LeaveRequest::where('user_id', $userId)
                 ->where('type', 'overtime')
                 ->where('status', 'approved')
-                ->whereDate('start_date', '<=', $today) // completed weeks only
+                ->countedInOvertimeBalance($today)
                 ->get();
 
             $overtimeFromLeavesMinutes = 0;
@@ -264,19 +264,23 @@ class LeaveRequestController extends Controller
                 (string) $request->input('overtime_work_type'),
                 $user
             );
+            $latestOvertimeDate = LeaveRequest::latestOvertimeFilingDate((string) $typeInput, $user)->toDateString();
             $startDateRules[] = 'after_or_equal:'.now()->subDays($lookbackDays)->toDateString();
-            $startDateRules[] = 'before_or_equal:today';
-            $endDateRules = ['required', 'date', 'after_or_equal:start_date', 'before_or_equal:today'];
+            $startDateRules[] = 'before_or_equal:'.$latestOvertimeDate;
+            $endDateRules = ['required', 'date', 'after_or_equal:start_date', 'before_or_equal:'.$latestOvertimeDate];
         } elseif (! ($typeInput === 'overtime' || $typeInput === 'sick_leave' || ($user->role === 'student' && $typeInput === 'additional_time'))) {
             $startDateRules[] = 'after_or_equal:today';
         }
 
         $overtimeSpecificDateItemRules = $this->usesStructuredHoursRequestFormat((string) $typeInput, $user)
-            ? $this->overtimeSpecificDateItemRules($this->overtimeLookbackDaysForRequest(
-                (string) $typeInput,
-                (string) $request->input('overtime_work_type'),
-                $user
-            ))
+            ? $this->overtimeSpecificDateItemRules(
+                $this->overtimeLookbackDaysForRequest(
+                    (string) $typeInput,
+                    (string) $request->input('overtime_work_type'),
+                    $user
+                ),
+                LeaveRequest::latestOvertimeFilingDate((string) $typeInput, $user)
+            )
             : ['date'];
 
         $hoursLabel = $this->structuredHoursRequestLabel((string) $typeInput, $user);
@@ -360,7 +364,8 @@ class LeaveRequestController extends Controller
                     (string) $validated['type'],
                     (string) ($validated['overtime_work_type'] ?? ''),
                     $user
-                )
+                ),
+                LeaveRequest::latestOvertimeFilingDate((string) $validated['type'], $user)
             );
             if ($overtimeDateValidationError !== null) {
                 return redirect()->back()->withErrors($overtimeDateValidationError)->withInput();
@@ -539,6 +544,7 @@ class LeaveRequestController extends Controller
             'status' => 'pending',
             'reviewed_by' => null,
             'reviewed_at' => null,
+            'credit_on_approval' => $validated['type'] === 'overtime' && $user->canFileFutureOvertime(),
         ]);
 
         // Send email notification to admin(s) if setting is configured (for any requester role)
@@ -807,7 +813,8 @@ class LeaveRequestController extends Controller
         $lockOvertimeDates = $leaveRequest->type === 'overtime'
             && ! $this->overtimeOriginalDatesWithinLookbackWindow(
                 $leaveRequest,
-                LeaveRequest::overtimeLookbackDays(LeaveRequest::parseOvertimeWorkTypeFromReason($leaveRequest->reason))
+                LeaveRequest::overtimeLookbackDays(LeaveRequest::parseOvertimeWorkTypeFromReason($leaveRequest->reason)),
+                LeaveRequest::latestOvertimeFilingDate('overtime', Auth::user())
             );
         $overtimeLookbackDays = LeaveRequest::overtimeLookbackDays(
             LeaveRequest::parseOvertimeWorkTypeFromReason($leaveRequest->reason)
@@ -1041,7 +1048,11 @@ class LeaveRequestController extends Controller
         $existingLookbackDays = LeaveRequest::overtimeLookbackDays($existingOvertimeWorkType);
         $lockOvertimeDatesOnResubmission = $leaveRequest->type === 'overtime'
             && $this->usesStructuredHoursRequestFormat((string) $typeInput, $user)
-            && ! $this->overtimeOriginalDatesWithinLookbackWindow($leaveRequest, $existingLookbackDays);
+            && ! $this->overtimeOriginalDatesWithinLookbackWindow(
+                $leaveRequest,
+                $existingLookbackDays,
+                LeaveRequest::latestOvertimeFilingDate('overtime', $user)
+            );
 
         // Travel (employee): only today or past dates
         if ($typeInput === 'travel') {
@@ -1056,9 +1067,10 @@ class LeaveRequestController extends Controller
                 (string) $request->input('overtime_work_type'),
                 $user
             );
+            $latestOvertimeDate = LeaveRequest::latestOvertimeFilingDate((string) $typeInput, $user)->toDateString();
             $startDateRules[] = 'after_or_equal:'.now()->subDays($lookbackDays)->toDateString();
-            $startDateRules[] = 'before_or_equal:today';
-            $endDateRules = ['required', 'date', 'after_or_equal:start_date', 'before_or_equal:today'];
+            $startDateRules[] = 'before_or_equal:'.$latestOvertimeDate;
+            $endDateRules = ['required', 'date', 'after_or_equal:start_date', 'before_or_equal:'.$latestOvertimeDate];
         } elseif (! ($typeInput === 'overtime' || $typeInput === 'sick_leave' || ($user->role === 'student' && $typeInput === 'additional_time'))) {
             $startDateRules[] = 'after_or_equal:today';
         }
@@ -1066,11 +1078,14 @@ class LeaveRequestController extends Controller
         $overtimeSpecificDateItemRules = $lockOvertimeDatesOnResubmission
             ? ['date']
             : ($this->usesStructuredHoursRequestFormat((string) $typeInput, $user)
-                ? $this->overtimeSpecificDateItemRules($this->overtimeLookbackDaysForRequest(
-                    (string) $typeInput,
-                    (string) $request->input('overtime_work_type'),
-                    $user
-                ))
+                ? $this->overtimeSpecificDateItemRules(
+                    $this->overtimeLookbackDaysForRequest(
+                        (string) $typeInput,
+                        (string) $request->input('overtime_work_type'),
+                        $user
+                    ),
+                    LeaveRequest::latestOvertimeFilingDate((string) $typeInput, $user)
+                )
                 : ['date']);
 
         $hoursLabel = $this->structuredHoursRequestLabel((string) $typeInput, $user);
@@ -1158,7 +1173,8 @@ class LeaveRequestController extends Controller
                     (string) $validated['type'],
                     (string) ($validated['overtime_work_type'] ?? $existingOvertimeWorkType ?? ''),
                     $user
-                )
+                ),
+                LeaveRequest::latestOvertimeFilingDate((string) $validated['type'], $user)
             );
             if ($overtimeDateValidationError !== null) {
                 return redirect()->back()->withErrors($overtimeDateValidationError)->withInput();
@@ -1443,7 +1459,7 @@ class LeaveRequestController extends Controller
         $approvedOvertimeRequests = LeaveRequest::where('user_id', $user->id)
             ->where('type', 'overtime')
             ->where('status', 'approved')
-            ->whereDate('start_date', '<=', $today)
+            ->countedInOvertimeBalance($today)
             ->get();
 
         $overtimeFromLeavesMinutes = 0;
@@ -1867,11 +1883,12 @@ class LeaveRequestController extends Controller
     /**
      * @return array<int, string>
      */
-    private function overtimeSpecificDateItemRules(int $lookbackDays = LeaveRequest::OVERTIME_LOOKBACK_DAYS_DEFAULT): array
+    private function overtimeSpecificDateItemRules(int $lookbackDays = LeaveRequest::OVERTIME_LOOKBACK_DAYS_DEFAULT, ?Carbon $latestDate = null): array
     {
         $earliest = now()->subDays($lookbackDays)->toDateString();
+        $latest = ($latestDate ?? now())->toDateString();
 
-        return ['date', 'after_or_equal:'.$earliest, 'before_or_equal:today'];
+        return ['date', 'after_or_equal:'.$earliest, 'before_or_equal:'.$latest];
     }
 
     private function overtimeLookbackDaysForRequest(string $type, ?string $overtimeWorkType, $user): int
@@ -1926,21 +1943,22 @@ class LeaveRequestController extends Controller
     /**
      * Whether the original overtime start/end dates fall within the allowed filing window.
      */
-    private function overtimeOriginalDatesWithinLookbackWindow(LeaveRequest $leaveRequest, int $lookbackDays): bool
+    private function overtimeOriginalDatesWithinLookbackWindow(LeaveRequest $leaveRequest, int $lookbackDays, ?Carbon $latestDate = null): bool
     {
         if (! $leaveRequest->start_date) {
             return false;
         }
 
         $today = now()->startOfDay();
+        $latest = ($latestDate ?? $today)->copy()->startOfDay();
         $earliest = $today->copy()->subDays($lookbackDays);
         $start = $leaveRequest->start_date->copy()->startOfDay();
         $end = ($leaveRequest->end_date ?? $leaveRequest->start_date)->copy()->startOfDay();
 
         return $start->gte($earliest)
-            && $start->lte($today)
+            && $start->lte($latest)
             && $end->gte($earliest)
-            && $end->lte($today)
+            && $end->lte($latest)
             && $end->gte($start);
     }
 
@@ -1955,7 +1973,8 @@ class LeaveRequestController extends Controller
         string $endDate,
         array $specificDates,
         bool $allowOutsideLookbackWindow = false,
-        int $lookbackDays = LeaveRequest::OVERTIME_LOOKBACK_DAYS_DEFAULT
+        int $lookbackDays = LeaveRequest::OVERTIME_LOOKBACK_DAYS_DEFAULT,
+        ?Carbon $latestDate = null
     ): ?array {
         try {
             $start = Carbon::parse($startDate)->startOfDay();
@@ -1965,14 +1984,20 @@ class LeaveRequestController extends Controller
         }
 
         $today = now()->startOfDay();
+        $latest = ($latestDate ?? $today)->copy()->startOfDay();
+        $allowsFuture = $latest->gt($today);
         $earliest = $today->copy()->subDays($lookbackDays);
 
         if (! $allowOutsideLookbackWindow) {
-            if ($start->lt($earliest) || $start->gt($today)) {
-                return ['start_date' => "For overtime, the start date must be within the last {$lookbackDays} days up to today."];
+            if ($start->lt($earliest) || $start->gt($latest)) {
+                return ['start_date' => $allowsFuture
+                    ? "For overtime, the start date must be between {$lookbackDays} days ago and ".$latest->format('M j, Y').'.'
+                    : "For overtime, the start date must be within the last {$lookbackDays} days up to today."];
             }
-            if ($end->lt($start) || $end->gt($today)) {
-                return ['end_date' => 'For overtime, the end date must be within the selected range and not later than today.'];
+            if ($end->lt($start) || $end->gt($latest)) {
+                return ['end_date' => $allowsFuture
+                    ? 'For overtime, the end date must be within the selected range and not later than '.$latest->format('M j, Y').'.'
+                    : 'For overtime, the end date must be within the selected range and not later than today.'];
             }
         } elseif ($end->lt($start)) {
             return ['end_date' => 'For overtime, the end date must be the same as or after the start date.'];
@@ -2000,8 +2025,10 @@ class LeaveRequestController extends Controller
             }
 
             if (! $allowOutsideLookbackWindow) {
-                if ($picked->gt($today)) {
-                    return ['overtime_specific_dates' => 'Overtime cannot be filed for future dates.'];
+                if ($picked->gt($latest)) {
+                    return ['overtime_specific_dates' => $allowsFuture
+                        ? 'Overtime dates cannot be later than '.$latest->format('M j, Y').'.'
+                        : 'Overtime cannot be filed for future dates.'];
                 }
 
                 if ($picked->lt($earliest)) {

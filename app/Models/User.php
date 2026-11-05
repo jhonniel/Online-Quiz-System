@@ -1704,6 +1704,14 @@ class User extends Authenticatable
      * Check if user has any admin permission assigned.
      * Works for admins, employees, and any other role that has been granted permissions.
      */
+    /**
+     * Staff with admin access may file overtime for future dates; other employees only up to today.
+     */
+    public function canFileFutureOvertime(): bool
+    {
+        return $this->isStaffMember() && $this->hasAnyAdminPermission();
+    }
+
     public function hasAnyAdminPermission(): bool
     {
         // Load the relationship if not already loaded

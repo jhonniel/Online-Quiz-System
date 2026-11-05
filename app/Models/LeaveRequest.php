@@ -28,6 +28,7 @@ class LeaveRequest extends Model
         'reviewed_by',
         'reviewed_at',
         'admin_officially_excused',
+        'credit_on_approval',
     ];
 
     protected $casts = [
@@ -38,6 +39,7 @@ class LeaveRequest extends Model
         'travel_hours' => 'float',
         'supporting_document_paths' => 'array',
         'admin_officially_excused' => 'boolean',
+        'credit_on_approval' => 'boolean',
     ];
 
     /**
@@ -195,6 +197,45 @@ class LeaveRequest extends Model
     public const OVERTIME_LOOKBACK_DAYS_DEFAULT = 7;
 
     public const OVERTIME_LOOKBACK_DAYS_TRAVEL_TIME = 30;
+
+    /** How far ahead staff with admin access may file overtime (everyone else: today at the latest). */
+    public const OVERTIME_FUTURE_FILING_DAYS = 365;
+
+    /**
+     * Approved overtime that counts toward the balance: dated today or earlier, or filed by admin access
+     * (credited as soon as it is approved).
+     */
+    public function scopeCountedInOvertimeBalance(Builder $query, ?\Carbon\Carbon $asOf = null): Builder
+    {
+        $asOfDate = ($asOf ?? now())->toDateString();
+
+        return $query->where(function (Builder $q) use ($asOfDate) {
+            $q->whereDate('start_date', '<=', $asOfDate)
+                ->orWhere('credit_on_approval', true);
+        });
+    }
+
+    public function countsTowardOvertimeBalance(?\Carbon\Carbon $asOf = null): bool
+    {
+        if ($this->credit_on_approval) {
+            return true;
+        }
+
+        return $this->start_date !== null
+            && $this->start_date->copy()->startOfDay()->lte(($asOf ?? now())->copy()->startOfDay());
+    }
+
+    /**
+     * Latest date a user may file overtime for.
+     */
+    public static function latestOvertimeFilingDate(string $type, ?User $user): \Carbon\Carbon
+    {
+        $today = now()->startOfDay();
+
+        return $type === 'overtime' && $user?->canFileFutureOvertime()
+            ? $today->copy()->addDays(self::OVERTIME_FUTURE_FILING_DAYS)
+            : $today;
+    }
 
     public static function overtimeLookbackDays(?string $workType): int
     {

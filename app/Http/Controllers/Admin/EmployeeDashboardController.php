@@ -290,7 +290,7 @@ class EmployeeDashboardController extends Controller
         $approvedOvertimeRequests = LeaveRequest::whereIn('user_id', $employeeIds)
             ->where('type', 'overtime')
             ->where('status', 'approved')
-            ->whereDate('start_date', '<=', $today)
+            ->countedInOvertimeBalance($today)
             ->get(['user_id', 'reason']);
         foreach ($approvedOvertimeRequests as $ot) {
             $raw = (string) ($ot->reason ?? '');

@@ -361,7 +361,7 @@ class LeaveRequestController extends Controller
         $approvedOvertimeRequests = LeaveRequest::whereIn('user_id', $userIds)
             ->where('type', 'overtime')
             ->where('status', 'approved')
-            ->whereDate('start_date', '<=', $today)
+            ->countedInOvertimeBalance($today)
             ->get(['user_id', 'reason']);
 
         foreach ($approvedOvertimeRequests as $overtimeRequest) {
@@ -776,7 +776,7 @@ class LeaveRequestController extends Controller
             $approvedOvertimeRequests = LeaveRequest::where('user_id', $user->id)
                 ->where('type', 'overtime')
                 ->where('status', 'approved')
-                ->whereDate('start_date', '<=', $today) // completed weeks only
+                ->countedInOvertimeBalance($today)
                 ->get();
 
             $overtimeFromLeavesMinutes = 0;
@@ -1531,6 +1531,7 @@ class LeaveRequestController extends Controller
                 'status' => 'pending',
                 'reviewed_by' => null,
                 'reviewed_at' => null,
+                'credit_on_approval' => $validated['type'] === 'overtime',
             ]);
 
             LeaveRequestLog::create([

@@ -313,7 +313,7 @@ class DashboardController extends Controller
                 ->where('user_id', $user->id)
                 ->where('type', 'overtime')
                 ->where('status', 'approved')
-                ->whereDate('start_date', '<=', $today)
+                ->countedInOvertimeBalance($today)
                 ->get(['reason']);
             foreach ($approvedOvertimeRequests as $requestItem) {
                 $raw = (string) ($requestItem->reason ?? '');

@@ -299,7 +299,7 @@ final class EmployeeRecordsLedger
                 continue;
             }
 
-            $countsTowardBalance = $request->start_date && $request->start_date->lte($today);
+            $countsTowardBalance = $request->countsTowardOvertimeBalance($today);
 
             $items[] = [
                 'kind' => 'overtime',
@@ -307,9 +307,11 @@ final class EmployeeRecordsLedger
                 'direction' => 'credit',
                 'amount_minutes' => $minutes,
                 'amount_label' => self::formatMinutes($minutes),
-                'description' => $countsTowardBalance
-                    ? 'Overtime approved'
-                    : 'Overtime approved (credits on '.$request->start_date->format('M j, Y').')',
+                'description' => ! $countsTowardBalance
+                    ? 'Overtime approved (credits on '.$request->start_date->format('M j, Y').')'
+                    : ($request->start_date->gt($today)
+                        ? 'Overtime approved (future date, credited now — filed with admin access)'
+                        : 'Overtime approved'),
                 'leave_request_id' => $request->id,
                 'reference' => self::dateRangeLabel($request),
                 'counts_toward_balance' => $countsTowardBalance,
@@ -463,7 +465,7 @@ final class EmployeeRecordsLedger
             ->where('user_id', $userId)
             ->where('type', 'overtime')
             ->where('status', 'approved')
-            ->whereDate('start_date', '<=', $today)
+            ->countedInOvertimeBalance($today)
             ->get(['reason']);
 
         foreach ($requests as $request) {

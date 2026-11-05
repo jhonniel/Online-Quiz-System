@@ -527,7 +527,7 @@ class UserController extends Controller
             $approvedOvertimeRequests = LeaveRequest::where('user_id', $user->id)
                 ->where('type', 'overtime')
                 ->where('status', 'approved')
-                ->whereDate('start_date', '<=', $today) // completed weeks only
+                ->countedInOvertimeBalance($today)
                 ->get();
 
             $overtimeFromLeavesMinutes = 0;

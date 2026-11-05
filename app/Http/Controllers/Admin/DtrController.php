@@ -3004,7 +3004,7 @@ class DtrController extends Controller
             $approvedOvertimeRequests = LeaveRequest::whereIn('user_id', $employeeIds)
                 ->where('type', 'overtime')
                 ->where('status', 'approved')
-                ->whereDate('start_date', '<=', $today) // completed weeks only
+                ->countedInOvertimeBalance($today)
                 ->get();
 
             $overtimeFromLeavesMinutes = 0;
@@ -3348,7 +3348,7 @@ class DtrController extends Controller
                 $approvedOvertimeRequests = LeaveRequest::where('user_id', $employee->id)
                     ->where('type', 'overtime')
                     ->where('status', 'approved')
-                    ->whereDate('start_date', '<=', $today) // completed weeks only
+                    ->countedInOvertimeBalance($today)
                     ->get();
 
                 $overtimeFromLeavesMinutes = 0;

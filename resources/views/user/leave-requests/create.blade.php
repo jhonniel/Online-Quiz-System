@@ -425,6 +425,7 @@
         today: @json(now()->toDateString()),
         overtimeMin: @json(now()->subDays(7)->toDateString()),
         overtimeTravelMin: @json(now()->subDays(30)->toDateString()),
+        overtimeMax: @json(\App\Models\LeaveRequest::latestOvertimeFilingDate('overtime', auth()->user())->toDateString()),
     };
     const today = leaveDateBounds.today;
     const endDateRequiredSpan = document.getElementById('end-date-required-span');
@@ -448,12 +449,20 @@
             : leaveDateBounds.overtimeMin;
     }
 
+    function getOvertimeMaxDate() {
+        return typeSelect.value === 'overtime' ? leaveDateBounds.overtimeMax : leaveDateBounds.today;
+    }
+
     function getOvertimeDateHintText() {
         const days = getOvertimeLookbackDays();
-        if (typeSelect.value === 'overtime' && getSelectedOvertimeWorkType() === 'travel_time') {
-            return `Travel Time overtime dates must be from the last ${days} days through today only (no future dates).`;
+        const allowsFuture = getOvertimeMaxDate() > leaveDateBounds.today;
+        const label = typeSelect.value === 'overtime' && getSelectedOvertimeWorkType() === 'travel_time'
+            ? 'Travel Time overtime'
+            : (typeSelect.value === 'overtime' ? 'Overtime' : 'Additional Time');
+        if (allowsFuture) {
+            return `${label} dates can be from the last ${days} days up to ${getOvertimeMaxDate()} (future dates allowed for admin access).`;
         }
-        return `Additional Time dates must be from the last ${days} days through today only (no future dates).`;
+        return `${label} dates must be from the last ${days} days through today only (no future dates).`;
     }
 
     function updateOvertimeDateRangeRules() {
@@ -464,10 +473,10 @@
         const minD = getOvertimeMinDate();
         if (startDateInput) {
             startDateInput.setAttribute('min', minD);
-            startDateInput.setAttribute('max', leaveDateBounds.today);
+            startDateInput.setAttribute('max', getOvertimeMaxDate());
         }
         if (endDateInput) {
-            endDateInput.setAttribute('max', leaveDateBounds.today);
+            endDateInput.setAttribute('max', getOvertimeMaxDate());
         }
         if (overtimeDateHint) {
             overtimeDateHint.textContent = getOvertimeDateHintText();
@@ -480,7 +489,7 @@
     function clampOvertimeDateInputs() {
         if (!startDateInput) return;
         const minD = getOvertimeMinDate();
-        const maxD = leaveDateBounds.today;
+        const maxD = getOvertimeMaxDate();
         if (startDateInput.value) {
             if (startDateInput.value > maxD) startDateInput.value = maxD;
             if (startDateInput.value < minD) startDateInput.value = minD;
@@ -642,8 +651,8 @@
 
         const start = startDateInput.value;
         let end = endDateInput.value || start;
-        if (end > leaveDateBounds.today) {
-            end = leaveDateBounds.today;
+        if (end > getOvertimeMaxDate()) {
+            end = getOvertimeMaxDate();
         }
         if (!start || !end) {
             overtimeSpecificDatesWrap.innerHTML = '<p class="text-xs text-gray-500">Pick Start Date and End Date first.</p>';
@@ -676,7 +685,7 @@
             const m = String(cursor.getMonth() + 1).padStart(2, '0');
             const d = String(cursor.getDate()).padStart(2, '0');
             const value = `${y}-${m}-${d}`;
-            if (value > leaveDateBounds.today || value < getOvertimeMinDate()) {
+            if (value > getOvertimeMaxDate() || value < getOvertimeMinDate()) {
                 cursor.setDate(cursor.getDate() + 1);
                 continue;
             }
@@ -706,7 +715,7 @@
                 ? startDate
                 : getOvertimeMinDate();
             endDateInput.min = endMin;
-            endDateInput.setAttribute('max', today);
+            endDateInput.setAttribute('max', getOvertimeMaxDate());
         } else if (typeSelect.value === 'sick_leave') {
             endDateInput.removeAttribute('min');
             endDateInput.removeAttribute('max');
@@ -1343,14 +1352,16 @@
                     return;
                 }
             }
-            const maxD = leaveDateBounds.today;
+            const maxD = getOvertimeMaxDate();
             const minD = getOvertimeMinDate();
             if (!startDateInput.value || !endDateInput?.value
                 || startDateInput.value > maxD || endDateInput.value > maxD
                 || startDateInput.value < minD || endDateInput.value < minD) {
                 e.preventDefault();
                 resetTravelTimeAgreementIfBlocked();
-                alert(`Dates must be within the last ${getOvertimeLookbackDays()} days through today.`);
+                alert(maxD > leaveDateBounds.today
+                    ? `Dates must be between the last ${getOvertimeLookbackDays()} days and ${maxD}.`
+                    : `Dates must be within the last ${getOvertimeLookbackDays()} days through today.`);
                 return;
             }
         }
