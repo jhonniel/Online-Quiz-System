@@ -29,14 +29,25 @@ class UniqueDeviceIdentifier implements ValidationRule
 
     public static function isTaken(string $table, string $column, mixed $value, ?int $ignoreId = null): bool
     {
+        return self::firstMatchId($table, $column, $value, $ignoreId) !== null;
+    }
+
+    /**
+     * ID of the device that already uses this identifier, or null when it is free.
+     */
+    public static function firstMatchId(string $table, string $column, mixed $value, ?int $ignoreId = null): ?int
+    {
         $normalized = mb_strtolower(trim((string) $value));
         if ($normalized === '') {
-            return false;
+            return null;
         }
 
-        return DB::table($table)
+        $id = DB::table($table)
             ->whereRaw("LOWER(TRIM({$column})) = ?", [$normalized])
             ->when($ignoreId, fn ($query) => $query->where('id', '!=', $ignoreId))
-            ->exists();
+            ->orderBy('id')
+            ->value('id');
+
+        return $id !== null ? (int) $id : null;
     }
 }

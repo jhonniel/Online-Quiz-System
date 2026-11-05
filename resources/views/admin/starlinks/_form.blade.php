@@ -42,23 +42,27 @@
     <div class="{{ $gridClass }}">
         <div>
             <label for="starlink_id" class="block text-sm font-medium text-gray-700">Starlink ID</label>
-            <input type="text" name="starlink_id" id="starlink_id" value="{{ old('starlink_id', $starlink?->starlink_id ?? '') }}" class="{{ $inputClass }}" placeholder="e.g. 1L-XXXXX" />
-            @error('starlink_id')<p class="mt-1.5 text-sm text-red-600">{{ $message }}</p>@enderror
+            <input type="text" name="starlink_id" id="starlink_id" value="{{ old('starlink_id', $starlink?->starlink_id ?? '') }}" class="{{ $inputClass }}" placeholder="e.g. 1L-XXXXX" data-unique-field="starlink_id" autocomplete="off" />
+            @error('starlink_id')<p class="mt-1.5 text-sm text-red-600" data-server-error-for="starlink_id">{{ $message }}</p>@enderror
+            <div class="hidden mt-1.5 text-sm" data-unique-feedback-for="starlink_id" aria-live="polite"></div>
         </div>
         <div>
             <label for="serial_number" class="block text-sm font-medium text-gray-700">Serial number <span class="text-red-600">*</span></label>
-            <input type="text" name="serial_number" id="serial_number" value="{{ old('serial_number', $starlink?->serial_number ?? '') }}" class="{{ $inputClass }}" required maxlength="255" />
-            @error('serial_number')<p class="mt-1.5 text-sm text-red-600">{{ $message }}</p>@enderror
+            <input type="text" name="serial_number" id="serial_number" value="{{ old('serial_number', $starlink?->serial_number ?? '') }}" class="{{ $inputClass }}" required maxlength="255" data-unique-field="serial_number" autocomplete="off" />
+            @error('serial_number')<p class="mt-1.5 text-sm text-red-600" data-server-error-for="serial_number">{{ $message }}</p>@enderror
+            <div class="hidden mt-1.5 text-sm" data-unique-feedback-for="serial_number" aria-live="polite"></div>
         </div>
         <div>
             <label for="kit_number" class="block text-sm font-medium text-gray-700">Kit number <span class="text-red-600">*</span></label>
-            <input type="text" name="kit_number" id="kit_number" value="{{ old('kit_number', $starlink?->kit_number ?? '') }}" class="{{ $inputClass }}" required maxlength="255" />
-            @error('kit_number')<p class="mt-1.5 text-sm text-red-600">{{ $message }}</p>@enderror
+            <input type="text" name="kit_number" id="kit_number" value="{{ old('kit_number', $starlink?->kit_number ?? '') }}" class="{{ $inputClass }}" required maxlength="255" data-unique-field="kit_number" autocomplete="off" />
+            @error('kit_number')<p class="mt-1.5 text-sm text-red-600" data-server-error-for="kit_number">{{ $message }}</p>@enderror
+            <div class="hidden mt-1.5 text-sm" data-unique-feedback-for="kit_number" aria-live="polite"></div>
         </div>
         <div>
             <label for="router_id" class="block text-sm font-medium text-gray-700">Router ID</label>
-            <input type="text" name="router_id" id="router_id" value="{{ old('router_id', $starlink?->router_id ?? '') }}" class="{{ $inputClass }}" />
-            @error('router_id')<p class="mt-1.5 text-sm text-red-600">{{ $message }}</p>@enderror
+            <input type="text" name="router_id" id="router_id" value="{{ old('router_id', $starlink?->router_id ?? '') }}" class="{{ $inputClass }}" data-unique-field="router_id" autocomplete="off" />
+            @error('router_id')<p class="mt-1.5 text-sm text-red-600" data-server-error-for="router_id">{{ $message }}</p>@enderror
+            <div class="hidden mt-1.5 text-sm" data-unique-feedback-for="router_id" aria-live="polite"></div>
         </div>
     </div>
 </div>
@@ -226,3 +230,153 @@
         </div>
     </div>
 </div>
+
+@push('scripts')
+<script>
+(function () {
+    const checkUrl = @json(route('admin.starlinks.check-identifier'));
+    const ignoreId = @json($starlink?->id);
+    const inputs = Array.from(document.querySelectorAll('input[data-unique-field]'));
+    if (inputs.length === 0) {
+        return;
+    }
+
+    const form = inputs[0].closest('form');
+    const submitButtons = form ? Array.from(form.querySelectorAll('button[type="submit"]')) : [];
+    const duplicates = new Set();
+    const requestIds = {};
+    const timers = {};
+
+    function escapeHtml(value) {
+        return String(value ?? '').replace(/[&<>"']/g, (ch) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[ch]));
+    }
+
+    function updateSubmitState() {
+        const blocked = duplicates.size > 0;
+        submitButtons.forEach((button) => {
+            button.disabled = blocked;
+            button.classList.toggle('opacity-50', blocked);
+            button.classList.toggle('cursor-not-allowed', blocked);
+            button.title = blocked ? 'Fix the duplicate device identifiers first.' : '';
+        });
+    }
+
+    function setFeedback(input, state, html) {
+        const field = input.dataset.uniqueField;
+        const box = form.querySelector('[data-unique-feedback-for="' + field + '"]');
+        const serverError = form.querySelector('[data-server-error-for="' + field + '"]');
+        if (serverError && state !== 'idle') {
+            serverError.classList.add('hidden');
+        }
+
+        input.classList.toggle('border-red-500', state === 'taken');
+        input.classList.toggle('focus:border-red-500', state === 'taken');
+        input.classList.toggle('focus:ring-red-500', state === 'taken');
+        input.classList.toggle('border-emerald-500', state === 'available');
+        input.setAttribute('aria-invalid', state === 'taken' ? 'true' : 'false');
+
+        if (state === 'taken') {
+            duplicates.add(field);
+        } else {
+            duplicates.delete(field);
+        }
+        updateSubmitState();
+
+        if (!box) {
+            return;
+        }
+        box.className = 'mt-1.5 text-sm ' + ({
+            taken: 'text-red-600',
+            available: 'text-emerald-600',
+            checking: 'text-gray-500',
+        }[state] || 'hidden');
+        box.innerHTML = html || '';
+    }
+
+    async function check(input) {
+        const field = input.dataset.uniqueField;
+        const value = input.value.trim();
+        const requestId = (requestIds[field] || 0) + 1;
+        requestIds[field] = requestId;
+
+        if (value === '') {
+            setFeedback(input, 'idle');
+            return;
+        }
+
+        setFeedback(input, 'checking', 'Checking for duplicates…');
+
+        const params = new URLSearchParams({ field: field, value: value });
+        if (ignoreId) {
+            params.set('ignore_id', ignoreId);
+        }
+
+        try {
+            const response = await fetch(checkUrl + '?' + params.toString(), {
+                headers: { 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest' },
+            });
+            if (requestId !== requestIds[field]) {
+                return;
+            }
+            if (!response.ok) {
+                throw new Error('check failed');
+            }
+            const data = await response.json();
+            if (!data.taken) {
+                setFeedback(input, 'available', 'Not used by any other device.');
+                return;
+            }
+
+            const device = data.device || {};
+            const details = [
+                device.starlink_id ? 'Starlink ID ' + escapeHtml(device.starlink_id) : null,
+                device.serial_number ? 'Serial ' + escapeHtml(device.serial_number) : null,
+                device.kit_number ? 'Kit ' + escapeHtml(device.kit_number) : null,
+                device.account ? escapeHtml(device.account) : null,
+                device.status ? escapeHtml(device.status) : null,
+            ].filter(Boolean).join(' · ');
+
+            setFeedback(
+                input,
+                'taken',
+                escapeHtml(data.message) +
+                    '<div class="mt-0.5 text-xs text-red-700">Device #' + escapeHtml(device.id) + (details ? ' — ' + details : '') +
+                    (device.url ? ' · <a href="' + escapeHtml(device.url) + '" target="_blank" rel="noopener" class="font-medium underline">Open device</a>' : '') +
+                    '</div>'
+            );
+        } catch (e) {
+            if (requestId === requestIds[field]) {
+                setFeedback(input, 'idle');
+            }
+        }
+    }
+
+    inputs.forEach((input) => {
+        const field = input.dataset.uniqueField;
+        input.addEventListener('input', () => {
+            clearTimeout(timers[field]);
+            timers[field] = setTimeout(() => check(input), 400);
+        });
+        input.addEventListener('blur', () => {
+            clearTimeout(timers[field]);
+            check(input);
+        });
+        if (input.value.trim() !== '') {
+            check(input);
+        }
+    });
+
+    if (form) {
+        form.addEventListener('submit', (event) => {
+            if (duplicates.size > 0) {
+                event.preventDefault();
+                const first = inputs.find((input) => duplicates.has(input.dataset.uniqueField));
+                if (first) {
+                    first.focus();
+                }
+            }
+        });
+    }
+})();
+</script>
+@endpush

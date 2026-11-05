@@ -838,6 +838,7 @@ Route::prefix('admin')->middleware(['auth', 'admin', 'admin.totp'])->group(funct
             Route::get('starlinks/export/csv', [StarlinkController::class, 'exportCsv'])->name('admin.starlinks.export.csv');
             Route::get('starlinks/export/pdf', [StarlinkController::class, 'exportPdf'])->name('admin.starlinks.export.pdf');
             Route::post('starlinks/import', [StarlinkController::class, 'processImport'])->name('admin.starlinks.import.process');
+            Route::get('starlinks/check-identifier', [StarlinkController::class, 'checkIdentifier'])->name('admin.starlinks.check-identifier');
             Route::resource('starlinks', StarlinkController::class)->names('admin.starlinks');
         });
         Route::middleware(['admin.subfeature:subscriptions,omadas'])->group(function () {

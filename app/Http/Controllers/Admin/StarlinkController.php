@@ -150,6 +150,42 @@ class StarlinkController extends Controller
         return $pdf->download('starlinks_export.pdf');
     }
 
+    /**
+     * Live duplicate check for device identifiers while the add/edit form is being filled in.
+     */
+    public function checkIdentifier(Request $request)
+    {
+        $this->ensureCanAccess();
+
+        $validated = $request->validate([
+            'field' => 'required|string|in:'.implode(',', array_keys(StarlinkRequest::UNIQUE_FIELDS)),
+            'value' => 'nullable|string|max:255',
+            'ignore_id' => 'nullable|integer',
+        ]);
+
+        $field = $validated['field'];
+        $matchId = UniqueDeviceIdentifier::firstMatchId('starlinks', $field, $validated['value'] ?? '', $validated['ignore_id'] ?? null);
+        if ($matchId === null) {
+            return response()->json(['taken' => false]);
+        }
+
+        $existing = Starlink::with('linkedAccount')->find($matchId);
+
+        return response()->json([
+            'taken' => true,
+            'message' => 'This '.StarlinkRequest::UNIQUE_FIELDS[$field].' is already used by another device.',
+            'device' => [
+                'id' => $existing->id,
+                'starlink_id' => $existing->starlink_id,
+                'serial_number' => $existing->serial_number,
+                'kit_number' => $existing->kit_number,
+                'account' => $existing->account_linked_email ?: $existing->linkedAccount?->email,
+                'status' => $existing->status,
+                'url' => url('/admin/starlinks/'.$existing->id.'/edit'),
+            ],
+        ]);
+    }
+
     // Client Name removal UI was intentionally removed from the starlinks list page.
 
     public function show(Starlink $starlink)
