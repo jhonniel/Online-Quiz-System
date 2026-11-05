@@ -208,7 +208,7 @@
                     </div>
                 </form>
                 </div>
-                <div class="user-portal-modal__footer">
+                <div id="user-upload-form-buttons" class="user-portal-modal__footer">
                     <button type="button" onclick="document.getElementById('user-upload-file-modal').classList.add('hidden')"
                             class="user-portal-modal__btn user-portal-modal__btn--secondary">Cancel</button>
                     <button type="submit" form="user-upload-file-form" id="user-upload-submit-btn"

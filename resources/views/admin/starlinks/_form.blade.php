@@ -46,13 +46,13 @@
             @error('starlink_id')<p class="mt-1.5 text-sm text-red-600">{{ $message }}</p>@enderror
         </div>
         <div>
-            <label for="serial_number" class="block text-sm font-medium text-gray-700">Serial number</label>
-            <input type="text" name="serial_number" id="serial_number" value="{{ old('serial_number', $starlink?->serial_number ?? '') }}" class="{{ $inputClass }}" />
+            <label for="serial_number" class="block text-sm font-medium text-gray-700">Serial number <span class="text-red-600">*</span></label>
+            <input type="text" name="serial_number" id="serial_number" value="{{ old('serial_number', $starlink?->serial_number ?? '') }}" class="{{ $inputClass }}" required maxlength="255" />
             @error('serial_number')<p class="mt-1.5 text-sm text-red-600">{{ $message }}</p>@enderror
         </div>
         <div>
-            <label for="kit_number" class="block text-sm font-medium text-gray-700">Kit number</label>
-            <input type="text" name="kit_number" id="kit_number" value="{{ old('kit_number', $starlink?->kit_number ?? '') }}" class="{{ $inputClass }}" />
+            <label for="kit_number" class="block text-sm font-medium text-gray-700">Kit number <span class="text-red-600">*</span></label>
+            <input type="text" name="kit_number" id="kit_number" value="{{ old('kit_number', $starlink?->kit_number ?? '') }}" class="{{ $inputClass }}" required maxlength="255" />
             @error('kit_number')<p class="mt-1.5 text-sm text-red-600">{{ $message }}</p>@enderror
         </div>
         <div>

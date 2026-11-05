@@ -3,15 +3,16 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Http\Requests\Admin\StarlinkRequest;
 use App\Models\LinkedAccount;
 use App\Models\Starlink;
 use App\Models\SubscriptionPlanType;
+use App\Rules\UniqueDeviceIdentifier;
 use App\Support\StarlinkReplacementGroup;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
-use Illuminate\Validation\ValidationException;
 use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class StarlinkController extends Controller
@@ -116,41 +117,15 @@ class StarlinkController extends Controller
         $this->ensureCanAccess();
         $hasMunicipalityColumn = Schema::hasColumn('starlinks', 'municipality');
         [$query] = $this->buildFilteredQuery($request, $hasMunicipalityColumn);
-        $starlinks = $query->orderByDesc('created_at')->get();
+        $starlinks = $query->with('subscriptionPlanType')->orderByDesc('created_at')->get();
 
-        $headers = [
-            'ID',
-            'Account/Email',
-            'Starlink ID',
-            'Serial Number',
-            'Kit Number',
-            'Router ID',
-            'Office/Location',
-            'Client Name',
-            'Plan',
-            'Status',
-            'Contact Email',
-            'Start Date',
-        ];
+        $headers = array_keys($this->exportRow(new Starlink(), $hasMunicipalityColumn));
 
         return new StreamedResponse(function () use ($starlinks, $headers, $hasMunicipalityColumn) {
             $out = fopen('php://output', 'w');
             fputcsv($out, $headers);
             foreach ($starlinks as $s) {
-                fputcsv($out, [
-                    $s->id,
-                    $s->account_linked_email ?: ($s->linkedAccount?->email ?? ''),
-                    $s->starlink_id,
-                    $s->serial_number,
-                    $s->kit_number,
-                    $s->router_id,
-                    $s->office_location,
-                    $hasMunicipalityColumn ? ($s->municipality ?? '') : '',
-                    $s->plan,
-                    $s->status,
-                    $s->contact_email,
-                    $s->start_date?->format('Y-m-d'),
-                ]);
+                fputcsv($out, array_values($this->exportRow($s, $hasMunicipalityColumn)));
             }
             fclose($out);
         }, 200, [
@@ -164,9 +139,12 @@ class StarlinkController extends Controller
         $this->ensureCanAccess();
         $hasMunicipalityColumn = Schema::hasColumn('starlinks', 'municipality');
         [$query, $search, $statusFilter, $accountEmailFilter, $clientNameFilter] = $this->buildFilteredQuery($request, $hasMunicipalityColumn);
-        $starlinks = $query->orderByDesc('created_at')->get();
+        $starlinks = $query->with('subscriptionPlanType')->orderByDesc('created_at')->get();
 
-        $pdf = Pdf::loadView('admin.starlinks.export-pdf', compact('starlinks', 'search', 'statusFilter', 'accountEmailFilter', 'clientNameFilter', 'hasMunicipalityColumn'))
+        $rows = $starlinks->map(fn (Starlink $s) => $this->exportRow($s, $hasMunicipalityColumn))->all();
+        $pendingBillingCount = count(array_filter($rows, fn (array $row) => $row['Pending Billing'] === 'Yes'));
+
+        $pdf = Pdf::loadView('admin.starlinks.export-pdf', compact('rows', 'pendingBillingCount', 'search', 'statusFilter', 'accountEmailFilter', 'clientNameFilter', 'hasMunicipalityColumn'))
             ->setPaper('a4', 'landscape');
 
         return $pdf->download('starlinks_export.pdf');
@@ -251,59 +229,15 @@ class StarlinkController extends Controller
         return view('admin.starlinks.create', compact('linkedAccounts', 'subscriptionPlanTypes', 'currentLinkedAccountId', 'clientNameOptions', 'linkableStarlinks', 'linkedStarlinkIds'));
     }
 
-    public function store(Request $request)
+    public function store(StarlinkRequest $request)
     {
         $this->ensureCanAccess();
 
-        $validated = $request->validate([
-            'linked_account_id' => 'nullable|exists:linked_accounts,id',
-            'account_linked_email' => 'nullable|string|max:255',
-            'starlink_id' => 'nullable|string|max:255',
-            'serial_number' => 'nullable|string|max:255',
-            'kit_number' => 'nullable|string|max:255',
-            'router_id' => 'nullable|string|max:255',
-            'ssid' => 'nullable|string|max:255',
-            'wifi_password' => 'nullable|string|max:255',
-            'office_location' => 'nullable|string|max:255',
-            'municipality_select' => 'nullable|string|max:255',
-            'municipality_custom' => 'nullable|string|max:255',
-            'start_date' => 'nullable|date',
-            'advance_payment_until' => 'nullable|date',
-            'last_paid_date' => 'nullable|date',
-            'billing_interval' => 'nullable|string|in:monthly,yearly',
-            'po_no' => 'nullable|string|max:255',
-            'contact_email' => 'nullable|email|max:255',
-            'plan' => 'nullable|string|max:255',
-            'subscription_plan_type_id' => 'nullable|exists:subscription_plan_types,id',
-            'status' => 'nullable|string|max:50',
-            'replaced_at' => 'nullable|date',
-            'replacement_note' => 'nullable|string|max:500',
-            'linked_starlink_ids' => 'nullable|array',
-            'linked_starlink_ids.*' => 'integer|exists:starlinks,id',
-            'end_user_email' => 'nullable|email|max:255',
-        ]);
+        $validated = $request->validated();
         $linkedStarlinkIds = $validated['linked_starlink_ids'] ?? [];
         unset($validated['linked_starlink_ids']);
 
         $validated = $this->prepareValidatedStarlinkData($validated);
-
-        // Check if a device with the same Starlink ID, Serial number, Kit number, or Router ID already exists
-        $deviceFields = [
-            'starlink_id' => 'Starlink ID',
-            'serial_number' => 'Serial number',
-            'kit_number' => 'Kit number',
-            'router_id' => 'Router ID',
-        ];
-        $duplicateErrors = [];
-        foreach ($deviceFields as $field => $label) {
-            $value = isset($validated[$field]) ? trim((string) $validated[$field]) : '';
-            if ($value !== '' && Starlink::where($field, $value)->exists()) {
-                $duplicateErrors[$field] = "A device with this {$label} already exists.";
-            }
-        }
-        if (! empty($duplicateErrors)) {
-            throw ValidationException::withMessages($duplicateErrors);
-        }
 
         // Ensure a linked account exists for the email so the dashboard shows data
         if (! empty($validated['account_linked_email'])) {
@@ -346,37 +280,11 @@ class StarlinkController extends Controller
         return view('admin.starlinks.edit', compact('starlink', 'linkedAccounts', 'subscriptionPlanTypes', 'currentLinkedAccountId', 'clientNameOptions', 'linkableStarlinks', 'linkedStarlinkIds'));
     }
 
-    public function update(Request $request, Starlink $starlink)
+    public function update(StarlinkRequest $request, Starlink $starlink)
     {
         $this->ensureCanAccess();
 
-        $validated = $request->validate([
-            'linked_account_id' => 'nullable|exists:linked_accounts,id',
-            'account_linked_email' => 'nullable|string|max:255',
-            'starlink_id' => 'nullable|string|max:255',
-            'serial_number' => 'nullable|string|max:255',
-            'kit_number' => 'nullable|string|max:255',
-            'router_id' => 'nullable|string|max:255',
-            'ssid' => 'nullable|string|max:255',
-            'wifi_password' => 'nullable|string|max:255',
-            'office_location' => 'nullable|string|max:255',
-            'municipality_select' => 'nullable|string|max:255',
-            'municipality_custom' => 'nullable|string|max:255',
-            'start_date' => 'nullable|date',
-            'advance_payment_until' => 'nullable|date',
-            'last_paid_date' => 'nullable|date',
-            'billing_interval' => 'nullable|string|in:monthly,yearly',
-            'po_no' => 'nullable|string|max:255',
-            'contact_email' => 'nullable|email|max:255',
-            'plan' => 'nullable|string|max:255',
-            'subscription_plan_type_id' => 'nullable|exists:subscription_plan_types,id',
-            'status' => 'nullable|string|max:50',
-            'replaced_at' => 'nullable|date',
-            'replacement_note' => 'nullable|string|max:500',
-            'linked_starlink_ids' => 'nullable|array',
-            'linked_starlink_ids.*' => 'integer|exists:starlinks,id',
-            'end_user_email' => 'nullable|email|max:255',
-        ]);
+        $validated = $request->validated();
 
         $linkedStarlinkIds = $validated['linked_starlink_ids'] ?? [];
         unset($validated['linked_starlink_ids']);
@@ -530,11 +438,19 @@ class StarlinkController extends Controller
             $data['municipality'] = $data['client_name'] ?? null;
             unset($data['client_name']);
 
+            $missingRequired = array_filter([
+                'Serial number' => $data['serial_number'] ?? '',
+                'Kit number' => $data['kit_number'] ?? '',
+            ], fn ($value) => trim((string) $value) === '');
+            if (! empty($missingRequired)) {
+                $errors[] = "Row {$rowNum}: " . implode(' and ', array_keys($missingRequired)) . ' required.';
+                continue;
+            }
+
             // Skip row if a device with same Starlink ID, Serial number, Kit number, or Router ID already exists
             $alreadyExists = false;
-            foreach (['starlink_id', 'serial_number', 'kit_number', 'router_id'] as $field) {
-                $value = isset($data[$field]) ? trim((string) $data[$field]) : '';
-                if ($value !== '' && Starlink::where($field, $value)->exists()) {
+            foreach (array_keys(StarlinkRequest::UNIQUE_FIELDS) as $field) {
+                if (UniqueDeviceIdentifier::isTaken('starlinks', $field, $data[$field] ?? null)) {
                     $alreadyExists = true;
                     break;
                 }
@@ -610,12 +526,23 @@ class StarlinkController extends Controller
      */
     private function getOverdueCycleCount(Starlink $s): int
     {
+        return $this->getOverdueBillingInfo($s)['count'];
+    }
+
+    /**
+     * Unpaid billing cycles that have passed, and the date of the first one.
+     *
+     * @return array{count: int, first_due: \Carbon\Carbon|null}
+     */
+    private function getOverdueBillingInfo(Starlink $s): array
+    {
+        $none = ['count' => 0, 'first_due' => null];
         $today = now()->startOfDay();
         if (! $s->start_date) {
-            return 0;
+            return $none;
         }
         if ($s->advance_payment_until && $s->advance_payment_until->gte($today)) {
-            return 0;
+            return $none;
         }
 
         $interval = $s->billing_interval ?? 'monthly';
@@ -646,6 +573,7 @@ class StarlinkController extends Controller
         } else {
             $check = $s->start_date->copy()->startOfDay();
         }
+        $firstDue = $check->copy();
 
         if ($interval === 'monthly') {
             while ($check->lte($today)) {
@@ -661,7 +589,47 @@ class StarlinkController extends Controller
             }
         }
 
-        return $count;
+        return ['count' => $count, 'first_due' => $count > 0 ? $firstDue : null];
+    }
+
+    /**
+     * One export row (CSV and PDF) with every device field plus billing status.
+     * WiFi password is left out because the UI masks it.
+     *
+     * @return array<string, string|int>
+     */
+    private function exportRow(Starlink $s, bool $hasMunicipalityColumn): array
+    {
+        $overdue = $this->getOverdueBillingInfo($s);
+
+        return [
+            'ID' => $s->id ?? '',
+            'Account/Email' => $s->account_linked_email ?: ($s->linkedAccount?->email ?? ''),
+            'Linked Account Name' => $s->linkedAccount?->name ?? '',
+            'Starlink ID' => $s->starlink_id ?? '',
+            'Serial Number' => $s->serial_number ?? '',
+            'Kit Number' => $s->kit_number ?? '',
+            'Router ID' => $s->router_id ?? '',
+            'SSID' => $s->ssid ?? '',
+            'Office/Location' => $s->office_location ?? '',
+            'Client Name' => $hasMunicipalityColumn ? ($s->municipality ?? '') : '',
+            'Plan' => $s->plan ?? '',
+            'Plan Type' => $s->subscriptionPlanType?->name ?? '',
+            'Status' => $s->status ?? '',
+            'Contact Email' => $s->contact_email ?? '',
+            'End User Email' => $s->end_user_email ?? '',
+            'PO No.' => $s->po_no ?? '',
+            'Start Date' => $s->start_date?->format('Y-m-d') ?? '',
+            'Billing Interval' => $s->start_date ? ucfirst($s->billing_interval ?? 'monthly') : '',
+            'Last Paid Date' => $s->last_paid_date?->format('Y-m-d') ?? '',
+            'Advance Paid Until' => $s->advance_payment_until?->format('Y-m-d') ?? '',
+            'Next Billing Date' => $s->next_billing_date?->format('Y-m-d') ?? '',
+            'Pending Billing' => $overdue['count'] > 0 ? 'Yes' : 'No',
+            'Overdue Cycles' => $overdue['count'],
+            'Pending Since' => $overdue['first_due']?->format('Y-m-d') ?? '',
+            'Replaced At' => $s->replaced_at?->format('Y-m-d') ?? '',
+            'Replacement Note' => $s->replacement_note ?? '',
+        ];
     }
 
     private function buildFilteredQuery(Request $request, bool $hasMunicipalityColumn = true): array

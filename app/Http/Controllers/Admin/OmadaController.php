@@ -3,10 +3,12 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Http\Requests\Admin\OmadaRequest;
 use App\Models\LinkedAccount;
 use App\Models\Omada;
+use App\Models\SubscriptionPlanType;
+use App\Rules\UniqueDeviceIdentifier;
 use Illuminate\Http\Request;
-use Illuminate\Validation\ValidationException;
 use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class OmadaController extends Controller
@@ -83,37 +85,11 @@ class OmadaController extends Controller
         return view('admin.omadas.create', compact('subscriptionPlanTypes'));
     }
 
-    public function store(Request $request)
+    public function store(OmadaRequest $request)
     {
         $this->ensureCanAccess();
 
-        $validated = $request->validate([
-            'account_linked_email' => 'nullable|email|max:255',
-            'site' => 'nullable|string|max:255',
-            'office' => 'nullable|string|max:255',
-            'type' => 'nullable|string|max:255',
-            'serial_number' => 'nullable|string|max:255',
-            'mac_address' => 'nullable|string|max:255',
-            'license' => 'nullable|string|max:255',
-            'license_expiration' => 'nullable|date',
-            'subscription_plan_type_id' => 'nullable|exists:subscription_plan_types,id',
-        ]);
-
-        // Check if a device with the same Serial number or License already exists
-        $deviceFields = [
-            'serial_number' => 'Serial number',
-            'license' => 'License',
-        ];
-        $duplicateErrors = [];
-        foreach ($deviceFields as $field => $label) {
-            $value = isset($validated[$field]) ? trim((string) $validated[$field]) : '';
-            if ($value !== '' && Omada::where($field, $value)->exists()) {
-                $duplicateErrors[$field] = "A device with this {$label} already exists.";
-            }
-        }
-        if (! empty($duplicateErrors)) {
-            throw ValidationException::withMessages($duplicateErrors);
-        }
+        $validated = $request->validated();
 
         $validated['subscription_plan_type_id'] = ! empty($validated['subscription_plan_type_id']) ? $validated['subscription_plan_type_id'] : null;
 
@@ -140,21 +116,11 @@ class OmadaController extends Controller
         return view('admin.omadas.edit', compact('omada', 'subscriptionPlanTypes'));
     }
 
-    public function update(Request $request, Omada $omada)
+    public function update(OmadaRequest $request, Omada $omada)
     {
         $this->ensureCanAccess();
 
-        $validated = $request->validate([
-            'account_linked_email' => 'nullable|email|max:255',
-            'site' => 'nullable|string|max:255',
-            'office' => 'nullable|string|max:255',
-            'type' => 'nullable|string|max:255',
-            'serial_number' => 'nullable|string|max:255',
-            'mac_address' => 'nullable|string|max:255',
-            'license' => 'nullable|string|max:255',
-            'license_expiration' => 'nullable|date',
-            'subscription_plan_type_id' => 'nullable|exists:subscription_plan_types,id',
-        ]);
+        $validated = $request->validated();
 
         $validated['subscription_plan_type_id'] = ! empty($validated['subscription_plan_type_id']) ? $validated['subscription_plan_type_id'] : null;
 
@@ -275,11 +241,15 @@ class OmadaController extends Controller
                 $data[$key] = $assoc[$key] ?? null;
             }
 
-            // Skip row if a device with same Serial number or License already exists
+            if (trim((string) ($data['serial_number'] ?? '')) === '') {
+                $errors[] = "Row {$rowNum}: Serial number required.";
+                continue;
+            }
+
+            // Skip row if a device with same Serial number, MAC address or License already exists
             $alreadyExists = false;
-            foreach (['serial_number', 'license'] as $field) {
-                $value = isset($data[$field]) ? trim((string) $data[$field]) : '';
-                if ($value !== '' && Omada::where($field, $value)->exists()) {
+            foreach (array_keys(OmadaRequest::UNIQUE_FIELDS) as $field) {
+                if (UniqueDeviceIdentifier::isTaken('omadas', $field, $data[$field] ?? null)) {
                     $alreadyExists = true;
                     break;
                 }
