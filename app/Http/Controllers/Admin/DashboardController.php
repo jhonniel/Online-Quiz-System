@@ -175,10 +175,11 @@ class DashboardController extends Controller
         }
 
         try {
-            $totalUsers = User::where('role', 'user')->count();
+            // Every account except admins (students, employees, HR, teachers, applicants, ...).
+            $totalUsers = User::where('role', '!=', 'admin')->count();
             $totalQuizzes = Quiz::count();
-            $disabledUsers = User::where('role', 'user')->where('is_active', false)->count();
-            $activeUsers = User::where('role', 'user')->where('is_active', true)->count();
+            $disabledUsers = User::where('role', '!=', 'admin')->where('is_active', false)->count();
+            $activeUsers = User::where('role', '!=', 'admin')->where('is_active', true)->count();
 
             // Employee and Student Statistics
             $totalEmployees = User::where('role', 'employee')->count();
@@ -234,20 +235,21 @@ class DashboardController extends Controller
                     ->take(5)
                     ->get();
 
-                // Ongoing and upcoming leave (approved, end_date >= today - all leave that extends into today or future)
+                // Ongoing and upcoming leave: approved, still running today or later. Overtime and Additional Time
+                // are hours credited, not time off. Single-day requests may have no end_date.
                 $today = now()->toDateString();
-                $ongoingLeaveEmployees = LeaveRequest::with('user')
+                $ongoingLeaveQuery = fn (string $role) => LeaveRequest::with('user')
                     ->where('status', 'approved')
-                    ->where('end_date', '>=', $today)
-                    ->whereHas('user', fn ($q) => $q->where('role', 'employee'))
+                    ->whereNotIn('type', ['overtime', 'additional_time'])
+                    ->where(function ($q) use ($today) {
+                        $q->whereDate('end_date', '>=', $today)
+                            ->orWhere(fn ($single) => $single->whereNull('end_date')->whereDate('start_date', '>=', $today));
+                    })
+                    ->whereHas('user', fn ($q) => $q->where('role', $role))
                     ->orderBy('start_date')
                     ->get();
-                $ongoingLeaveStudents = LeaveRequest::with('user')
-                    ->where('status', 'approved')
-                    ->where('end_date', '>=', $today)
-                    ->whereHas('user', fn ($q) => $q->where('role', 'student'))
-                    ->orderBy('start_date')
-                    ->get();
+                $ongoingLeaveEmployees = $ongoingLeaveQuery('employee');
+                $ongoingLeaveStudents = $ongoingLeaveQuery('student');
             } catch (\Exception $e) {
                 Log::warning('Leave request statistics error: '.$e->getMessage());
                 $totalLeaveRequests = 0;
@@ -261,29 +263,34 @@ class DashboardController extends Controller
                 $ongoingLeaveStudents = collect();
             }
 
-            // Students/Employees with time remaining (DTR deficit)
+            // Time remaining: interns = required training hours minus logged DTR (same rule as OJT slots);
+            // employees = unrendered weekly DTR deficits. Active accounts only.
             try {
+                $userTable = (new User)->getTable();
+                $dtrTable = (new Dtr)->getTable();
+                $loggedHoursSql = "COALESCE((SELECT SUM({$dtrTable}.total_hours) FROM {$dtrTable} WHERE {$dtrTable}.user_id = {$userTable}.id), 0)";
                 $studentsWithDeficit = User::where('role', 'student')
-                    ->whereIn('id', DtrDeficit::where('deficit_hours', '>', 0)->select('user_id')->distinct()->pluck('user_id'))
-                    ->get()
-                    ->map(function ($user) {
-                        $user->total_deficit_hours = DtrDeficit::where('user_id', $user->id)->where('deficit_hours', '>', 0)->sum('deficit_hours');
-
-                        return $user;
-                    })
-                    ->sortByDesc('total_deficit_hours')
+                    ->where('is_active', true)
+                    ->where('required_training_hours', '>', 0)
+                    ->select("{$userTable}.*")
+                    ->selectRaw("({$userTable}.required_training_hours - {$loggedHoursSql}) as total_deficit_hours")
+                    ->whereRaw("{$loggedHoursSql} < {$userTable}.required_training_hours")
+                    ->orderByDesc('total_deficit_hours')
                     ->take(10)
-                    ->values();
-                $employeesWithDeficit = User::where('role', 'employee')
-                    ->whereIn('id', DtrDeficit::where('deficit_hours', '>', 0)->select('user_id')->distinct()->pluck('user_id'))
-                    ->get()
-                    ->map(function ($user) {
-                        $user->total_deficit_hours = DtrDeficit::where('user_id', $user->id)->where('deficit_hours', '>', 0)->sum('deficit_hours');
+                    ->get();
 
-                        return $user;
-                    })
-                    ->sortByDesc('total_deficit_hours')
+                $employeeDeficitTotals = DtrDeficit::where('deficit_hours', '>', 0)
+                    ->whereIn('user_id', User::where('role', 'employee')->where('is_active', true)->select('id'))
+                    ->groupBy('user_id')
+                    ->selectRaw('user_id, SUM(deficit_hours) as total_deficit_hours')
+                    ->orderByDesc('total_deficit_hours')
                     ->take(10)
+                    ->get()
+                    ->pluck('total_deficit_hours', 'user_id');
+                $employeesWithDeficit = User::whereIn('id', $employeeDeficitTotals->keys())
+                    ->get()
+                    ->each(fn ($user) => $user->total_deficit_hours = (float) $employeeDeficitTotals[$user->id])
+                    ->sortByDesc('total_deficit_hours')
                     ->values();
             } catch (\Exception $e) {
                 Log::warning('Deficit stats error: '.$e->getMessage());
@@ -355,7 +362,7 @@ class DashboardController extends Controller
 
             // University Student Count Ranking - with error handling
             try {
-                $universityRanking = University::withCount('users')
+                $universityRanking = University::withCount(['users' => fn ($q) => $q->where('role', 'student')])
                     ->orderBy('users_count', 'desc')
                     ->get();
             } catch (\Exception $e) {

@@ -700,7 +700,7 @@
                     <a href="{{ url('/admin/leave-requests/' . $leave->id) }}" class="flex items-center justify-between p-3 rounded-lg hover:bg-gray-50 border border-transparent hover:border-amber-200 transition-colors">
                         <div class="min-w-0 flex-1">
                             <p class="text-sm font-medium text-gray-900 truncate"><x-user-name :user="$leave->user" /></p>
-                            <p class="text-xs text-gray-500">{{ $leave->start_date->format('M j') }} – {{ $leave->end_date->format('M j, Y') }}</p>
+                            <p class="text-xs text-gray-500">{{ $leave->start_date->format('M j') }} – {{ ($leave->end_date ?? $leave->start_date)->format('M j, Y') }}</p>
                         </div>
                         <div class="shrink-0 max-w-[8rem] text-right bg-amber-50 px-2 py-1 rounded">
                             <x-leave-request-list-type
@@ -732,7 +732,7 @@
                     <a href="{{ url('/admin/student-leave-requests') }}" class="flex items-center justify-between p-3 rounded-lg hover:bg-gray-50 border border-transparent hover:border-amber-200 transition-colors">
                         <div class="min-w-0 flex-1">
                             <p class="text-sm font-medium text-gray-900 truncate"><x-user-name :user="$leave->user" /></p>
-                            <p class="text-xs text-gray-500">{{ $leave->start_date->format('M j') }} – {{ $leave->end_date->format('M j, Y') }}</p>
+                            <p class="text-xs text-gray-500">{{ $leave->start_date->format('M j') }} – {{ ($leave->end_date ?? $leave->start_date)->format('M j, Y') }}</p>
                         </div>
                         <div class="shrink-0 max-w-[8rem] text-right bg-amber-50 px-2 py-1 rounded">
                             <x-leave-request-list-type
@@ -757,7 +757,7 @@
         <div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
             <div class="px-6 py-4 border-b border-gray-200 bg-gray-50/80">
                 <h2 class="text-base font-semibold text-gray-900">Time Remaining</h2>
-                <p class="text-sm text-gray-500 mt-0.5">Students with DTR deficit (hours to render)</p>
+                <p class="text-sm text-gray-500 mt-0.5">Active interns – required training hours not yet rendered</p>
             </div>
             <div class="p-4 max-h-64 overflow-y-auto">
                 @forelse($studentsWithDeficit as $user)
@@ -787,7 +787,7 @@
         <div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
             <div class="px-6 py-4 border-b border-gray-200 bg-gray-50/80">
                 <h2 class="text-base font-semibold text-gray-900">Time Remaining</h2>
-                <p class="text-sm text-gray-500 mt-0.5">Employees with DTR deficit (hours to render)</p>
+                <p class="text-sm text-gray-500 mt-0.5">Active employees with DTR deficit (hours to render)</p>
             </div>
             <div class="p-4 max-h-64 overflow-y-auto">
                 @forelse($employeesWithDeficit as $user)
