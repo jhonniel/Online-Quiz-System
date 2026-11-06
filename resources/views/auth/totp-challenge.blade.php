@@ -91,7 +91,7 @@
                         </div>
                     @endif
 
-                    <form method="POST" action="{{ url('/admin/two-factor-challenge') }}" class="space-y-5">
+                    <form method="POST" action="{{ url('/admin/two-factor-challenge') }}" class="space-y-5" id="totp-challenge-form">
                         @csrf
                         <div>
                             <label for="code" class="block text-sm font-medium text-slate-700 mb-2">
@@ -113,13 +113,13 @@
                                 value="{{ old('code') }}"
                             >
                             <p class="mt-2 text-xs text-slate-500 leading-relaxed">
-                                You can also enter a one-time recovery code if you no longer have access to your authenticator app.
+                                The code is checked automatically once all 6 digits are entered. You can also enter a one-time recovery code if you no longer have access to your authenticator app.
                             </p>
                         </div>
 
-                        <button type="submit"
-                                class="btn-brand inline-flex w-full items-center justify-center gap-2 rounded-xl px-4 py-3 text-sm font-semibold text-white shadow-sm transition focus:outline-none focus:ring-2 focus:ring-offset-2 ring-brand">
-                            <span>Verify &amp; continue</span>
+                        <button type="submit" id="totp-submit"
+                                class="btn-brand inline-flex w-full items-center justify-center gap-2 rounded-xl px-4 py-3 text-sm font-semibold text-white shadow-sm transition focus:outline-none focus:ring-2 focus:ring-offset-2 ring-brand disabled:opacity-70 disabled:cursor-wait">
+                            <span id="totp-submit-label">Verify &amp; continue</span>
                             <svg class="h-4 w-4 opacity-90" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7l5 5m0 0l-5 5m5-5H6"></path>
                             </svg>
@@ -142,5 +142,60 @@
             </p>
         </div>
     </div>
+    <script>
+        (function () {
+            const form = document.getElementById('totp-challenge-form');
+            const input = document.getElementById('code');
+            const button = document.getElementById('totp-submit');
+            const label = document.getElementById('totp-submit-label');
+            if (!form || !input) {
+                return;
+            }
+
+            let submitting = false;
+
+            function submitOnce() {
+                if (submitting) {
+                    return;
+                }
+                submitting = true;
+                input.readOnly = true;
+                if (button) {
+                    button.disabled = true;
+                }
+                if (label) {
+                    label.textContent = 'Verifying…';
+                }
+                form.submit();
+            }
+
+            // Authenticator codes are exactly 6 digits; recovery codes (XXXX-XXXX) still use the button.
+            input.addEventListener('input', function () {
+                const digits = input.value.replace(/\s+/g, '');
+                if (/^\d{6}$/.test(digits)) {
+                    input.value = digits;
+                    submitOnce();
+                }
+            });
+
+            form.addEventListener('submit', function (event) {
+                if (submitting) {
+                    event.preventDefault();
+                    return;
+                }
+                submitting = true;
+                if (button) {
+                    button.disabled = true;
+                }
+                if (label) {
+                    label.textContent = 'Verifying…';
+                }
+            });
+
+            if (input.value) {
+                input.select();
+            }
+        })();
+    </script>
 </body>
 </html>
