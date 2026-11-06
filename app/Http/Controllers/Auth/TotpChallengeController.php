@@ -52,7 +52,7 @@ class TotpChallengeController extends Controller
         if ($validTotp) {
             $this->totp->markSessionPassed();
 
-            return redirect()->intended('/admin/dashboard');
+            return $this->passedResponse($request);
         }
 
         [$recoveryOk, $remaining] = $this->totp->consumeRecoveryCode(
@@ -65,13 +65,32 @@ class TotpChallengeController extends Controller
             $user->save();
             $this->totp->markSessionPassed();
 
-            return redirect()->intended('/admin/dashboard')
-                ->with('warning', 'You signed in with a recovery code. Consider regenerating recovery codes from Security.');
+            return $this->passedResponse(
+                $request,
+                'You signed in with a recovery code. Consider regenerating recovery codes from Security.'
+            );
         }
 
         throw ValidationException::withMessages([
             'code' => ['Invalid authenticator or recovery code.'],
         ]);
+    }
+
+    /**
+     * Redirect after a passed challenge; the challenge page verifies in the background and expects JSON.
+     */
+    private function passedResponse(Request $request, ?string $warning = null)
+    {
+        $redirect = redirect()->intended('/admin/dashboard');
+        if ($warning !== null) {
+            $redirect->with('warning', $warning);
+        }
+
+        if ($request->expectsJson()) {
+            return response()->json(['redirect' => $redirect->getTargetUrl()]);
+        }
+
+        return $redirect;
     }
 
     public function cancel(Request $request)

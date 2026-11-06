@@ -43,6 +43,12 @@
             letter-spacing: 0.2em;
             color: #9ca3af;
         }
+        @keyframes totp-shake {
+            0%, 100% { transform: translateX(0); }
+            20%, 60% { transform: translateX(-6px); }
+            40%, 80% { transform: translateX(6px); }
+        }
+        .totp-shake { animation: totp-shake 0.35s ease-in-out; }
     </style>
 </head>
 <body class="min-h-screen bg-slate-50 text-slate-900 antialiased">
@@ -83,7 +89,7 @@
 
                 <div class="px-6 py-6 sm:px-8 sm:py-7">
                     @if($errors->any())
-                        <div class="mb-5 flex items-start gap-2.5 rounded-xl border border-red-200 bg-red-50 px-3.5 py-3 text-sm text-red-700" role="alert">
+                        <div id="totp-server-error" class="mb-5 flex items-start gap-2.5 rounded-xl border border-red-200 bg-red-50 px-3.5 py-3 text-sm text-red-700" role="alert">
                             <svg class="mt-0.5 h-4 w-4 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20" aria-hidden="true">
                                 <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clip-rule="evenodd"/>
                             </svg>
@@ -113,17 +119,20 @@
                                 value="{{ old('code') }}"
                             >
                             <p class="mt-2 text-xs text-slate-500 leading-relaxed">
-                                The code is checked automatically once all 6 digits are entered. You can also enter a one-time recovery code if you no longer have access to your authenticator app.
+                                Your code is checked automatically once all 6 digits are entered. Using a one-time recovery code instead? Type it and press Enter.
                             </p>
                         </div>
 
-                        <button type="submit" id="totp-submit"
-                                class="btn-brand inline-flex w-full items-center justify-center gap-2 rounded-xl px-4 py-3 text-sm font-semibold text-white shadow-sm transition focus:outline-none focus:ring-2 focus:ring-offset-2 ring-brand disabled:opacity-70 disabled:cursor-wait">
-                            <span id="totp-submit-label">Verify &amp; continue</span>
-                            <svg class="h-4 w-4 opacity-90" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7l5 5m0 0l-5 5m5-5H6"></path>
+                        <div id="totp-status" class="hidden flex items-center justify-center gap-2 rounded-xl px-4 py-3 text-sm font-semibold" role="status" aria-live="polite">
+                            <svg id="totp-status-spinner" class="hidden h-4 w-4 animate-spin" fill="none" viewBox="0 0 24 24" aria-hidden="true">
+                                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z"></path>
                             </svg>
-                        </button>
+                            <svg id="totp-status-check" class="hidden h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7"></path>
+                            </svg>
+                            <span id="totp-status-text"></span>
+                        </div>
                     </form>
                 </div>
 
@@ -146,50 +155,115 @@
         (function () {
             const form = document.getElementById('totp-challenge-form');
             const input = document.getElementById('code');
-            const button = document.getElementById('totp-submit');
-            const label = document.getElementById('totp-submit-label');
-            if (!form || !input) {
+            const status = document.getElementById('totp-status');
+            const statusText = document.getElementById('totp-status-text');
+            const spinner = document.getElementById('totp-status-spinner');
+            const check = document.getElementById('totp-status-check');
+            const serverError = document.getElementById('totp-server-error');
+            const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '';
+            if (!form || !input || !status) {
                 return;
             }
 
-            let submitting = false;
+            const statusStyles = {
+                checking: 'bg-slate-100 text-slate-700',
+                success: 'bg-emerald-50 text-emerald-700',
+                error: 'bg-red-50 text-red-700',
+            };
+            const inputErrorClasses = ['border-red-300', 'focus:border-red-500', 'focus:ring-red-500'];
+            let busy = false;
 
-            function submitOnce() {
-                if (submitting) {
-                    return;
-                }
-                submitting = true;
-                input.readOnly = true;
-                if (button) {
-                    button.disabled = true;
-                }
-                if (label) {
-                    label.textContent = 'Verifying…';
-                }
-                form.submit();
+            function setStatus(state, message) {
+                status.classList.remove('hidden', ...Object.values(statusStyles).join(' ').split(' '));
+                status.classList.add(...statusStyles[state].split(' '));
+                spinner.classList.toggle('hidden', state !== 'checking');
+                check.classList.toggle('hidden', state !== 'success');
+                statusText.textContent = message;
+                input.classList.toggle('border-red-300', state === 'error');
+                input.classList.toggle('focus:border-red-500', state === 'error');
+                input.classList.toggle('focus:ring-red-500', state === 'error');
             }
 
-            // Authenticator codes are exactly 6 digits; recovery codes (XXXX-XXXX) still use the button.
+            function showError(message) {
+                busy = false;
+                input.readOnly = false;
+                input.value = '';
+                setStatus('error', message);
+                input.classList.remove('totp-shake');
+                void input.offsetWidth;
+                input.classList.add('totp-shake');
+                input.focus();
+            }
+
+            async function verify() {
+                const code = input.value.replace(/\s+/g, '');
+                if (busy || code.length < 6) {
+                    return;
+                }
+                busy = true;
+                input.readOnly = true;
+                if (serverError) {
+                    serverError.remove();
+                }
+                setStatus('checking', 'Checking code…');
+
+                const body = new FormData(form);
+                body.set('code', code);
+
+                try {
+                    const response = await fetch(form.action, {
+                        method: 'POST',
+                        body: body,
+                        credentials: 'same-origin',
+                        headers: {
+                            'Accept': 'application/json',
+                            'X-Requested-With': 'XMLHttpRequest',
+                            'X-CSRF-TOKEN': csrfToken,
+                        },
+                    });
+
+                    if (response.ok) {
+                        const data = await response.json().catch(() => ({}));
+                        setStatus('success', 'Verified! Opening dashboard…');
+                        window.location.assign(data.redirect || @json(url('/admin/dashboard')));
+                        return;
+                    }
+                    if (response.status === 419) {
+                        showError('Your session expired. Reloading…');
+                        setTimeout(() => window.location.reload(), 1200);
+                        return;
+                    }
+                    if (response.status === 429) {
+                        showError('Too many attempts. Please wait a minute and try again.');
+                        return;
+                    }
+
+                    const data = await response.json().catch(() => ({}));
+                    const message = (data.errors && data.errors.code && data.errors.code[0])
+                        || data.message
+                        || 'Invalid authenticator or recovery code.';
+                    showError(message);
+                } catch (e) {
+                    showError('Could not reach the server. Check your connection and try again.');
+                }
+            }
+
+            // Authenticator codes are exactly 6 digits; recovery codes (XXXX-XXXX) are submitted with Enter.
             input.addEventListener('input', function () {
+                if (!status.classList.contains('hidden') && !busy) {
+                    status.classList.add('hidden');
+                    input.classList.remove(...inputErrorClasses);
+                }
                 const digits = input.value.replace(/\s+/g, '');
                 if (/^\d{6}$/.test(digits)) {
                     input.value = digits;
-                    submitOnce();
+                    verify();
                 }
             });
 
             form.addEventListener('submit', function (event) {
-                if (submitting) {
-                    event.preventDefault();
-                    return;
-                }
-                submitting = true;
-                if (button) {
-                    button.disabled = true;
-                }
-                if (label) {
-                    label.textContent = 'Verifying…';
-                }
+                event.preventDefault();
+                verify();
             });
 
             if (input.value) {
