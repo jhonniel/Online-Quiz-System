@@ -495,6 +495,11 @@
                                                                 @endif
                                                             </div>
                                                         @endif
+                                                        @if($hrDtrLimitedView)
+                                                            <div class="mt-2">
+                                                                @include('admin.dtr.partials.holiday-exclusion-action', ['employeeName' => $employeeGroup['employee']->name])
+                                                            </div>
+                                                        @endif
                                                     </td>
                                                     @unless($hrDtrLimitedView)
                                                     <td class="px-3 py-2">
@@ -510,6 +515,7 @@
                                                                     Reject remarks
                                                                 </button>
                                                             @endif
+                                                            @include('admin.dtr.partials.holiday-exclusion-action', ['employeeName' => $employeeGroup['employee']->name])
                                                             @if($dtr->exists && $dtr->id)
                                                                 <a href="{{ url('/admin/dtr/' . $dtr->id . '/edit') }}"
                                                                    class="inline-flex items-center px-2.5 py-1.5 border border-indigo-200 text-xs font-medium rounded-md text-indigo-700 bg-indigo-50 hover:bg-indigo-100">

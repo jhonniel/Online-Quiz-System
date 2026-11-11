@@ -4,7 +4,7 @@ namespace App\Support;
 
 use App\Models\Dtr;
 use App\Models\LeaveRequest;
-use Illuminate\Support\Carbon;
+use Carbon\Carbon;
 
 final class DtrApprovedLeaveRemark
 {

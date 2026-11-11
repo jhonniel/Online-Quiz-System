@@ -50,6 +50,10 @@ final class DtrEmployeeAttendance
      */
     public static function displayedLeaveTypeLabel(Dtr $dtr): ?string
     {
+        if (DtrHolidayCalendar::hasRegularHolidayCredit($dtr)) {
+            return 'Holiday';
+        }
+
         if (self::isOffsetLeave($dtr)) {
             return 'Offset';
         }
@@ -81,6 +85,10 @@ final class DtrEmployeeAttendance
      */
     public static function isOffsetLeave(Dtr $dtr): bool
     {
+        if (DtrHolidayCalendar::hasRegularHolidayCredit($dtr)) {
+            return false;
+        }
+
         $requestType = self::approvedLeaveRequestType($dtr);
         if ($requestType === 'offset') {
             return true;

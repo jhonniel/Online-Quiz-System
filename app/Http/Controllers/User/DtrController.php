@@ -133,21 +133,15 @@ class DtrController extends Controller
                     continue;
                 }
 
-                $holidayEntry = DtrHolidayCalendar::syntheticHolidayEntry($day, $holidayMap[$dateKey] ?? null);
-                $isHoliday = $holidayEntry !== null;
-                $syntheticStatus = $isHoliday ? 'holiday' : 'absent';
-                if ($selectedStatus !== null && $selectedStatus !== $syntheticStatus) {
+                $attributes = DtrHolidayCalendar::missingDayAttributes($day, $holidayMap[$dateKey] ?? null, (int) $user->id);
+                if ($selectedStatus !== null && $selectedStatus !== $attributes['status']) {
                     continue;
                 }
 
                 $entry = new Dtr([
                     'user_id' => $user->id,
                     'date' => $day->copy(),
-                    'total_hours' => $isHoliday ? $holidayEntry['total_hours'] : 0,
-                    'overtime_hours' => 0,
-                    'status' => $syntheticStatus,
-                    'remarks' => $isHoliday ? $holidayEntry['remarks'] : DtrHolidayCalendar::absentRemark(),
-                ]);
+                ] + $attributes);
                 $entry->setRelation('user', $user);
                 $syntheticEntries->push($entry);
             }
@@ -605,21 +599,15 @@ class DtrController extends Controller
                     continue;
                 }
 
-                $holidayEntry = DtrHolidayCalendar::syntheticHolidayEntry($day, $holidayMap[$dateKey] ?? null);
-                $isHoliday = $holidayEntry !== null;
-                $syntheticStatus = $isHoliday ? 'holiday' : 'absent';
-                if ($selectedStatus !== null && $selectedStatus !== $syntheticStatus) {
+                $attributes = DtrHolidayCalendar::missingDayAttributes($day, $holidayMap[$dateKey] ?? null, (int) $user->id);
+                if ($selectedStatus !== null && $selectedStatus !== $attributes['status']) {
                     continue;
                 }
 
                 $entry = new Dtr([
                     'user_id' => $user->id,
                     'date' => $day->copy(),
-                    'total_hours' => $isHoliday ? $holidayEntry['total_hours'] : 0,
-                    'overtime_hours' => 0,
-                    'status' => $syntheticStatus,
-                    'remarks' => $isHoliday ? $holidayEntry['remarks'] : DtrHolidayCalendar::absentRemark(),
-                ]);
+                ] + $attributes);
                 $entry->setRelation('user', $user);
                 $syntheticEntries->push($entry);
             }

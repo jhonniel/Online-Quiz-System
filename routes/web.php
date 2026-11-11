@@ -619,6 +619,8 @@ Route::prefix('admin')->middleware(['auth', 'admin', 'admin.totp'])->group(funct
             Route::get('/dtr/{dtr}/edit', [DtrController::class, 'edit'])->name('admin.dtr.edit');
             Route::put('/dtr/{dtr}', [DtrController::class, 'update'])->name('admin.dtr.update');
             Route::post('/dtr/{dtr}/reject-remarks', [DtrController::class, 'rejectRemarks'])->name('admin.dtr.reject-remarks');
+            Route::post('/dtr/holiday-exclusions', [DtrController::class, 'excludeFromHoliday'])->name('admin.dtr.holiday-exclusions.store');
+            Route::delete('/dtr/holiday-exclusions', [DtrController::class, 'restoreHoliday'])->name('admin.dtr.holiday-exclusions.destroy');
             Route::delete('/dtr/{dtr}', [DtrController::class, 'destroy'])->name('admin.dtr.destroy');
             Route::post('/dtr/recalculate-deficits', [DtrController::class, 'recalculateDeficits'])->name('admin.dtr.recalculate-deficits');
             Route::post('/dtr/import', [DtrController::class, 'import'])->name('admin.dtr.import');

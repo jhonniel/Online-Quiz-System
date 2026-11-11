@@ -270,8 +270,9 @@
                         <th style="width: 14%;">Date</th>
                         <th style="width: 9%;">Day</th>
                         <th style="width: 14%;" class="right">Hubstaff Hours</th>
-                        <th style="width: 14%;" class="right">Added Time</th>
-                        <th style="width: 14%;" class="right">Total Hours</th>
+                        <th style="width: 12%;" class="right">Added Time</th>
+                        <th style="width: 10%;" class="right">Leave/Offset</th>
+                        <th style="width: 12%;" class="right">Total Hours</th>
                         <th style="width: 12%;" class="center">Status</th>
                         <th style="width: 23%;">Remarks</th>
                     </tr>
@@ -283,8 +284,6 @@
                             $dtrRecord = is_array($leaveData) ? ($leaveData['dtr'] ?? null) : null;
                             $leaveDate = \Carbon\Carbon::parse($dateKey);
                             $leaveTypeLabel = $leave->type_label ?? ucfirst(str_replace('_', ' ', $leave->type));
-                            $approvalTime = $leave->reviewed_at ? $leave->reviewed_at->format('M d, Y g:i A') : '';
-                            
                             $isAbsentLeave = ($leave->type ?? '') === 'absent';
 
                             // Use DTR hours if available, otherwise default to 8 hours.
@@ -339,15 +338,7 @@
                             <td class="right">00:00</td>
                             <td class="right">{{ $totalFormatted }}</td>
                             <td class="center">{{ ($leave->type ?? '') === 'absent' ? 'Absent' : 'Completed' }}</td>
-                            <td>
-                                {!! \App\Support\DtrApprovedLeaveRemark::pdfRemarkLabelHtml((string) ($leave->type ?? ''), $leaveTypeLabel) !!}
-                                @if($approvalTime)
-                                    (Approved: {{ $approvalTime }})
-                                @endif
-                                @if($leave->reason)
-                                    - {{ \Illuminate\Support\Str::limit($leave->reason, 50) }}
-                                @endif
-                            </td>
+                            <td>{!! \App\Support\DtrApprovedLeaveRemark::pdfRemarkLabelHtml((string) ($leave->type ?? ''), $leaveTypeLabel) !!}</td>
                         </tr>
                     @endforeach
                 </tbody>
@@ -366,8 +357,9 @@
                         <th style="width: 14%;">Date</th>
                         <th style="width: 9%;">Day</th>
                         <th style="width: 14%;" class="right">Hubstaff Hours</th>
-                        <th style="width: 14%;" class="right">Added Time</th>
-                        <th style="width: 14%;" class="right">Total Hours</th>
+                        <th style="width: 12%;" class="right">Added Time</th>
+                        <th style="width: 10%;" class="right">Leave/Offset</th>
+                        <th style="width: 12%;" class="right">Total Hours</th>
                         <th style="width: 12%;" class="center">Status</th>
                         <th style="width: 23%;">Remarks</th>
                     </tr>
@@ -378,8 +370,6 @@
                             $travel = is_array($travelData) ? $travelData['travel'] : $travelData;
                             $dtrRecord = is_array($travelData) ? ($travelData['dtr'] ?? null) : null;
                             $travelDate = \Carbon\Carbon::parse($dateKey);
-                            $approvalTime = $travel->reviewed_at ? $travel->reviewed_at->format('M d, Y g:i A') : '';
-                            
                             // Use DTR hours if available, otherwise default to 8 hours
                             if ($dtrRecord && ($dtrRecord->total_hours ?? 0) > 0) {
                                 $travelHours = $dtrRecord->total_hours;
@@ -418,15 +408,7 @@
                             <td class="right">00:00</td>
                             <td class="right">{{ $totalFormatted }}</td>
                             <td class="center">Travel</td>
-                            <td>
-                                {!! \App\Support\DtrApprovedLeaveRemark::pdfFixedLabelHtml('Travel Leave', 'travel') !!}
-                                @if($approvalTime)
-                                    (Approved: {{ $approvalTime }})
-                                @endif
-                                @if($travel->reason)
-                                    - {{ \Illuminate\Support\Str::limit($travel->reason, 50) }}
-                                @endif
-                            </td>
+                            <td>{!! \App\Support\DtrApprovedLeaveRemark::pdfFixedLabelHtml('Travel Leave', 'travel') !!}</td>
                         </tr>
                     @endforeach
                 </tbody>

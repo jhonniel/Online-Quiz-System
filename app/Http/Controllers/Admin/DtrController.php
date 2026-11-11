@@ -7,6 +7,8 @@ use App\Helpers\TimeExtraction;
 use App\Helpers\SmartTimeParser;
 use App\Models\Dtr;
 use App\Models\DtrDeficit;
+use App\Models\DtrHoliday;
+use App\Models\DtrHolidayExclusion;
 use App\Models\User;
 use App\Models\University;
 use App\Models\Department;
@@ -429,8 +431,6 @@ class DtrController extends Controller
                 }
 
                 $dateKey = $day->format('Y-m-d');
-                $holidayEntry = DtrHolidayCalendar::syntheticHolidayEntry($day, $holidayMap[$dateKey] ?? null);
-                $isHoliday = $holidayEntry !== null;
 
                 foreach ($employeeMap as $employeeId => $employeeModel) {
                     if (isset($existingMap[$employeeId][$dateKey])) {
@@ -440,11 +440,7 @@ class DtrController extends Controller
                     $entry = new Dtr([
                         'user_id' => $employeeId,
                         'date' => $day->copy(),
-                        'total_hours' => $isHoliday ? $holidayEntry['total_hours'] : 0,
-                        'overtime_hours' => 0,
-                        'status' => $isHoliday ? $holidayEntry['status'] : 'absent',
-                        'remarks' => $isHoliday ? $holidayEntry['remarks'] : DtrHolidayCalendar::absentRemark(),
-                    ]);
+                    ] + DtrHolidayCalendar::missingDayAttributes($day, $holidayMap[$dateKey] ?? null, (int) $employeeId));
                     $entry->is_synthetic = true;
                     $entry->setRelation('user', $employeeModel);
                     $syntheticEntries->push($entry);
@@ -542,16 +538,10 @@ class DtrController extends Controller
                             continue;
                         }
 
-                        $holidayEntry = DtrHolidayCalendar::syntheticHolidayEntry($day, $holidayMap[$dateKey] ?? null);
-                        $isHoliday = $holidayEntry !== null;
                         $synthetic = new Dtr([
                             'user_id' => $empGroup['employee']->id,
                             'date' => $day->copy(),
-                            'total_hours' => $isHoliday ? $holidayEntry['total_hours'] : 0,
-                            'overtime_hours' => 0,
-                            'status' => $isHoliday ? $holidayEntry['status'] : 'absent',
-                            'remarks' => $isHoliday ? $holidayEntry['remarks'] : DtrHolidayCalendar::absentRemark(),
-                        ]);
+                        ] + DtrHolidayCalendar::missingDayAttributes($day, $holidayMap[$dateKey] ?? null, (int) $empGroup['employee']->id));
                         $synthetic->is_synthetic = true;
                         $synthetic->setRelation('user', $empGroup['employee']);
                         $empGroup['records'][] = $synthetic;
@@ -568,13 +558,27 @@ class DtrController extends Controller
         unset($monthGroup);
 
         $totalRecords = 0;
+        $shownFrom = null;
+        $shownTo = null;
         foreach ($groupedDtrs as $monthGroup) {
             foreach (($monthGroup['weeks'] ?? []) as $weekGroup) {
+                $weekStartDate = Carbon::parse($weekGroup['week_start'])->startOfDay();
+                $weekEndDate = Carbon::parse($weekGroup['week_end'])->startOfDay();
+                $shownFrom = $shownFrom === null || $weekStartDate->lt($shownFrom) ? $weekStartDate : $shownFrom;
+                $shownTo = $shownTo === null || $weekEndDate->gt($shownTo) ? $weekEndDate : $shownTo;
                 foreach (($weekGroup['employees'] ?? []) as $employeeGroup) {
                     $totalRecords += count($employeeGroup['records'] ?? []);
                 }
             }
         }
+
+        // Regular holidays in view (with exclusions) for the per-employee "Exclude from holiday" action.
+        $dtrHolidayMap = $shownFrom && $shownTo
+            ? array_filter(
+                DtrHolidayCalendar::mapForRange($shownFrom, $shownTo),
+                fn (DtrHoliday $holiday) => $holiday->type === DtrHoliday::TYPE_REGULAR
+            )
+            : [];
 
         $previousBrowseMonth = null;
         $nextBrowseMonth = null;
@@ -616,7 +620,8 @@ class DtrController extends Controller
             'lazyMonthBrowsing',
             'browseMonth',
             'previousBrowseMonth',
-            'nextBrowseMonth'
+            'nextBrowseMonth',
+            'dtrHolidayMap'
         ));
     }
 
@@ -882,20 +887,11 @@ class DtrController extends Controller
 
         if ($isNewEntry) {
             $holidayMap = DtrHolidayCalendar::mapForRange($date, $date);
-            $holidayEntry = DtrHolidayCalendar::syntheticHolidayEntry(
-                $date,
-                $holidayMap[$date->toDateString()] ?? null
-            );
-            $isHoliday = $holidayEntry !== null;
 
             $dtr = new Dtr([
                 'user_id' => $employee->id,
                 'date' => $date->copy(),
-                'total_hours' => $isHoliday ? $holidayEntry['total_hours'] : 0,
-                'overtime_hours' => 0,
-                'status' => $isHoliday ? $holidayEntry['status'] : 'absent',
-                'remarks' => $isHoliday ? $holidayEntry['remarks'] : DtrHolidayCalendar::absentRemark(),
-            ]);
+            ] + DtrHolidayCalendar::missingDayAttributes($date, $holidayMap[$date->toDateString()] ?? null, (int) $employee->id));
         } else {
             $holidayMap = DtrHolidayCalendar::mapForRange($date, $date);
             DtrHolidayCalendar::applyRegularHolidayToRecordIfEligible(
@@ -1135,6 +1131,71 @@ class DtrController extends Controller
     /**
      * Remove credited "added time from note" (often parsed from remarks) and recalculate totals.
      */
+    /**
+     * Exclude an employee from a regular holiday: that day becomes ABSENT unless they have Hubstaff time.
+     */
+    public function excludeFromHoliday(Request $request)
+    {
+        [$employee, $holiday] = $this->resolveHolidayExclusionTarget($request);
+
+        DtrHolidayExclusion::firstOrCreate(
+            ['dtr_holiday_id' => $holiday->id, 'user_id' => $employee->id],
+            ['excluded_by' => auth()->id()]
+        );
+
+        Log::info('Employee excluded from holiday', [
+            'holiday_id' => $holiday->id,
+            'date' => $holiday->date->toDateString(),
+            'employee_id' => $employee->id,
+            'admin_id' => auth()->id(),
+        ]);
+
+        return redirect()->back()->with('success', "{$employee->name} is excluded from {$holiday->name} on ".$holiday->date->format('M d, Y').'. The day is ABSENT unless they have Hubstaff time.');
+    }
+
+    public function restoreHoliday(Request $request)
+    {
+        [$employee, $holiday] = $this->resolveHolidayExclusionTarget($request);
+
+        $deleted = DtrHolidayExclusion::where('dtr_holiday_id', $holiday->id)
+            ->where('user_id', $employee->id)
+            ->delete();
+
+        if ($deleted > 0) {
+            Log::info('Employee holiday exclusion removed', [
+                'holiday_id' => $holiday->id,
+                'date' => $holiday->date->toDateString(),
+                'employee_id' => $employee->id,
+                'admin_id' => auth()->id(),
+            ]);
+        }
+
+        return redirect()->back()->with('success', "{$holiday->name} on ".$holiday->date->format('M d, Y')." is restored for {$employee->name}.");
+    }
+
+    /**
+     * @return array{0: User, 1: DtrHoliday}
+     */
+    private function resolveHolidayExclusionTarget(Request $request): array
+    {
+        $validated = $request->validate([
+            'user_id' => ['required', 'integer', 'exists:users,id'],
+            'date' => ['required', 'date'],
+        ]);
+
+        $employee = User::find($validated['user_id']);
+        $this->assertCanManageEmployeeDtr($employee);
+
+        $holiday = DtrHoliday::whereDate('date', Carbon::parse($validated['date'])->toDateString())
+            ->where('type', DtrHoliday::TYPE_REGULAR)
+            ->first();
+        if (! $holiday) {
+            abort(422, 'There is no regular holiday on this date.');
+        }
+
+        return [$employee, $holiday];
+    }
+
     public function rejectRemarks(Request $request, Dtr $dtr)
     {
         $this->assertCanManageEmployeeDtrRecord($dtr);
@@ -2884,8 +2945,6 @@ class DtrController extends Controller
                 }
 
                 $dateKey = $day->format('Y-m-d');
-                $holidayEntry = DtrHolidayCalendar::syntheticHolidayEntry($day, $holidayMap[$dateKey] ?? null);
-                $isHoliday = $holidayEntry !== null;
 
                 foreach ($employeesForPdf as $employeeModel) {
                     $employeeId = $employeeModel->id;
@@ -2893,19 +2952,15 @@ class DtrController extends Controller
                         continue;
                     }
 
-                    $syntheticStatus = $isHoliday ? 'holiday' : 'absent';
-                    if ($selectedStatus !== null && $selectedStatus !== $syntheticStatus) {
+                    $attributes = DtrHolidayCalendar::missingDayAttributes($day, $holidayMap[$dateKey] ?? null, (int) $employeeId);
+                    if ($selectedStatus !== null && $selectedStatus !== $attributes['status']) {
                         continue;
                     }
 
                     $entry = new Dtr([
                         'user_id' => $employeeId,
                         'date' => $day->copy(),
-                        'total_hours' => $isHoliday ? $holidayEntry['total_hours'] : 0,
-                        'overtime_hours' => 0,
-                        'status' => $syntheticStatus,
-                        'remarks' => $isHoliday ? $holidayEntry['remarks'] : DtrHolidayCalendar::absentRemark(),
-                    ]);
+                    ] + $attributes);
                     $entry->is_synthetic = true;
                     $entry->setRelation('user', $employeeModel);
                     $syntheticEntries->push($entry);
@@ -3165,25 +3220,21 @@ class DtrController extends Controller
                         $recordMap[$dateKey],
                         $holidayMap[$dateKey] ?? null
                     );
+                    DtrHolidayCalendar::applyRegularHolidayAsLeaveCredit($recordMap[$dateKey], $holidayMap[$dateKey] ?? null);
                     continue;
                 }
 
-                $holidayEntry = DtrHolidayCalendar::syntheticHolidayEntry($day, $holidayMap[$dateKey] ?? null);
-                $isHoliday = $holidayEntry !== null;
-                $syntheticStatus = $isHoliday ? 'holiday' : 'absent';
-                if ($selectedStatus !== null && $selectedStatus !== $syntheticStatus) {
+                $attributes = DtrHolidayCalendar::missingDayAttributes($day, $holidayMap[$dateKey] ?? null, (int) $group['employee']->id);
+                if ($selectedStatus !== null && $selectedStatus !== $attributes['status']) {
                     continue;
                 }
                 $synthetic = new Dtr([
                     'user_id' => $group['employee']->id,
                     'date' => $day->copy(),
-                    'total_hours' => $isHoliday ? $holidayEntry['total_hours'] : 0,
-                    'overtime_hours' => 0,
-                    'status' => $syntheticStatus,
-                    'remarks' => $isHoliday ? $holidayEntry['remarks'] : DtrHolidayCalendar::absentRemark(),
-                ]);
+                ] + $attributes);
                 $synthetic->is_synthetic = true;
                 $synthetic->setRelation('user', $group['employee']);
+                DtrHolidayCalendar::applyRegularHolidayAsLeaveCredit($synthetic, $holidayMap[$dateKey] ?? null);
                 $group['records'][] = $synthetic;
             }
 
@@ -3580,13 +3631,18 @@ class DtrController extends Controller
 
     private function assertCanManageEmployeeDtrRecord(Dtr $dtr): void
     {
+        $dtr->loadMissing('user');
+        $this->assertCanManageEmployeeDtr($dtr->user);
+    }
+
+    private function assertCanManageEmployeeDtr(?User $employee): void
+    {
         $user = auth()->user();
         if (! $user) {
             abort(403);
         }
 
-        $dtr->loadMissing('user');
-        if (! $dtr->user || $dtr->user->role !== 'employee') {
+        if (! $employee || $employee->role !== 'employee') {
             abort(404, 'Employee DTR record not found.');
         }
 
@@ -3598,7 +3654,7 @@ class DtrController extends Controller
             $allowedDepartmentIds = $user->getAllowedDepartmentIds();
             if ($allowedDepartmentIds !== null) {
                 $normalized = array_map('intval', $allowedDepartmentIds);
-                if (! in_array((int) $dtr->user->department_id, $normalized, true)) {
+                if (! in_array((int) $employee->department_id, $normalized, true)) {
                     abort(403, 'Access denied. You cannot manage this employee department.');
                 }
             }

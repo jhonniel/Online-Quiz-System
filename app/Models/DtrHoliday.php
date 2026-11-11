@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class DtrHoliday extends Model
 {
@@ -45,5 +46,26 @@ class DtrHoliday extends Model
     public function creator(): BelongsTo
     {
         return $this->belongsTo(User::class, 'created_by');
+    }
+
+    public function exclusions(): HasMany
+    {
+        return $this->hasMany(DtrHolidayExclusion::class);
+    }
+
+    /**
+     * Whether this employee was excluded from the holiday (treated as a regular workday).
+     */
+    public function excludesUser(?int $userId): bool
+    {
+        if ($userId === null) {
+            return false;
+        }
+
+        if ($this->relationLoaded('exclusions')) {
+            return $this->exclusions->contains('user_id', $userId);
+        }
+
+        return $this->exclusions()->where('user_id', $userId)->exists();
     }
 }
