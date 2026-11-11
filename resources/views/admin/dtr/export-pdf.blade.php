@@ -129,7 +129,9 @@
                             $remarks = $remarks !== '' ? $remarks.' | Travel' : 'Travel';
                         }
 
-                        $remarksDisplayHtml = \App\Support\DtrApprovedLeaveRemark::pdfRemarksHtml($remarks, $extraMinutes > 0);
+                        $remarksDisplayHtml = \App\Support\DtrHolidayCalendar::hasRegularHolidayCredit($dtr)
+                            ? \App\Support\DtrApprovedLeaveRemark::pdfFixedLabelHtml($remarks, 'holiday')
+                            : \App\Support\DtrApprovedLeaveRemark::pdfRemarksHtml($remarks, $extraMinutes > 0);
                     @endphp
                     @php
                         // Force absent display to 00:00 in PDF table.
