@@ -128,6 +128,25 @@
                 </label>
             </div>
 
+            @if($regularHoliday ?? null)
+                <!-- Holiday exclusion -->
+                <div class="p-4 bg-amber-50 border border-amber-200 rounded-lg">
+                    <input type="hidden" name="holiday_exclusion_present" value="1">
+                    <div class="flex items-start space-x-2">
+                        <input type="checkbox" name="not_part_of_holiday" id="not_part_of_holiday" value="1"
+                               class="mt-0.5 h-4 w-4 text-amber-600 focus:ring-amber-500 border-gray-300 rounded"
+                               {{ old('not_part_of_holiday', ($excludedFromHoliday ?? false) ? '1' : '') ? 'checked' : '' }}>
+                        <label for="not_part_of_holiday" class="text-sm text-gray-700 cursor-pointer">
+                            <span class="font-medium">Not part of {{ $regularHoliday->name }}</span>
+                            <span class="block text-xs text-gray-500 mt-0.5">
+                                {{ $dtr->date->format('M d, Y') }} is a regular holiday. When checked, this employee does not get the 8:00 holiday credit:
+                                the day is <strong>ABSENT</strong> unless Hubstaff hours are entered, in which case those hours count.
+                            </span>
+                        </label>
+                    </div>
+                </div>
+            @endif
+
             <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
                 <!-- Hubstaff Hours (Total Hours) -->
                 <div>

@@ -852,9 +852,69 @@ class DtrController extends Controller
         $addedFormatted = sprintf('%02d:%02d', $addedH, $addedM);
 
         $overtimeFormatted = $this->formatDecimalHoursToHhMm((float) ($dtr->overtime_hours ?? 0));
+        [$regularHoliday, $excludedFromHoliday] = $this->regularHolidayFor($dtr->date, (int) $dtr->user_id);
 
-        return view('admin.dtr.edit', compact('dtr', 'employees', 'workedFormatted', 'addedFormatted', 'overtimeFormatted'))
+        return view('admin.dtr.edit', compact('dtr', 'employees', 'workedFormatted', 'addedFormatted', 'overtimeFormatted', 'regularHoliday', 'excludedFromHoliday'))
             ->with('isNewEntry', false);
+    }
+
+    /**
+     * Regular holiday on this date (with exclusions) and whether the employee is excluded from it.
+     *
+     * @return array{0: DtrHoliday|null, 1: bool}
+     */
+    private function regularHolidayFor(Carbon|string|null $date, ?int $userId): array
+    {
+        if (! $date) {
+            return [null, false];
+        }
+
+        $holiday = DtrHolidayCalendar::findForDate($date);
+        if (! $holiday || $holiday->type !== DtrHoliday::TYPE_REGULAR) {
+            return [null, false];
+        }
+
+        return [$holiday, $holiday->excludesUser($userId)];
+    }
+
+    /**
+     * Edit form: "Not part of this holiday" excludes the employee (ABSENT unless time is entered);
+     * unchecking restores the holiday for them.
+     */
+    private function syncHolidayExclusionFromForm(Request $request, User $employee, Dtr $dtr): void
+    {
+        [$holiday] = $this->regularHolidayFor($dtr->date, (int) $employee->id);
+        if (! $holiday || ! $request->has('holiday_exclusion_present')) {
+            return;
+        }
+
+        if ($request->boolean('not_part_of_holiday')) {
+            $exclusion = DtrHolidayExclusion::firstOrCreate(
+                ['dtr_holiday_id' => $holiday->id, 'user_id' => $employee->id],
+                ['excluded_by' => auth()->id()]
+            );
+            if ($exclusion->wasRecentlyCreated) {
+                Log::info('Employee excluded from holiday (DTR edit)', [
+                    'holiday_id' => $holiday->id, 'employee_id' => $employee->id, 'admin_id' => auth()->id(),
+                ]);
+            }
+
+            $hasTime = (float) ($dtr->total_hours ?? 0) > 0;
+            if (! $hasTime && ! in_array((string) $dtr->status, ['travel', 'on_leave'], true)) {
+                $dtr->update(['status' => 'absent']);
+            }
+
+            return;
+        }
+
+        $removed = DtrHolidayExclusion::where('dtr_holiday_id', $holiday->id)
+            ->where('user_id', $employee->id)
+            ->delete();
+        if ($removed > 0) {
+            Log::info('Employee holiday exclusion removed (DTR edit)', [
+                'holiday_id' => $holiday->id, 'employee_id' => $employee->id, 'admin_id' => auth()->id(),
+            ]);
+        }
     }
 
     /**
@@ -917,6 +977,7 @@ class DtrController extends Controller
         $addedM = $addedMinutes % 60;
         $addedFormatted = sprintf('%02d:%02d', $addedH, $addedM);
         $overtimeFormatted = $this->formatDecimalHoursToHhMm((float) ($dtr->overtime_hours ?? 0));
+        [$regularHoliday, $excludedFromHoliday] = $this->regularHolidayFor($date, (int) $employee->id);
 
         return view('admin.dtr.edit', compact(
             'dtr',
@@ -924,7 +985,9 @@ class DtrController extends Controller
             'workedFormatted',
             'addedFormatted',
             'overtimeFormatted',
-            'isNewEntry'
+            'isNewEntry',
+            'regularHoliday',
+            'excludedFromHoliday'
         ));
     }
 
@@ -1015,6 +1078,7 @@ class DtrController extends Controller
                 ]);
             }
 
+            $this->syncHolidayExclusionFromForm($request, $employee, $dtr);
             $this->calculateAndStoreWeeklyDeficit($request->user_id, Carbon::parse($request->date));
 
             return redirect('/admin/dtr')
@@ -1110,6 +1174,8 @@ class DtrController extends Controller
                 'status' => $status,
                 'remarks' => $request->remarks,
             ]);
+
+            $this->syncHolidayExclusionFromForm($request, $employee, $dtr);
 
             // Calculate and store weekly deficit
             $this->calculateAndStoreWeeklyDeficit($request->user_id, Carbon::parse($request->date));
