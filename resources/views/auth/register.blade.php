@@ -3,74 +3,19 @@
 @section('title', 'Register - ' . $settings['system_name'])
 @section('description', 'Create your account to start your learning journey')
 
+@section('styles')
+    <link rel="stylesheet" href="{{ asset('css/login-page-themes.css') }}?v=5">
+    <link rel="stylesheet" href="{{ asset('css/login-witch.css') }}?v=1">
+    <link rel="stylesheet" href="{{ asset('css/login-ghosto.css') }}?v=1">
+    <link rel="stylesheet" href="{{ asset('css/login-hohoho.css') }}?v=1">
+@endsection
+
 @section('content')
-<div class="min-h-screen flex">
-    <!-- Left Section - Illustrative Background -->
-    <div class="hidden lg:flex lg:w-2/3 bg-gradient-to-br from-teal-500 to-cyan-600 relative overflow-hidden">
-        <!-- Decorative Shapes with Floating Animation -->
-        <div class="absolute top-0 left-0 w-96 h-96 bg-yellow-300 rounded-full -translate-x-48 -translate-y-24 opacity-80 animate-float-slow"></div>
-        <div class="absolute bottom-0 right-0 w-80 h-80 bg-teal-300 rounded-full translate-x-40 translate-y-20 opacity-60 animate-float-medium"></div>
-
-        <!-- Additional Floating Elements -->
-        <div class="absolute top-1/4 left-1/4 w-4 h-4 bg-white rounded-full opacity-60 animate-float-fast animate-twinkle"></div>
-        <div class="absolute top-3/4 right-1/3 w-6 h-6 bg-pink-200 rounded-full opacity-50 animate-float-slow"></div>
-        <div class="absolute top-1/2 left-1/2 w-3 h-3 bg-yellow-200 rounded-full opacity-70 animate-float-medium animate-twinkle"></div>
-        <div class="absolute bottom-1/4 left-1/3 w-5 h-5 bg-white rounded-full opacity-40 animate-float-fast"></div>
-
-        <!-- Twinkling Stars -->
-        <div class="absolute top-1/6 right-1/4 w-2 h-2 bg-white rounded-full opacity-80 animate-twinkle"></div>
-        <div class="absolute top-2/3 left-1/6 w-1 h-1 bg-yellow-300 rounded-full opacity-90 animate-twinkle"></div>
-        <div class="absolute bottom-1/3 right-1/6 w-2 h-2 bg-white rounded-full opacity-70 animate-twinkle"></div>
-        <div class="absolute top-1/3 right-2/3 w-1 h-1 bg-pink-300 rounded-full opacity-85 animate-twinkle"></div>
-        <div class="absolute bottom-2/3 left-2/3 w-1 h-1 bg-yellow-200 rounded-full opacity-75 animate-twinkle"></div>
-
-        <!-- Illustration -->
-        <div class="relative z-10 flex items-center justify-center w-full">
-            <div class="text-center text-white">
-                <!-- Person Illustration -->
-                <div class="relative mb-8 animate-float-gentle">
-                    <!-- Person Group - All elements move together -->
-                    <div class="w-32 h-32 mx-auto relative animate-float-slow">
-                        <!-- Head -->
-                        <div class="w-16 h-16 bg-pink-200 rounded-full mx-auto mb-2"></div>
-                        <!-- Body -->
-                        <div class="w-20 h-16 bg-green-300 rounded-t-2xl mx-auto"></div>
-                        <!-- Legs -->
-                        <div class="flex justify-center space-x-2 mt-1">
-                            <div class="w-8 h-12 bg-gray-700 rounded-b-lg"></div>
-                            <div class="w-8 h-12 bg-gray-700 rounded-b-lg"></div>
-                        </div>
-
-                        <!-- Laptop - Part of the person group -->
-                        <div class="absolute bottom-8 left-1/2 transform -translate-x-1/2">
-                            <div class="w-20 h-12 bg-gray-800 rounded-lg">
-                                <div class="w-16 h-8 bg-white rounded mx-auto mt-1 flex items-center justify-center">
-                                    <div class="w-2 h-2 bg-gray-400 rounded-full animate-pulse"></div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- Decorative Elements - Move separately from person -->
-                    <div class="absolute -left-8 top-12 animate-float-slow">
-                        <div class="w-8 h-8 bg-pink-300 rounded-full"></div>
-                        <div class="w-4 h-4 bg-teal-400 rounded-full ml-4 -mt-2 animate-float-fast"></div>
-                    </div>
-
-                    <div class="absolute -right-8 top-16 animate-float-medium">
-                        <div class="w-6 h-12 bg-gray-600 rounded-full"></div>
-                    </div>
-                </div>
-
-                <!-- Welcome Text -->
-                <h1 class="text-6xl font-black mb-6 text-white drop-shadow-lg animate-float-gentle">Join {{ $settings['system_name'] }}</h1>
-                <p class="text-2xl font-semibold text-white drop-shadow-md animate-float-slow">Start your learning journey today</p>
-            </div>
-        </div>
-    </div>
+<div class="min-h-screen flex flex-col lg:flex-row">
+    @include('partials.login-left-panel')
 
     <!-- Right Section - Register Form -->
-    <div class="w-full lg:w-1/3 flex items-center justify-center p-8 bg-gray-50">
+    <div class="w-full lg:w-1/3 flex items-center justify-center p-8 bg-gray-50 overflow-y-auto">
         <div class="w-full max-w-md">
             <!-- Logo -->
             <div class="text-center mb-8">
@@ -107,14 +52,19 @@
                 </div>
             @endif
 
-            <!-- Back to Login Link -->
-            <div class="text-center mb-6">
-                <p class="text-sm text-gray-600">
-                    Already have an account?
-                    <a href="{{ url('/login') }}" class="text-teal-600 hover:text-teal-800 font-medium underline">
-                        Login here
-                    </a>
-                </p>
+            <div class="flex space-x-1 bg-gray-100 p-1 rounded-lg mb-6">
+                <a href="{{ url('/login') }}" class="flex-1 py-3 px-4 text-base font-bold rounded-md transition-colors duration-200 text-gray-600 hover:text-gray-800 text-center">
+                    LOGIN
+                </a>
+                <span class="flex-1 py-3 px-4 text-base font-bold rounded-md bg-white text-gray-900 shadow-sm text-center">
+                    REGISTER
+                </span>
+            </div>
+
+            <div class="text-center mb-4">
+                <a href="{{ url('/login') }}" class="text-sm text-teal-600 hover:text-teal-800 underline">
+                    Already have an account? Login here
+                </a>
             </div>
 
             <!-- Register Form -->
@@ -147,34 +97,6 @@
                         background-color: #fef2f2;
                         border-color: #ef4444;
                     }
-
-                    /* Floating Animations */
-                    @keyframes float-slow {
-                        0%, 100% { transform: translateY(0px) rotate(0deg); }
-                        50% { transform: translateY(-20px) rotate(1deg); }
-                    }
-                    @keyframes float-medium {
-                        0%, 100% { transform: translateY(0px) rotate(0deg); }
-                        50% { transform: translateY(-15px) rotate(-1deg); }
-                    }
-                    @keyframes float-fast {
-                        0%, 100% { transform: translateY(0px) rotate(0deg); }
-                        50% { transform: translateY(-10px) rotate(0.5deg); }
-                    }
-                    @keyframes float-gentle {
-                        0%, 100% { transform: translateY(0px); }
-                        50% { transform: translateY(-5px); }
-                    }
-                    @keyframes twinkle {
-                        0%, 100% { opacity: 0.3; transform: scale(1); }
-                        50% { opacity: 1; transform: scale(1.1); }
-                    }
-
-                    .animate-float-slow { animation: float-slow 6s ease-in-out infinite; }
-                    .animate-float-medium { animation: float-medium 4s ease-in-out infinite; }
-                    .animate-float-fast { animation: float-fast 3s ease-in-out infinite; }
-                    .animate-float-gentle { animation: float-gentle 8s ease-in-out infinite; }
-                    .animate-twinkle { animation: twinkle 2s ease-in-out infinite; }
                 </style>
 
                 <form method="POST" action="{{ url('/register') }}" class="space-y-6">
@@ -192,7 +114,7 @@
                                 </svg>
                             </div>
                             <input id="name" name="name" type="text" autocomplete="name" required
-                                   class="block w-full pl-10 pr-3 py-3 border border-gray-300 rounded-lg placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-teal-500 transition-colors duration-200"
+                                   class="block w-full pl-10 pr-3 py-4 border-2 border-gray-300 text-lg font-medium rounded-lg placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-teal-500 transition-colors duration-200"
                                    placeholder="Full Name"
                                    value="{{ old('name') }}">
                         </div>
@@ -215,7 +137,7 @@
                                 </svg>
                             </div>
                             <input id="email" name="email" type="email" autocomplete="email" required
-                                   class="block w-full pl-10 pr-3 py-3 border border-gray-300 rounded-lg placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-teal-500 transition-colors duration-200 {{ isset($application) && $application ? 'bg-gray-100' : '' }}"
+                                   class="block w-full pl-10 pr-3 py-4 border-2 border-gray-300 text-lg font-medium rounded-lg placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-teal-500 transition-colors duration-200 {{ isset($application) && $application ? 'bg-gray-100' : '' }}"
                                    placeholder="Email Address"
                                    value="{{ old('email', $email ?? '') }}"
                                    {{ isset($application) && $application ? 'readonly' : '' }}>
@@ -239,7 +161,7 @@
                                 </svg>
                             </div>
                             <select name="university_id" id="university_id" required
-                                    class="block w-full pl-10 pr-3 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-teal-500 transition-colors duration-200"
+                                    class="block w-full pl-10 pr-3 py-4 border-2 border-gray-300 text-lg font-medium rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-teal-500 transition-colors duration-200"
                                     onchange="toggleUniversityInput()">
                                 <option value="">Select University</option>
                                 @foreach(\App\Models\University::active()->orderBy('name')->get() as $university)
@@ -272,7 +194,7 @@
                             <input id="course" name="course" type="text" maxlength="255"
                                    value="{{ old('course') }}"
                                    placeholder="Course / Program (e.g. BS Information Technology)"
-                                   class="block w-full pl-10 pr-3 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-teal-500 transition-colors duration-200">
+                                   class="block w-full pl-10 pr-3 py-4 border-2 border-gray-300 text-lg font-medium rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-teal-500 transition-colors duration-200">
                         </div>
                         @if($errors->has('course'))
                             <p class="mt-2 text-sm text-red-600">{{ $errors->first('course') }}</p>
@@ -288,7 +210,7 @@
                                 </svg>
                             </div>
                             <input id="new_university_name" name="new_university_name" type="text"
-                                   class="block w-full pl-10 pr-3 py-3 border border-gray-300 rounded-lg placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-teal-500 transition-colors duration-200"
+                                   class="block w-full pl-10 pr-3 py-4 border-2 border-gray-300 text-lg font-medium rounded-lg placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-teal-500 transition-colors duration-200"
                                    placeholder="Enter University Name"
                                    value="{{ old('new_university_name') }}">
                         </div>
@@ -311,7 +233,7 @@
                                 </svg>
                             </div>
                             <input id="password" name="password" type="password" autocomplete="new-password" required
-                                   class="block w-full pl-10 pr-10 py-3 border border-gray-300 rounded-lg placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-teal-500 transition-colors duration-200"
+                                   class="block w-full pl-10 pr-10 py-4 border-2 border-gray-300 text-lg font-medium rounded-lg placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-teal-500 transition-colors duration-200"
                                    placeholder="Password">
                             <button type="button" id="toggle-password" class="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-400 hover:text-gray-600 focus:outline-none">
                                 <svg id="password-eye" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -363,7 +285,7 @@
                                 </svg>
                             </div>
                             <input id="password_confirmation" name="password_confirmation" type="password" autocomplete="new-password" required
-                                   class="block w-full pl-10 pr-10 py-3 border border-gray-300 rounded-lg placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-teal-500 transition-colors duration-200"
+                                   class="block w-full pl-10 pr-10 py-4 border-2 border-gray-300 text-lg font-medium rounded-lg placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-teal-500 transition-colors duration-200"
                                    placeholder="Confirm Password">
                             <button type="button" id="toggle-password-confirmation" class="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-400 hover:text-gray-600 focus:outline-none">
                                 <svg id="password-confirmation-eye" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -394,10 +316,20 @@
                     </div>
 
                     <!-- Submit Button -->
-                    <button type="submit" class="w-full bg-gradient-to-r from-teal-500 to-cyan-600 text-white py-3 px-4 rounded-lg font-bold text-lg hover:from-teal-600 hover:to-cyan-700 focus:outline-none focus:ring-2 focus:ring-teal-500 focus:ring-offset-2 transition-all duration-200 transform hover:scale-105">
-                        Create Account
+                    <button type="submit"
+                            class="w-full flex justify-center items-center py-4 px-6 border border-transparent rounded-lg shadow-lg text-lg font-bold text-white bg-gradient-to-r from-pink-500 to-pink-600 hover:from-pink-600 hover:to-pink-700 focus:outline-none focus:ring-2 focus:ring-pink-500 focus:ring-offset-2 transition-all duration-200">
+                        REGISTER
                     </button>
                 </form>
+            </div>
+
+            <div class="mt-6 text-center">
+                <a href="{{ url('/') }}" class="inline-flex items-center text-sm font-medium text-gray-600 hover:text-gray-800 transition-colors duration-200">
+                    <svg class="w-4 h-4 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+                    </svg>
+                    Back to Home
+                </a>
             </div>
         </div>
     </div>
