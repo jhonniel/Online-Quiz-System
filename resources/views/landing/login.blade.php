@@ -11,18 +11,8 @@
 @endsection
 
 @section('content')
-@php
-    use App\Support\LoginPageTheme;
-    $loginPageTheme = LoginPageTheme::normalize($settings['login_page_theme'] ?? LoginPageTheme::DEFAULT);
-@endphp
 <div class="min-h-screen flex flex-col lg:flex-row">
     @include('partials.login-left-panel')
-
-    @if($loginPageTheme !== LoginPageTheme::DEFAULT)
-        <div class="lg:hidden px-4 py-3 bg-orange-50 border-b border-orange-200 text-center text-sm text-orange-900">
-            Login artwork appears on wide screens (1024px+). Widen the window or use a laptop to see the left panel.
-        </div>
-    @endif
 
     <!-- Right Section - Login Form -->
     <div class="w-full lg:w-1/3 flex items-center justify-center p-8 bg-gray-50">

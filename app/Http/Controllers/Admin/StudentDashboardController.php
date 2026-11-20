@@ -1155,7 +1155,7 @@ class StudentDashboardController extends Controller
         }
 
         if ($user->role !== 'student') {
-            return redirect()->back()->withErrors(['error' => 'Selected user is not a student.']);
+            return redirect()->back()->with('error', 'Selected user is not a student.');
         }
 
         $allowedDepartmentIds = $admin->canAccessStudentManagement()
@@ -1166,12 +1166,21 @@ class StudentDashboardController extends Controller
             abort(403, 'Access denied. You cannot manage this student.');
         }
 
+        $pendingRollbackHours = $this->getPendingResubmissionRollbackHours((int) $user->id);
+
         try {
-            $result = $completion->completeForStudent($user);
+            $result = $completion->completeForStudent($user, $pendingRollbackHours);
         } catch (\InvalidArgumentException $exception) {
-            return redirect()->back()->withErrors(['error' => $exception->getMessage()]);
+            return redirect()->back()->with('error', $exception->getMessage());
         } catch (\RuntimeException $exception) {
-            return redirect()->back()->withErrors(['error' => $exception->getMessage()]);
+            return redirect()->back()->with('error', $exception->getMessage());
+        } catch (\Throwable $exception) {
+            Log::error('Failed to mark student remaining time as done', [
+                'student_id' => $user->id,
+                'message' => $exception->getMessage(),
+            ]);
+
+            return redirect()->back()->with('error', 'Failed to mark remaining time as done. Please try again.');
         }
 
         UserActivity::logActivity(
@@ -1183,6 +1192,7 @@ class StudentDashboardController extends Controller
                 'student_name' => $user->name,
                 'student_email' => $user->email,
                 'remaining_hours_completed' => $result['remaining_hours_completed'],
+                'pending_rollback_hours' => $pendingRollbackHours,
                 'dtr_created_count' => $result['created_count'],
                 'dtr_updated_count' => $result['updated_count'],
                 'entries' => $result['entries'],
