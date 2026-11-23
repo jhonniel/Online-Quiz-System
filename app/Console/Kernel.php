@@ -48,6 +48,10 @@ class Kernel extends ConsoleKernel
         $schedule->command('subscriptions:notify-other-expiring')
             ->dailyAt('08:00')
             ->withoutOverlapping();
+
+        $schedule->command('subscriptions:notify-starlink-billing')
+            ->dailyAt('08:15')
+            ->withoutOverlapping();
     }
 
     /**

@@ -124,6 +124,15 @@ class SettingsController extends Controller
             $settings['other_subscription_notification_emails'] = '';
         }
 
+        // Starlink billing reminder emails
+        $starlinkBillingNotificationEmailSetting = Setting::where('key', \App\Support\StarlinkBillingNotifier::EMAILS_SETTING_KEY)->first();
+        if ($starlinkBillingNotificationEmailSetting && $starlinkBillingNotificationEmailSetting->value !== null && trim($starlinkBillingNotificationEmailSetting->value) !== '') {
+            $settings['starlink_billing_notification_emails'] = $starlinkBillingNotificationEmailSetting->value;
+        } else {
+            $settings['starlink_billing_notification_emails'] = '';
+        }
+        $settings['starlink_billing_notify_days_before'] = \App\Support\StarlinkBillingNotifier::notifyDaysBefore();
+
         // Default leave balances - use database value if it exists and is not empty, otherwise default to 0
         $vacationSetting = Setting::where('key', 'default_vacation_balance')->first();
         $sickSetting = Setting::where('key', 'default_sick_leave_balance')->first();
@@ -600,6 +609,9 @@ class SettingsController extends Controller
             'hiring_admin_notification_email.*' => 'nullable|email|max:255',
             'other_subscription_notification_emails' => 'nullable|array',
             'other_subscription_notification_emails.*' => 'nullable|email|max:255',
+            'starlink_billing_notification_emails' => 'nullable|array',
+            'starlink_billing_notification_emails.*' => 'nullable|email|max:255',
+            'starlink_billing_notify_days_before' => 'nullable|integer|min:0|max:90',
             'default_vacation_balance' => 'nullable|numeric|min:0|max:365',
             // Contact Information
             'contact_email' => 'nullable|email|max:255',
@@ -970,6 +982,16 @@ class SettingsController extends Controller
                 : []
         );
 
+        // Starlink upcoming/overdue billing reminders
+        \App\Support\StarlinkBillingNotifier::saveNotificationEmails(
+            is_array($request->starlink_billing_notification_emails)
+                ? $request->starlink_billing_notification_emails
+                : []
+        );
+        \App\Support\StarlinkBillingNotifier::saveNotifyDaysBefore(
+            (int) ($request->input('starlink_billing_notify_days_before') ?? \App\Support\StarlinkBillingNotifier::DEFAULT_NOTIFY_DAYS_BEFORE)
+        );
+
         // Default Leave Balances
         // Always save these values - form fields are always present in the form
         // Get values from request - if empty, use 0
@@ -1239,6 +1261,8 @@ class SettingsController extends Controller
         // Clear cache for hiring admin notification email
         Cache::forget('setting.hiring_admin_notification_email');
         Cache::forget('setting.'.\App\Support\OtherSubscriptionNotifier::SETTING_KEY);
+        Cache::forget('setting.'.\App\Support\StarlinkBillingNotifier::EMAILS_SETTING_KEY);
+        Cache::forget('setting.'.\App\Support\StarlinkBillingNotifier::DAYS_BEFORE_SETTING_KEY);
         // Clear cache for hiring process configuration settings
         Cache::forget('setting.hiring_process_enabled');
         Cache::forget('setting.hiring_process_description');

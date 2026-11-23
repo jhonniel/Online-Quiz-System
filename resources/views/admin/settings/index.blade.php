@@ -989,6 +989,70 @@
                                     </p>
                                 </div>
 
+                                <div class="md:col-span-2">
+                                    <label for="starlink_billing_notification_emails" class="block text-sm font-medium text-gray-700 mb-2">
+                                        Admin Notification Emails (Starlink Billing)
+                                    </label>
+                                    <div id="starlink-billing-email-list-container" class="space-y-2 mb-2">
+                                        @php
+                                            $oldStarlinkBillingEmails = old('starlink_billing_notification_emails');
+                                            if (is_array($oldStarlinkBillingEmails)) {
+                                                $starlinkBillingEmailArray = array_filter(array_map('trim', $oldStarlinkBillingEmails));
+                                            } else {
+                                                $starlinkBillingEmails = $oldStarlinkBillingEmails ?? ($settings['starlink_billing_notification_emails'] ?? '');
+                                                $starlinkBillingEmailArray = !empty($starlinkBillingEmails) ? explode(',', $starlinkBillingEmails) : [''];
+                                                $starlinkBillingEmailArray = array_map('trim', $starlinkBillingEmailArray);
+                                                $starlinkBillingEmailArray = array_filter($starlinkBillingEmailArray);
+                                            }
+                                            if (empty($starlinkBillingEmailArray)) {
+                                                $starlinkBillingEmailArray = [''];
+                                            }
+                                        @endphp
+                                        @foreach($starlinkBillingEmailArray as $index => $email)
+                                            <div class="starlink-billing-email-input-group flex items-center space-x-2">
+                                                <input type="email"
+                                                       name="starlink_billing_notification_emails[]"
+                                                       value="{{ $email }}"
+                                                       placeholder="admin@example.com"
+                                                       class="flex-1 px-4 py-3 border border-gray-300 rounded-lg shadow-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">
+                                                @if($index === 0)
+                                                    <button type="button"
+                                                            onclick="addStarlinkBillingEmailField()"
+                                                            class="px-4 py-3 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                                                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path>
+                                                        </svg>
+                                                    </button>
+                                                @else
+                                                    <button type="button"
+                                                            onclick="removeStarlinkBillingEmailField(this)"
+                                                            class="px-4 py-3 bg-red-600 text-white rounded-lg hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-red-500">
+                                                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                                                        </svg>
+                                                    </button>
+                                                @endif
+                                            </div>
+                                        @endforeach
+                                    </div>
+                                    <div class="mt-3 max-w-xs">
+                                        <label for="starlink_billing_notify_days_before" class="block text-sm font-medium text-gray-700 mb-2">
+                                            Remind before next billing (days)
+                                        </label>
+                                        <input type="number"
+                                               name="starlink_billing_notify_days_before"
+                                               id="starlink_billing_notify_days_before"
+                                               min="0"
+                                               max="90"
+                                               value="{{ old('starlink_billing_notify_days_before', $settings['starlink_billing_notify_days_before'] ?? 7) }}"
+                                               class="w-full px-4 py-3 border border-gray-300 rounded-lg shadow-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">
+                                    </div>
+                                    <p class="text-xs text-gray-500 mt-2">
+                                        Emails receive reminders for Starlink devices that are overdue or due within the days above.
+                                        Each notice includes a PDF for that device. Leave emails empty to disable.
+                                    </p>
+                                </div>
+
                                 <div>
                                     <label for="hiring_instructions" class="block text-sm font-medium text-gray-700 mb-2">Instructions for Applicants</label>
                                     <textarea name="hiring_instructions" id="hiring_instructions" rows="4"
@@ -3025,6 +3089,47 @@ document.addEventListener('DOMContentLoaded', function() {
         const groups = container.querySelectorAll('.other-subscription-email-input-group');
         if (groups.length > 1) {
             button.closest('.other-subscription-email-input-group').remove();
+        } else {
+            const input = groups[0]?.querySelector('input');
+            if (input) {
+                input.value = '';
+                input.focus();
+            }
+        }
+    }
+
+    function addStarlinkBillingEmailField() {
+        const container = document.getElementById('starlink-billing-email-list-container');
+        if (!container) {
+            return;
+        }
+        const newField = document.createElement('div');
+        newField.className = 'starlink-billing-email-input-group flex items-center space-x-2';
+        newField.innerHTML = `
+            <input type="email"
+                   name="starlink_billing_notification_emails[]"
+                   value=""
+                   placeholder="admin@example.com"
+                   class="flex-1 px-4 py-3 border border-gray-300 rounded-lg shadow-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">
+            <button type="button"
+                    onclick="removeStarlinkBillingEmailField(this)"
+                    class="px-4 py-3 bg-red-600 text-white rounded-lg hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-red-500">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                </svg>
+            </button>
+        `;
+        container.appendChild(newField);
+    }
+
+    function removeStarlinkBillingEmailField(button) {
+        const container = document.getElementById('starlink-billing-email-list-container');
+        if (!container) {
+            return;
+        }
+        const groups = container.querySelectorAll('.starlink-billing-email-input-group');
+        if (groups.length > 1) {
+            button.closest('.starlink-billing-email-input-group').remove();
         } else {
             const input = groups[0]?.querySelector('input');
             if (input) {

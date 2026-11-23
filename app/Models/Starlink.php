@@ -31,6 +31,9 @@ class Starlink extends Model
         'replaced_at',
         'replacement_note',
         'end_user_email',
+        'last_billing_notified_at',
+        'last_billing_notified_for',
+        'last_billing_notified_kind',
     ];
 
     protected $casts = [
@@ -38,6 +41,8 @@ class Starlink extends Model
         'advance_payment_until' => 'date',
         'last_paid_date' => 'date',
         'replaced_at' => 'date',
+        'last_billing_notified_at' => 'datetime',
+        'last_billing_notified_for' => 'date',
     ];
 
     /**

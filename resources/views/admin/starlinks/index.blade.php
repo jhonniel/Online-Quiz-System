@@ -45,6 +45,12 @@
         </div>
     </div>
 
+    <div class="mb-5 rounded-lg border border-indigo-100 bg-indigo-50 px-4 py-3 text-sm text-indigo-900">
+        Incoming and overdue billing reminders (with a PDF per device) are sent to emails configured in
+        <a href="{{ url('/admin/settings') }}" class="font-semibold underline hover:text-indigo-700">Admin → Settings</a>
+        under <span class="font-medium">Admin Notification Emails (Starlink Billing)</span>.
+    </div>
+
     @if(session('success'))
         <div class="mb-6 rounded-lg bg-green-50 border border-green-200 p-4 text-sm text-green-800 flex items-start sm:items-center">
             <svg class="w-5 h-5 mr-2 text-green-500 flex-shrink-0 mt-0.5 sm:mt-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>
