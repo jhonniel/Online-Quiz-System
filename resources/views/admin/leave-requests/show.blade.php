@@ -298,6 +298,47 @@
                                 </button>
                             </form>
                             <p class="mt-2 text-xs text-gray-500">Adjust total overtime hours (HH:MM). This updates the employee overtime balance when approved.</p>
+                        @elseif(($canEditLeaveRequestDetails ?? false) && $leaveRequest->type === 'offset' && in_array($leaveRequest->status, ['pending', 'approved'], true))
+                            @php
+                                $editableOffsetHours = old(
+                                    'offset_hours',
+                                    $leaveRequest->offsetHoursFormattedFromReason()
+                                );
+                            @endphp
+                            <form action="{{ url('/admin/leave-requests/' . $leaveRequest->id . '/offset-hours') }}" method="POST"
+                                  class="flex flex-col sm:flex-row sm:items-end gap-3"
+                                  onsubmit="return confirm('Update offset duration for this request? Reducing hours credits overtime back; amounts over available balance are capped to the maximum available.');">
+                                @csrf
+                                @include('admin.leave-requests.partials.show-nav-fields')
+                                @method('PATCH')
+                                <div class="flex-1 min-w-[8rem]">
+                                    <label for="leave-request-offset-hours" class="sr-only">Offset hours to deduct</label>
+                                    <input type="text" name="offset_hours" id="leave-request-offset-hours"
+                                           value="{{ $editableOffsetHours }}"
+                                           placeholder="08:00"
+                                           required
+                                           pattern="^\d{1,4}:[0-5]\d$"
+                                           class="w-full px-3 py-2 text-sm font-mono border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 bg-white">
+                                    @error('offset_hours')
+                                        <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
+                                    @enderror
+                                </div>
+                                <div class="flex-1 min-w-0 sm:min-w-[12rem]">
+                                    <label for="offset-hours-change-notes" class="sr-only">Note (optional)</label>
+                                    <input type="text" name="admin_notes" id="offset-hours-change-notes"
+                                           value="{{ old('admin_notes') }}"
+                                           placeholder="Optional note for activity log"
+                                           class="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">
+                                </div>
+                                <button type="submit"
+                                        class="inline-flex items-center justify-center px-4 py-2 text-sm font-medium text-white bg-indigo-600 rounded-lg hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 whitespace-nowrap">
+                                    Update Offset Hours
+                                </button>
+                            </form>
+                            <p class="mt-2 text-xs text-gray-500">
+                                Set hours to deduct (HH:MM). Reducing hours credits overtime back.
+                                If the amount exceeds available overtime balance, only the maximum available is applied.
+                            </p>
                         @else
                             <p class="text-sm font-semibold text-gray-900">
                                 {{ $leaveRequest->duration_display_label }}

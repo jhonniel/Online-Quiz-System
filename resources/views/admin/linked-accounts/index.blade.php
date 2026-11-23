@@ -27,9 +27,15 @@
         <div class="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
             <div class="min-w-0">
                 <h1 class="text-xl sm:text-2xl font-bold text-gray-900 tracking-tight">Subscriptions</h1>
-                <p class="mt-1 text-sm text-gray-500">Dashboard of linked accounts, Starlink and Omada devices, billing, and stats.</p>
+                <p class="mt-1 text-sm text-gray-500">Dashboard of linked accounts, other online subscriptions, Starlink and Omada devices, billing, and stats.</p>
             </div>
             <div class="grid grid-cols-2 sm:flex sm:flex-wrap gap-2 w-full lg:w-auto">
+                @if(auth()->user()->canAccessSubscriptionFeature('others'))
+                <a href="{{ url('/admin/other-subscriptions') }}" class="inline-flex items-center justify-center px-3 py-2.5 sm:px-4 border border-violet-200 rounded-lg text-sm font-medium text-violet-800 bg-violet-50 hover:bg-violet-100 transition-colors min-h-[44px] touch-manipulation">
+                    <svg class="w-4 h-4 mr-2 text-violet-600 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"></path></svg>
+                    Others
+                </a>
+                @endif
                 <a href="{{ url('/admin/starlinks') }}" class="inline-flex items-center justify-center px-3 py-2.5 sm:px-4 border border-indigo-200 rounded-lg text-sm font-medium text-indigo-800 bg-indigo-50 hover:bg-indigo-100 transition-colors min-h-[44px] touch-manipulation">
                     <svg class="w-4 h-4 mr-2 text-indigo-600 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8.111 16.404a5.5 5.5 0 017.778 0M12 20h.01m-7.08-7.071c3.904-3.905 10.236-3.905 14.141 0M1.394 9.393c5.857-5.857 15.355-5.857 21.213 0"></path></svg>
                     Starlinks
@@ -62,7 +68,7 @@
     @endif
 
     {{-- Stats --}}
-    <div class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-3 sm:gap-4 mb-5 sm:mb-6">
+    <div class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-5 gap-3 sm:gap-4 mb-5 sm:mb-6">
         <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-4 sm:p-5">
             <div class="flex items-center gap-3">
                 <div class="flex-shrink-0 w-11 h-11 rounded-lg bg-slate-100 flex items-center justify-center">
@@ -71,6 +77,18 @@
                 <div class="min-w-0">
                     <p class="text-xs sm:text-sm font-medium text-gray-500">Linked accounts</p>
                     <p class="text-2xl font-semibold text-gray-900">{{ $total }}</p>
+                </div>
+            </div>
+        </div>
+        <div class="bg-white rounded-xl shadow-sm border border-violet-200 p-4 sm:p-5">
+            <div class="flex items-center gap-3">
+                <div class="flex-shrink-0 w-11 h-11 rounded-lg bg-violet-50 flex items-center justify-center">
+                    <svg class="w-6 h-6 text-violet-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"></path></svg>
+                </div>
+                <div class="min-w-0">
+                    <p class="text-xs sm:text-sm font-medium text-violet-700">Other subscriptions</p>
+                    <p class="text-2xl font-semibold text-violet-800">{{ $totalOtherSubscriptions ?? 0 }}</p>
+                    <p class="text-xs text-gray-500 mt-0.5">{{ $otherActiveCount ?? 0 }} active · {{ $otherExpiredCount ?? 0 }} expired</p>
                 </div>
             </div>
         </div>
@@ -108,6 +126,67 @@
                 </div>
             </div>
         </div>
+    </div>
+
+    {{-- Other subscriptions ending soon --}}
+    <div class="bg-white rounded-xl shadow-sm border border-violet-200 overflow-hidden mb-5 sm:mb-6">
+        <div class="px-4 sm:px-5 py-4 border-b border-violet-100 bg-violet-50/80 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+            <div class="min-w-0">
+                <h2 class="text-sm sm:text-base font-semibold text-gray-900">Other subscriptions ending / renewing soon</h2>
+                <p class="text-xs sm:text-sm text-gray-500 mt-0.5">Active online subscriptions with an end date in the next 30 days.</p>
+            </div>
+            <div class="flex items-center gap-3 flex-shrink-0">
+                <p class="text-sm font-medium text-gray-700">{{ ($otherUpcoming ?? collect())->count() }} item(s)</p>
+                @if(auth()->user()->canAccessSubscriptionFeature('others'))
+                <a href="{{ url('/admin/other-subscriptions') }}" class="inline-flex items-center justify-center px-3 py-2 rounded-lg text-xs sm:text-sm font-medium text-violet-800 bg-violet-100 hover:bg-violet-200 transition-colors min-h-[40px] touch-manipulation">Manage Others</a>
+                @endif
+            </div>
+        </div>
+        @if(($otherUpcoming ?? collect())->isEmpty())
+            <div class="px-4 sm:px-5 py-8 text-center text-sm text-gray-500">No other subscriptions ending in the next 30 days.</div>
+        @else
+            <div class="overflow-x-auto">
+                <table class="min-w-full divide-y divide-gray-200">
+                    <thead class="bg-gray-50">
+                        <tr>
+                            <th class="px-5 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Name</th>
+                            <th class="px-5 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Type</th>
+                            <th class="px-5 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Price</th>
+                            <th class="px-5 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">End date</th>
+                            <th class="px-5 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Renew</th>
+                            <th class="px-5 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-gray-200">
+                        @foreach($otherUpcoming as $other)
+                            <tr class="hover:bg-gray-50/50">
+                                <td class="px-5 py-3">
+                                    <p class="font-medium text-gray-900">{{ $other->name }}</p>
+                                    <p class="text-sm text-gray-500">{{ method_exists($other, 'providerDisplayName') ? $other->providerDisplayName() : ($other->provider ?: '—') }}</p>
+                                </td>
+                                <td class="px-5 py-3 text-sm text-gray-600">{{ $other->billing_type_label }}</td>
+                                <td class="px-5 py-3 text-sm text-gray-600">{{ $other->formatted_price }}</td>
+                                <td class="px-5 py-3 text-sm text-gray-600">
+                                    {{ $other->ends_on?->format('M j, Y') }}
+                                    @php $daysLeft = $other->daysUntilEnd(); @endphp
+                                    @if($daysLeft !== null)
+                                        <span class="block text-xs text-amber-600 mt-0.5">
+                                            {{ $daysLeft === 0 ? 'Today' : ($daysLeft === 1 ? 'Tomorrow' : $daysLeft.' days left') }}
+                                        </span>
+                                    @endif
+                                </td>
+                                <td class="px-5 py-3 text-sm text-gray-600">{{ $other->auto_renew ? 'Yes' : 'No' }}</td>
+                                <td class="px-5 py-3 text-right">
+                                    @if(auth()->user()->canAccessSubscriptionFeature('others'))
+                                    <a href="{{ route('admin.other-subscriptions.edit', $other) }}" class="inline-flex items-center px-3 py-1.5 rounded-lg text-sm font-medium text-indigo-700 bg-indigo-50 hover:bg-indigo-100">Edit</a>
+                                    @endif
+                                </td>
+                            </tr>
+                        @endforeach
+                    </tbody>
+                </table>
+            </div>
+        @endif
     </div>
 
     {{-- Ongoing billing (moved up – actionable) --}}

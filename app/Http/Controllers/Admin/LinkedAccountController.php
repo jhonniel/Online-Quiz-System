@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use App\Models\LinkedAccount;
 use App\Models\Omada;
+use App\Models\OtherSubscription;
 use App\Models\Starlink;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\DB;
@@ -219,6 +220,21 @@ class LinkedAccountController extends Controller
             ->orderBy('license_expiration')
             ->get();
 
+        $totalOtherSubscriptions = 0;
+        $otherActiveCount = 0;
+        $otherExpiredCount = 0;
+        $otherUpcoming = collect();
+        if (Schema::hasTable('other_subscriptions')) {
+            $totalOtherSubscriptions = OtherSubscription::count();
+            $otherActiveCount = OtherSubscription::active()->count();
+            $otherExpiredCount = OtherSubscription::expired()->count();
+            $otherUpcoming = OtherSubscription::with('subscriptionProvider')
+                ->active()
+                ->whereDate('ends_on', '<=', now()->addDays(30)->toDateString())
+                ->orderBy('ends_on')
+                ->get();
+        }
+
         return view('admin.linked-accounts.index', compact(
             'linkedAccounts',
             'total',
@@ -239,7 +255,11 @@ class LinkedAccountController extends Controller
             'clientNameUniqueCount',
             'starlinksToBillNextMonth',
             'nextMonthStart',
-            'omadaOngoingBilling'
+            'omadaOngoingBilling',
+            'totalOtherSubscriptions',
+            'otherActiveCount',
+            'otherExpiredCount',
+            'otherUpcoming'
         ));
     }
 

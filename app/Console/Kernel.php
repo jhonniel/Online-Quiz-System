@@ -44,6 +44,10 @@ class Kernel extends ConsoleKernel
         $schedule->command('stories:purge-expired')
             ->hourly()
             ->withoutOverlapping();
+
+        $schedule->command('subscriptions:notify-other-expiring')
+            ->dailyAt('08:00')
+            ->withoutOverlapping();
     }
 
     /**

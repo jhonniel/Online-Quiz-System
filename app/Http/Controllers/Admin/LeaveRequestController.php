@@ -1218,6 +1218,138 @@ class LeaveRequestController extends Controller
     }
 
     /**
+     * Admin: adjust offset "Hours to Deduct" (Duration) on Leave Request Details.
+     * Reducing hours credits overtime back; increasing is capped to available overtime balance.
+     */
+    public function updateOffsetHours(Request $request, LeaveRequest $leaveRequest)
+    {
+        $leaveRequest->load('user');
+        $this->assertCanManageLeaveRequestSubject($leaveRequest);
+
+        if ($leaveRequest->type !== 'offset') {
+            return $this->redirectToAdminLeaveRequestShow($leaveRequest)
+                ->withErrors(['offset_hours' => 'Only offset requests can have duration hours adjusted.']);
+        }
+
+        if (! in_array($leaveRequest->status, ['pending', 'approved'], true)) {
+            return $this->redirectToAdminLeaveRequestShow($leaveRequest)
+                ->withErrors(['offset_hours' => 'Offset hours can only be adjusted on pending or approved requests.']);
+        }
+
+        $validated = $request->validate([
+            'offset_hours' => ['required', 'regex:/^\d{1,4}:[0-5]\d$/'],
+            'admin_notes' => ['nullable', 'string', 'max:1000'],
+        ]);
+
+        if (preg_match('/^(\d{1,4}):([0-5]\d)$/', trim($validated['offset_hours']), $parts) !== 1) {
+            return $this->redirectToAdminLeaveRequestShow($leaveRequest)
+                ->withErrors(['offset_hours' => 'Please enter valid hours in HH:MM format (e.g., 08:00).']);
+        }
+
+        $requestedMinutes = ((int) $parts[1] * 60) + (int) $parts[2];
+        if ($requestedMinutes <= 0) {
+            return $this->redirectToAdminLeaveRequestShow($leaveRequest)
+                ->withErrors(['offset_hours' => 'Offset duration must be greater than 00:00.']);
+        }
+
+        $oldFormatted = $leaveRequest->offsetHoursFormattedFromReason();
+        $oldHours = (float) $leaveRequest->offset_hours_needed;
+        $wasApproved = $leaveRequest->status === 'approved';
+
+        $availableHours = $this->employeeOvertimeBalanceHours((int) $leaveRequest->user_id);
+        if ($wasApproved) {
+            // Approved offsets are already deducted; free them back for this edit.
+            $availableHours += $oldHours;
+        }
+        $availableHours = max(0.0, $availableHours);
+        $availableMinutes = (int) round($availableHours * 60);
+
+        $capped = false;
+        $appliedMinutes = $requestedMinutes;
+        if ($appliedMinutes > $availableMinutes) {
+            $appliedMinutes = $availableMinutes;
+            $capped = true;
+        }
+
+        if ($appliedMinutes <= 0) {
+            return $this->redirectToAdminLeaveRequestShow($leaveRequest)
+                ->withErrors([
+                    'offset_hours' => 'Insufficient overtime balance. No hours are available to apply to this offset.',
+                ]);
+        }
+
+        $newFormatted = sprintf('%02d:%02d', intdiv($appliedMinutes, 60), $appliedMinutes % 60);
+        $newHours = $appliedMinutes / 60.0;
+
+        if ($oldFormatted === $newFormatted && ! $capped) {
+            return $this->redirectToAdminLeaveRequestShow($leaveRequest)
+                ->with('info', 'Offset duration is already set to '.$newFormatted.'.');
+        }
+
+        if ($wasApproved && abs($oldHours - $newHours) > 0.0001) {
+            $this->revertOffsetFromDtr($leaveRequest, true, false);
+        }
+
+        $leaveRequest->update([
+            'reason' => $leaveRequest->replaceOffsetHoursToDeductInReason($newFormatted),
+        ]);
+        $leaveRequest->refresh();
+
+        if ($wasApproved && abs($oldHours - $newHours) > 0.0001) {
+            $this->applyOffsetTimeToDtr($leaveRequest);
+        }
+
+        $logNotes = trim((string) ($validated['admin_notes'] ?? ''));
+        if ($logNotes === '') {
+            $logNotes = sprintf(
+                'Adjusted offset hours from %s to %s.%s',
+                $oldFormatted,
+                $newFormatted,
+                $capped ? ' Requested amount exceeded overtime balance; applied maximum available only.' : ''
+            );
+            if ($wasApproved && $newHours < $oldHours) {
+                $credited = $oldHours - $newHours;
+                $creditedMins = (int) round($credited * 60);
+                $logNotes .= sprintf(
+                    ' Credited back %02d:%02d overtime hours.',
+                    intdiv($creditedMins, 60),
+                    $creditedMins % 60
+                );
+            }
+        }
+
+        LeaveRequestLog::create([
+            'leave_request_id' => $leaveRequest->id,
+            'action' => 'offset_hours_adjusted',
+            'status_before' => $leaveRequest->status,
+            'status_after' => $leaveRequest->status,
+            'notes' => $logNotes,
+            'performed_by' => Auth::id(),
+            'changes' => [
+                'offset_hours' => [
+                    'from' => $oldFormatted,
+                    'to' => $newFormatted,
+                    'requested' => sprintf('%02d:%02d', intdiv($requestedMinutes, 60), $requestedMinutes % 60),
+                    'capped_to_balance' => $capped,
+                ],
+            ],
+        ]);
+
+        $success = 'Offset duration updated to '.$newFormatted.'.';
+        if ($capped) {
+            $availableLabel = sprintf('%02d:%02d', intdiv($availableMinutes, 60), $availableMinutes % 60);
+            $success .= ' Requested hours exceeded overtime balance; only the maximum available ('.$availableLabel.') was applied.';
+        } elseif ($wasApproved && $newHours < $oldHours) {
+            $success .= ' Excess hours were credited back to the employee overtime balance.';
+        } else {
+            $success .= ' Employee overtime balance will reflect this change.';
+        }
+
+        return $this->redirectToAdminLeaveRequestShow($leaveRequest)
+            ->with('success', $success);
+    }
+
+    /**
      * Calendar view of leave requests for easier tracking.
      */
     public function calendar(Request $request)
@@ -1435,6 +1567,43 @@ class LeaveRequestController extends Controller
                 return redirect()->back()
                     ->withErrors(['offset_hours' => 'Please enter valid hours to deduct in HH:MM format (e.g., 08:00).'])
                     ->withInput();
+            }
+
+            $startDate = Carbon::parse($validated['start_date']);
+            $endDate = ! empty($validated['end_date'])
+                ? Carbon::parse($validated['end_date'])
+                : $startDate->copy();
+            $daysRequested = $startDate->diffInDays($endDate) + 1;
+            $offsetMinutesNeeded = $offsetText !== ''
+                ? $this->parseHourMinuteToMinutesForAdminFiling($offsetText)
+                : ($daysRequested * 8 * 60);
+            $offsetHoursNeeded = $offsetMinutesNeeded / 60;
+
+            foreach ($validated['user_ids'] as $employeeId) {
+                $availableHours = $this->employeeOvertimeBalanceHours((int) $employeeId);
+                if ($availableHours <= 0) {
+                    $employee = User::find($employeeId);
+
+                    return redirect()->back()
+                        ->withErrors([
+                            'offset_hours' => ($employee?->name ?? 'Selected employee').' has no overtime balance available to file an offset.',
+                        ])
+                        ->withInput();
+                }
+                if ($offsetHoursNeeded > $availableHours) {
+                    $employee = User::find($employeeId);
+                    $availableMins = (int) round($availableHours * 60);
+                    $availableLabel = sprintf('%02d:%02d', intdiv($availableMins, 60), $availableMins % 60);
+                    $requestedLabel = $offsetText !== ''
+                        ? $offsetText
+                        : sprintf('%02d:00', $daysRequested * 8);
+
+                    return redirect()->back()
+                        ->withErrors([
+                            'offset_hours' => ($employee?->name ?? 'Selected employee')." only has {$availableLabel} overtime balance. Cannot file {$requestedLabel} offset hours over the balance.",
+                        ])
+                        ->withInput();
+                }
             }
         }
 
@@ -2928,7 +3097,7 @@ class LeaveRequestController extends Controller
         }
     }
 
-    private function revertOffsetFromDtr(LeaveRequest $leaveRequest, bool $force = false): void
+    private function revertOffsetFromDtr(LeaveRequest $leaveRequest, bool $force = false, bool $createLog = true): void
     {
         $totalOffsetHours = (float) $leaveRequest->offset_hours_needed;
         if ($totalOffsetHours <= 0) {
@@ -2961,7 +3130,7 @@ class LeaveRequestController extends Controller
             $didRevert = true;
         }
 
-        if ($didRevert) {
+        if ($didRevert && $createLog) {
             LeaveRequestLog::create([
                 'leave_request_id' => $leaveRequest->id,
                 'action' => 'offset_time_reverted',
@@ -2971,6 +3140,41 @@ class LeaveRequestController extends Controller
                 'performed_by' => Auth::id(),
             ]);
         }
+    }
+
+    /**
+     * Net overtime hours available for an employee (approved OT leave minus approved offsets).
+     */
+    private function employeeOvertimeBalanceHours(int $userId, ?Carbon $asOf = null): float
+    {
+        $today = $asOf?->copy() ?? Carbon::today();
+
+        $overtimeFromLeavesMinutes = 0;
+        $approvedOvertimeRequests = LeaveRequest::where('user_id', $userId)
+            ->where('type', 'overtime')
+            ->where('status', 'approved')
+            ->countedInOvertimeBalance($today)
+            ->get();
+
+        foreach ($approvedOvertimeRequests as $otRequest) {
+            $raw = $otRequest->reason ?? '';
+            if (preg_match('/Total Overtime Hours:\s*([0-9]{1,4}:[0-9]{2})/', $raw, $m)) {
+                [$h, $mPart] = array_map('intval', explode(':', $m[1]));
+                $overtimeFromLeavesMinutes += $h * 60 + $mPart;
+            }
+        }
+
+        $offsetMinutes = 0;
+        $approvedOffsetRequests = LeaveRequest::where('user_id', $userId)
+            ->where('type', 'offset')
+            ->where('status', 'approved')
+            ->get();
+
+        foreach ($approvedOffsetRequests as $offsetRequest) {
+            $offsetMinutes += (int) round(((float) $offsetRequest->offset_hours_needed) * 60);
+        }
+
+        return ($overtimeFromLeavesMinutes - $offsetMinutes) / 60;
     }
 
     private function applyLeaveTimeToDtr(LeaveRequest $leaveRequest): void

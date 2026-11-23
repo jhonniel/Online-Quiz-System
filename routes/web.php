@@ -35,6 +35,7 @@ use App\Http\Controllers\Admin\NetworkGraphController;
 use App\Http\Controllers\Admin\NewsController;
 use App\Http\Controllers\Admin\NotificationController;
 use App\Http\Controllers\Admin\OmadaController;
+use App\Http\Controllers\Admin\OtherSubscriptionController;
 use App\Http\Controllers\Admin\PayslipController;
 use App\Http\Controllers\Admin\QuizController as AdminQuizController;
 use App\Http\Controllers\Admin\SettingsController;
@@ -644,6 +645,7 @@ Route::prefix('admin')->middleware(['auth', 'admin', 'admin.totp'])->group(funct
             Route::patch('/leave-requests/{leaveRequest}/type', [LeaveRequestController::class, 'updateType'])->name('admin.leave-requests.update-type');
             Route::patch('/leave-requests/{leaveRequest}/dates', [LeaveRequestController::class, 'updateDates'])->name('admin.leave-requests.update-dates');
             Route::patch('/leave-requests/{leaveRequest}/overtime-hours', [LeaveRequestController::class, 'updateOvertimeHours'])->name('admin.leave-requests.update-overtime-hours');
+            Route::patch('/leave-requests/{leaveRequest}/offset-hours', [LeaveRequestController::class, 'updateOffsetHours'])->name('admin.leave-requests.update-offset-hours');
             Route::post('/leave-requests/{leaveRequest}/approve', [LeaveRequestController::class, 'approve'])->name('admin.leave-requests.approve');
             Route::post('/leave-requests/{leaveRequest}/verify', [LeaveRequestController::class, 'verify'])->name('admin.leave-requests.verify');
             Route::post('/leave-requests/{leaveRequest}/force-accept', [LeaveRequestController::class, 'forceAccept'])->name('admin.leave-requests.force-accept');
@@ -833,6 +835,18 @@ Route::prefix('admin')->middleware(['auth', 'admin', 'admin.totp'])->group(funct
     Route::middleware(['admin.permission:linked_accounts'])->group(function () {
         Route::middleware(['admin.subfeature:subscriptions,dashboard'])->group(function () {
             Route::get('linked-accounts', [LinkedAccountController::class, 'index'])->name('admin.linked-accounts.index');
+        });
+        Route::middleware(['admin.subfeature:subscriptions,others'])->group(function () {
+            Route::post('other-subscriptions/providers', [OtherSubscriptionController::class, 'storeProvider'])
+                ->name('admin.other-subscriptions.providers.store');
+            Route::put('other-subscriptions/providers/{otherSubscriptionProvider}', [OtherSubscriptionController::class, 'updateProvider'])
+                ->name('admin.other-subscriptions.providers.update');
+            Route::delete('other-subscriptions/providers/{otherSubscriptionProvider}', [OtherSubscriptionController::class, 'destroyProvider'])
+                ->name('admin.other-subscriptions.providers.destroy');
+            Route::resource('other-subscriptions', OtherSubscriptionController::class)
+                ->except(['show'])
+                ->parameters(['other-subscriptions' => 'otherSubscription'])
+                ->names('admin.other-subscriptions');
         });
         Route::middleware(['admin.subfeature:subscriptions,starlinks'])->group(function () {
             Route::get('starlinks/import', [StarlinkController::class, 'importForm'])->name('admin.starlinks.import');

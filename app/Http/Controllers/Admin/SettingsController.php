@@ -116,6 +116,14 @@ class SettingsController extends Controller
             $settings['hiring_admin_notification_email'] = '';
         }
 
+        // Other Subscriptions reminder emails
+        $otherSubscriptionNotificationEmailSetting = Setting::where('key', \App\Support\OtherSubscriptionNotifier::SETTING_KEY)->first();
+        if ($otherSubscriptionNotificationEmailSetting && $otherSubscriptionNotificationEmailSetting->value !== null && trim($otherSubscriptionNotificationEmailSetting->value) !== '') {
+            $settings['other_subscription_notification_emails'] = $otherSubscriptionNotificationEmailSetting->value;
+        } else {
+            $settings['other_subscription_notification_emails'] = '';
+        }
+
         // Default leave balances - use database value if it exists and is not empty, otherwise default to 0
         $vacationSetting = Setting::where('key', 'default_vacation_balance')->first();
         $sickSetting = Setting::where('key', 'default_sick_leave_balance')->first();
@@ -590,6 +598,8 @@ class SettingsController extends Controller
             'leave_admin_notification_email.*' => 'nullable|email|max:255',
             'hiring_admin_notification_email' => 'nullable|array',
             'hiring_admin_notification_email.*' => 'nullable|email|max:255',
+            'other_subscription_notification_emails' => 'nullable|array',
+            'other_subscription_notification_emails.*' => 'nullable|email|max:255',
             'default_vacation_balance' => 'nullable|numeric|min:0|max:365',
             // Contact Information
             'contact_email' => 'nullable|email|max:255',
@@ -953,6 +963,13 @@ class SettingsController extends Controller
         $hiringAdminNotificationEmail = ! empty($hiringAdminEmails) ? implode(',', $hiringAdminEmails) : '';
         Setting::set('hiring_admin_notification_email', $hiringAdminNotificationEmail, 'text', 'Email addresses (comma-separated) to receive notifications when hiring applications are submitted');
 
+        // Other Subscriptions ending/renewing reminders
+        \App\Support\OtherSubscriptionNotifier::saveNotificationEmails(
+            is_array($request->other_subscription_notification_emails)
+                ? $request->other_subscription_notification_emails
+                : []
+        );
+
         // Default Leave Balances
         // Always save these values - form fields are always present in the form
         // Get values from request - if empty, use 0
@@ -1221,6 +1238,7 @@ class SettingsController extends Controller
         Cache::forget('setting.leave_admin_notification_email');
         // Clear cache for hiring admin notification email
         Cache::forget('setting.hiring_admin_notification_email');
+        Cache::forget('setting.'.\App\Support\OtherSubscriptionNotifier::SETTING_KEY);
         // Clear cache for hiring process configuration settings
         Cache::forget('setting.hiring_process_enabled');
         Cache::forget('setting.hiring_process_description');

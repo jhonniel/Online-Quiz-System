@@ -14,14 +14,7 @@ class SystemHealthMetrics
      */
     public function handle(Request $request, Closure $next): Response
     {
-        $sampleStatus = SystemHealthMetricsStore::evaluateRouteSampling($request);
-        if ($sampleStatus === 404) {
-            abort(404);
-        }
-        if ($sampleStatus === 500) {
-            abort(500);
-        }
-
+        // Metrics only — never inject intentional 404/500 failures into real traffic.
         $response = $next($request);
 
         if ($request->is('admin/settings/health-metrics')) {

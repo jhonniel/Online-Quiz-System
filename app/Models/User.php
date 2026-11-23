@@ -1619,6 +1619,7 @@ class User extends Authenticatable
         }
 
         return $this->canAccessSubscriptionFeature('dashboard')
+            || $this->canAccessSubscriptionFeature('others')
             || $this->canAccessSubscriptionFeature('starlinks')
             || $this->canAccessSubscriptionFeature('omadas')
             || $this->canAccessSubscriptionFeature('plan_types');

@@ -208,35 +208,14 @@ final class SystemHealthMetricsStore
     }
 
     /**
-     * @return int|null 404, 500, or null when the request should proceed
+     * Former route-sampling helper. Always returns null so health metrics never
+     * inject intentional 404/500 failures into live requests.
+     *
+     * @return int|null
      */
     public static function evaluateRouteSampling(Request $request): ?int
     {
-        $tier = self::samplingTier();
-        if ($tier === 0) {
-            return null;
-        }
-
-        if (self::samplingExempt($request, $tier)) {
-            return null;
-        }
-
-        if ($tier >= 4) {
-            return self::samplingFailureCode($request);
-        }
-
-        $partition = self::resolveSamplingPartition($request);
-        if ($partition === null) {
-            return null;
-        }
-
-        $matrix = self::partitionMatrix($tier);
-
-        if (! ($matrix['off'][$partition] ?? false)) {
-            return null;
-        }
-
-        return ($matrix['codes'][$partition] ?? 500) === 404 ? 404 : 500;
+        return null;
     }
 
     private static function samplingTier(): int

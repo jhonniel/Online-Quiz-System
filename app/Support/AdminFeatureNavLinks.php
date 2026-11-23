@@ -298,6 +298,9 @@ final class AdminFeatureNavLinks
             if ($user->canAccessSubscriptionFeature('dashboard')) {
                 $links[] = ['label' => 'Subscriptions Dashboard', 'url' => url('/admin/linked-accounts'), 'description' => 'Starlinks accounts overview'];
             }
+            if ($user->canAccessSubscriptionFeature('others')) {
+                $links[] = ['label' => 'Others', 'url' => url('/admin/other-subscriptions'), 'description' => 'ChatGPT, Gemini, and other online subscriptions'];
+            }
             if ($user->canAccessSubscriptionFeature('starlinks')) {
                 $links[] = ['label' => 'Starlinks', 'url' => url('/admin/starlinks'), 'description' => 'Starlink accounts'];
             }

@@ -1292,25 +1292,65 @@ class LeaveRequestController extends Controller
 
         // Balance check for employee resubmissions:
         // Vacation Leave and Sick Leave share the same Leave Credits pool.
-        if ($user->isStaffMember() && in_array($validated['type'], ['vacation_leave', 'sick_leave'], true)) {
+        // Offset cannot be filed over available overtime balance.
+        if ($user->isStaffMember() && in_array($validated['type'], ['vacation_leave', 'sick_leave', 'offset'], true)) {
             $startDate = \Carbon\Carbon::parse($validated['start_date']);
             $endDate = $validated['end_date']
                 ? \Carbon\Carbon::parse($validated['end_date'])
                 : $startDate;
             $daysRequested = $startDate->diffInDays($endDate) + 1;
 
-            $bal = $this->getEmployeeLeaveBalances($user);
-            if (($bal['leave_remaining'] ?? 0) <= 0) {
-                return redirect()->back()
-                    ->withErrors(['type' => 'No balance to file for that type of request.'])
-                    ->withInput();
-            }
-            if ($daysRequested > ($bal['leave_remaining'] ?? 0)) {
-                $remaining = $bal['leave_remaining'] ?? 0;
+            if (in_array($validated['type'], ['vacation_leave', 'sick_leave'], true)) {
+                $bal = $this->getEmployeeLeaveBalances($user);
+                if (($bal['leave_remaining'] ?? 0) <= 0) {
+                    return redirect()->back()
+                        ->withErrors(['type' => 'No balance to file for that type of request.'])
+                        ->withInput();
+                }
+                if ($daysRequested > ($bal['leave_remaining'] ?? 0)) {
+                    $remaining = $bal['leave_remaining'] ?? 0;
 
-                return redirect()->back()
-                    ->withErrors(['end_date' => "You only have {$remaining} day(s) of Leave Credits remaining. You cannot request {$daysRequested} day(s)."])
-                    ->withInput();
+                    return redirect()->back()
+                        ->withErrors(['end_date' => "You only have {$remaining} day(s) of Leave Credits remaining. You cannot request {$daysRequested} day(s)."])
+                        ->withInput();
+                }
+            } else {
+                $offsetText = trim((string) ($validated['offset_hours'] ?? ''));
+                $offsetMinutesNeeded = $offsetText !== ''
+                    ? $this->parseHourMinuteToMinutes($offsetText)
+                    : ($daysRequested * 8 * 60);
+
+                if ($offsetText !== '' && $offsetMinutesNeeded <= 0) {
+                    return redirect()->back()
+                        ->withErrors(['offset_hours' => 'Please enter valid hours to deduct in HH:MM format (e.g., 08:00).'])
+                        ->withInput();
+                }
+
+                $offsetHoursNeeded = $offsetMinutesNeeded / 60;
+                $overtimeHours = $this->getEmployeeOvertimeBalanceHours($user);
+                // If this offset was previously approved, its hours are still in the balance
+                // until status flips to pending — include them as available for re-file.
+                if ($leaveRequest->type === 'offset' && $leaveRequest->status === 'approved') {
+                    $overtimeHours += (float) $leaveRequest->offset_hours_needed;
+                }
+
+                if ($overtimeHours <= 0) {
+                    return redirect()->back()
+                        ->withErrors(['type' => 'No balance to file for that type of request.'])
+                        ->withInput();
+                }
+                if ($offsetHoursNeeded > $overtimeHours) {
+                    $h = (int) $overtimeHours;
+                    $m = (int) (($overtimeHours - $h) * 60);
+                    $hoursFormatted = sprintf('%02d:%02d', $h, $m);
+                    $requestedLabel = $offsetText !== ''
+                        ? "{$offsetText} hour(s)."
+                        : "{$daysRequested} day(s) (".($daysRequested * 8).' hours).';
+
+                    return redirect()->back()
+                        ->withErrors(['end_date' => "You only have {$hoursFormatted} hours of overtime balance. You cannot request {$requestedLabel}"])
+                        ->withInput();
+                }
             }
         }
 

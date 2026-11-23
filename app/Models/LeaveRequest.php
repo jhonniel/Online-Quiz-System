@@ -675,6 +675,45 @@ class LeaveRequest extends Model
     }
 
     /**
+     * HH:MM from "Hours to Deduct", or days × 8 when the reason has no explicit hours.
+     */
+    public function offsetHoursFormattedFromReason(): string
+    {
+        $mins = $this->parseOffsetHoursToDeductMinutes();
+        if ($mins === null) {
+            $mins = max(0, (int) round($this->days * 8 * 60));
+        }
+
+        return sprintf('%02d:%02d', intdiv($mins, 60), $mins % 60);
+    }
+
+    public function replaceOffsetHoursToDeductInReason(string $hhmm): string
+    {
+        $raw = (string) ($this->reason ?? '');
+
+        if (preg_match('/^(\d{1,4}):(\d{2})$/', trim($hhmm), $parts)) {
+            $normalized = sprintf('%02d:%02d', (int) $parts[1], (int) $parts[2]);
+        } else {
+            $normalized = trim($hhmm);
+        }
+
+        if (preg_match('/Hours to Deduct:\s*.+/m', $raw)) {
+            return preg_replace(
+                '/Hours to Deduct:\s*.+/',
+                'Hours to Deduct: '.$normalized,
+                $raw,
+                1
+            );
+        }
+
+        $raw = trim($raw);
+
+        return $raw === ''
+            ? "Offset Request Details:\nHours to Deduct: ".$normalized
+            : $raw."\nHours to Deduct: ".$normalized;
+    }
+
+    /**
      * Human-readable duration for details UI.
      * For offset: day count only in lists (dates live in start/end columns); custom HH:MM when hours differ from days × 8h.
      */

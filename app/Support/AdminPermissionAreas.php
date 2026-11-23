@@ -74,6 +74,7 @@ final class AdminPermissionAreas
 
     public const SUBSCRIPTION_FEATURES = [
         'dashboard' => 'Subscriptions Dashboard',
+        'others' => 'Others',
         'starlinks' => 'Starlinks',
         'omadas' => 'Omada',
         'billing' => 'Billing',

@@ -938,6 +938,57 @@
                                     <p class="text-xs text-gray-500">Email addresses to receive notifications when new hiring applications are submitted (comma-separated)</p>
                                 </div>
 
+                                <div class="md:col-span-2">
+                                    <label for="other_subscription_notification_emails" class="block text-sm font-medium text-gray-700 mb-2">
+                                        Admin Notification Emails (Other Subscriptions)
+                                    </label>
+                                    <div id="other-subscription-email-list-container" class="space-y-2 mb-2">
+                                        @php
+                                            $oldOtherSubEmails = old('other_subscription_notification_emails');
+                                            if (is_array($oldOtherSubEmails)) {
+                                                $otherSubEmailArray = array_filter(array_map('trim', $oldOtherSubEmails));
+                                            } else {
+                                                $otherSubEmails = $oldOtherSubEmails ?? ($settings['other_subscription_notification_emails'] ?? '');
+                                                $otherSubEmailArray = !empty($otherSubEmails) ? explode(',', $otherSubEmails) : [''];
+                                                $otherSubEmailArray = array_map('trim', $otherSubEmailArray);
+                                                $otherSubEmailArray = array_filter($otherSubEmailArray);
+                                            }
+                                            if (empty($otherSubEmailArray)) {
+                                                $otherSubEmailArray = [''];
+                                            }
+                                        @endphp
+                                        @foreach($otherSubEmailArray as $index => $email)
+                                            <div class="other-subscription-email-input-group flex items-center space-x-2">
+                                                <input type="email"
+                                                       name="other_subscription_notification_emails[]"
+                                                       value="{{ $email }}"
+                                                       placeholder="admin@example.com"
+                                                       class="flex-1 px-4 py-3 border border-gray-300 rounded-lg shadow-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">
+                                                @if($index === 0)
+                                                    <button type="button"
+                                                            onclick="addOtherSubscriptionEmailField()"
+                                                            class="px-4 py-3 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                                                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path>
+                                                        </svg>
+                                                    </button>
+                                                @else
+                                                    <button type="button"
+                                                            onclick="removeOtherSubscriptionEmailField(this)"
+                                                            class="px-4 py-3 bg-red-600 text-white rounded-lg hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-red-500">
+                                                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                                                        </svg>
+                                                    </button>
+                                                @endif
+                                            </div>
+                                        @endforeach
+                                    </div>
+                                    <p class="text-xs text-gray-500">
+                                        Email addresses notified when Other Subscriptions (ChatGPT, Gemini, etc.) are ending or will renew. Leave empty to disable.
+                                    </p>
+                                </div>
+
                                 <div>
                                     <label for="hiring_instructions" class="block text-sm font-medium text-gray-700 mb-2">Instructions for Applicants</label>
                                     <textarea name="hiring_instructions" id="hiring_instructions" rows="4"
@@ -2939,6 +2990,47 @@ document.addEventListener('DOMContentLoaded', function() {
             button.closest('.hiring-email-input-group').remove();
         } else {
             alert('You must have at least one email field.');
+        }
+    }
+
+    function addOtherSubscriptionEmailField() {
+        const container = document.getElementById('other-subscription-email-list-container');
+        if (!container) {
+            return;
+        }
+        const newField = document.createElement('div');
+        newField.className = 'other-subscription-email-input-group flex items-center space-x-2';
+        newField.innerHTML = `
+            <input type="email"
+                   name="other_subscription_notification_emails[]"
+                   value=""
+                   placeholder="admin@example.com"
+                   class="flex-1 px-4 py-3 border border-gray-300 rounded-lg shadow-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">
+            <button type="button"
+                    onclick="removeOtherSubscriptionEmailField(this)"
+                    class="px-4 py-3 bg-red-600 text-white rounded-lg hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-red-500">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                </svg>
+            </button>
+        `;
+        container.appendChild(newField);
+    }
+
+    function removeOtherSubscriptionEmailField(button) {
+        const container = document.getElementById('other-subscription-email-list-container');
+        if (!container) {
+            return;
+        }
+        const groups = container.querySelectorAll('.other-subscription-email-input-group');
+        if (groups.length > 1) {
+            button.closest('.other-subscription-email-input-group').remove();
+        } else {
+            const input = groups[0]?.querySelector('input');
+            if (input) {
+                input.value = '';
+                input.focus();
+            }
         }
     }
 

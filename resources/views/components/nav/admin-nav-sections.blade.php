@@ -891,7 +891,7 @@
                 localStorage.setItem('nav-linked-accounts', this.open);
             }
         }"
-        x-init="if ({{ request()->routeIs('admin.linked-accounts.*') || request()->routeIs('admin.starlinks.*') || request()->routeIs('admin.omadas.*') || request()->is('admin/subscription-plan-types*') || request()->is('admin/billing*') ? 'true' : 'false' }}) { open = true; }">
+        x-init="if ({{ request()->routeIs('admin.linked-accounts.*') || request()->routeIs('admin.other-subscriptions.*') || request()->routeIs('admin.starlinks.*') || request()->routeIs('admin.omadas.*') || request()->is('admin/subscription-plan-types*') || request()->is('admin/billing*') ? 'true' : 'false' }}) { open = true; }">
             <button @click="toggle()"
                     class="w-full flex items-center justify-between px-3 py-2 text-xs font-semibold text-gray-400 uppercase tracking-wider hover:text-gray-300 transition-opacity duration-300"
                     :class="sidebarCollapsed ? 'opacity-0 h-0 overflow-hidden pointer-events-none' : 'opacity-100'">
@@ -910,6 +910,17 @@
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path>
                     </svg>
                     <span class="transition-opacity duration-300" :class="sidebarCollapsed ? 'opacity-0 w-0 overflow-hidden' : 'opacity-100'">Dashboard</span>
+                </a>
+                @endif
+                @if(auth()->user()->canAccessSubscriptionFeature('others'))
+                <a href="{{ url('/admin/other-subscriptions') }}"
+                   class="flex items-center px-3 py-2 text-sm font-medium rounded-md transition-colors duration-200 {{ request()->is('admin/other-subscriptions*') ? 'bg-indigo-700 text-white' : 'text-gray-300 hover:bg-gray-700 hover:text-white' }}"
+                   :class="sidebarCollapsed ? 'justify-center' : ''"
+                   :title="sidebarCollapsed ? 'Others' : ''">
+                    <svg class="h-5 w-5 flex-shrink-0" :class="sidebarCollapsed ? '' : 'mr-3'" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"></path>
+                    </svg>
+                    <span class="transition-opacity duration-300" :class="sidebarCollapsed ? 'opacity-0 w-0 overflow-hidden' : 'opacity-100'">Others</span>
                 </a>
                 @endif
                 @if(auth()->user()->canAccessSubscriptionFeature('starlinks'))
