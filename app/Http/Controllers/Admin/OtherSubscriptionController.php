@@ -7,8 +7,6 @@ use App\Http\Requests\Admin\OtherSubscriptionRequest;
 use App\Models\OtherSubscription;
 use App\Models\OtherSubscriptionProvider;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\DB;
-use Illuminate\Validation\Rule;
 
 class OtherSubscriptionController extends Controller
 {
@@ -60,18 +58,13 @@ class OtherSubscriptionController extends Controller
         $upcomingCount = OtherSubscription::active()
             ->whereDate('ends_on', '<=', now()->addDays(30)->toDateString())
             ->count();
-        $providers = OtherSubscriptionProvider::query()
-            ->withCount('subscriptions')
-            ->orderBy('name')
-            ->get();
 
         return view('admin.other-subscriptions.index', compact(
             'subscriptions',
             'search',
             'activeCount',
             'expiredCount',
-            'upcomingCount',
-            'providers'
+            'upcomingCount'
         ));
     }
 
@@ -138,66 +131,6 @@ class OtherSubscriptionController extends Controller
             ->with('success', 'Subscription removed successfully.');
     }
 
-    public function storeProvider(Request $request)
-    {
-        $this->ensureCanAccess();
-
-        $validated = $request->validate([
-            'name' => [
-                'required',
-                'string',
-                'max:255',
-                Rule::unique('other_subscription_providers', 'name'),
-            ],
-        ]);
-
-        OtherSubscriptionProvider::create([
-            'name' => trim($validated['name']),
-        ]);
-
-        return redirect()->route('admin.other-subscriptions.index')
-            ->with('success', 'Provider added successfully.');
-    }
-
-    public function updateProvider(Request $request, OtherSubscriptionProvider $otherSubscriptionProvider)
-    {
-        $this->ensureCanAccess();
-
-        $validated = $request->validate([
-            'name' => [
-                'required',
-                'string',
-                'max:255',
-                Rule::unique('other_subscription_providers', 'name')->ignore($otherSubscriptionProvider->id),
-            ],
-        ]);
-
-        $otherSubscriptionProvider->update([
-            'name' => trim($validated['name']),
-        ]);
-
-        return redirect()->route('admin.other-subscriptions.index')
-            ->with('success', 'Provider updated successfully.');
-    }
-
-    public function destroyProvider(OtherSubscriptionProvider $otherSubscriptionProvider)
-    {
-        $this->ensureCanAccess();
-
-        DB::transaction(function () use ($otherSubscriptionProvider) {
-            OtherSubscription::query()
-                ->where('other_subscription_provider_id', $otherSubscriptionProvider->id)
-                ->update([
-                    'other_subscription_provider_id' => null,
-                    'provider' => null,
-                ]);
-
-            $otherSubscriptionProvider->delete();
-        });
-
-        return redirect()->route('admin.other-subscriptions.index')
-            ->with('success', 'Provider removed successfully.');
-    }
 
     /**
      * @return array<string, mixed>

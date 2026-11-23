@@ -48,7 +48,7 @@
                 <span x-text="providerMode === 'new' ? 'Pick existing' : 'Add new provider'"></span>
             </button>
         </div>
-        <p class="mt-1 text-xs text-gray-500">Saved providers can be reused later. Manage them from the Others list page.</p>
+        <p class="mt-1 text-xs text-gray-500">Pick a saved provider or add a new one here when creating or editing a subscription.</p>
         @error('other_subscription_provider_id')
             <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
         @enderror

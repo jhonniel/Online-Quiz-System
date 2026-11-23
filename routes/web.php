@@ -837,12 +837,6 @@ Route::prefix('admin')->middleware(['auth', 'admin', 'admin.totp'])->group(funct
             Route::get('linked-accounts', [LinkedAccountController::class, 'index'])->name('admin.linked-accounts.index');
         });
         Route::middleware(['admin.subfeature:subscriptions,others'])->group(function () {
-            Route::post('other-subscriptions/providers', [OtherSubscriptionController::class, 'storeProvider'])
-                ->name('admin.other-subscriptions.providers.store');
-            Route::put('other-subscriptions/providers/{otherSubscriptionProvider}', [OtherSubscriptionController::class, 'updateProvider'])
-                ->name('admin.other-subscriptions.providers.update');
-            Route::delete('other-subscriptions/providers/{otherSubscriptionProvider}', [OtherSubscriptionController::class, 'destroyProvider'])
-                ->name('admin.other-subscriptions.providers.destroy');
             Route::resource('other-subscriptions', OtherSubscriptionController::class)
                 ->except(['show'])
                 ->parameters(['other-subscriptions' => 'otherSubscription'])
