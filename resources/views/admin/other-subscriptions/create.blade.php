@@ -38,15 +38,15 @@
         </div>
     </div>
 
-    <div class="bg-white rounded-xl sm:rounded-2xl shadow-lg border border-gray-200 overflow-hidden">
-        <form action="{{ route('admin.other-subscriptions.store') }}" method="POST">
+    <div class="bg-white rounded-xl sm:rounded-2xl shadow-lg border border-gray-200 overflow-hidden min-w-0">
+        <form action="{{ route('admin.other-subscriptions.store') }}" method="POST" class="min-w-0">
             @csrf
-            <div class="p-4 sm:p-6 lg:p-8">
+            <div class="p-4 sm:p-6 lg:p-8 min-w-0 overflow-x-hidden">
                 @include('admin.other-subscriptions._form', ['subscription' => null, 'providers' => $providers ?? collect()])
             </div>
-            <div class="flex flex-col-reverse sm:flex-row justify-end gap-3 p-4 sm:p-6 lg:p-8 bg-gray-50/50">
-                <a href="{{ route('admin.other-subscriptions.index') }}" class="inline-flex justify-center items-center px-5 py-2.5 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 bg-white hover:bg-gray-50">Cancel</a>
-                <button type="submit" class="inline-flex justify-center items-center px-6 py-2.5 border border-transparent rounded-lg text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 shadow-sm">
+            <div class="flex flex-col-reverse sm:flex-row sm:justify-end gap-3 p-4 sm:p-6 lg:p-8 bg-gray-50/50 border-t border-gray-100">
+                <a href="{{ route('admin.other-subscriptions.index') }}" class="inline-flex justify-center items-center w-full sm:w-auto px-5 py-2.5 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 min-h-[44px] touch-manipulation">Cancel</a>
+                <button type="submit" class="inline-flex justify-center items-center w-full sm:w-auto px-6 py-2.5 border border-transparent rounded-lg text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 shadow-sm min-h-[44px] touch-manipulation">
                     Add Subscription
                 </button>
             </div>
