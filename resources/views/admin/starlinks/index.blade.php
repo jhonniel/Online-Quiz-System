@@ -47,8 +47,9 @@
 
     <div class="mb-5 rounded-lg border border-indigo-100 bg-indigo-50 px-4 py-3 text-sm text-indigo-900">
         Incoming and overdue billing reminders (with a PDF per device) are sent to emails configured in
-        <a href="{{ url('/admin/settings') }}" class="font-semibold underline hover:text-indigo-700">Admin → Settings</a>
-        under <span class="font-medium">Admin Notification Emails (Starlink Billing)</span>.
+        <a href="{{ url('/admin/settings') }}" class="font-semibold underline hover:text-indigo-700">Admin → Settings → General</a>
+        under <span class="font-medium">Subscription Reminder Emails</span>
+        → <span class="font-medium">Admin Notification Emails (Starlink Billing)</span>.
     </div>
 
     @if(session('success'))

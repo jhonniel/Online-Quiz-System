@@ -7,21 +7,23 @@
 <body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background-color: #f9fafb; padding: 24px;">
     @php
         $daysLeft = $subscription->daysUntilEnd();
-        $action = $subscription->auto_renew ? 'renew' : 'end';
-        $actionLabel = $subscription->auto_renew ? 'will renew' : 'will end';
-        if ($daysLeft === 0) {
-            $timing = $subscription->auto_renew ? 'renews today' : 'ends today';
-        } elseif ($daysLeft === 1) {
-            $timing = $actionLabel.' tomorrow';
+        $isOverdue = $daysLeft !== null && $daysLeft < 0;
+        if ($isOverdue) {
+            $overdueDays = abs((int) $daysLeft);
+            $timing = $overdueDays === 1
+                ? 'is overdue by 1 day'
+                : 'is overdue by '.$overdueDays.' days';
+            $title = 'Subscription overdue';
         } else {
-            $timing = $actionLabel.' in '.$daysLeft.' days';
+            $timing = $subscription->auto_renew ? 'renews today' : 'is due today';
+            $title = $subscription->auto_renew ? 'Subscription renews today' : 'Subscription due today';
         }
     @endphp
     <table width="100%" cellpadding="0" cellspacing="0" style="max-width: 640px; margin: 0 auto; background: #ffffff; border-radius: 8px; border: 1px solid #e5e7eb;">
         <tr>
-            <td style="padding: 20px 24px; border-bottom: 1px solid #e5e7eb;">
+            <td style="padding: 20px 24px; border-bottom: 1px solid #e5e7eb; background: {{ $isOverdue ? '#fff7ed' : '#eef2ff' }};">
                 <h1 style="margin: 0 0 4px 0; font-size: 20px; color: #111827;">
-                    Subscription reminder
+                    {{ $title }}
                 </h1>
                 <p style="margin: 0; font-size: 14px; color: #6b7280;">
                     <strong>{{ $subscription->name }}</strong> {{ $timing }}.
@@ -46,6 +48,7 @@
                     <strong>Price:</strong> {{ $subscription->formatted_price }}<br>
                     <strong>Start date:</strong> {{ $subscription->starts_on?->format('F d, Y') }}<br>
                     <strong>End date:</strong> {{ $subscription->ends_on?->format('F d, Y') }}<br>
+                    <strong>Status:</strong> {{ $isOverdue ? 'Overdue' : 'Due today' }}<br>
                     <strong>Auto renew:</strong> {{ $subscription->auto_renew ? 'Yes' : 'No' }}
                 </p>
 
@@ -62,7 +65,7 @@
                 </p>
 
                 <p style="margin: 0; font-size: 13px; color: #6b7280;">
-                    You are receiving this because your email is listed for Other Subscription reminders.
+                    You are receiving this because your email is listed for Other Subscription due/overdue reminders.
                     Update notification emails in Admin → Settings.
                 </p>
             </td>

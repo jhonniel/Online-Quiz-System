@@ -20,23 +20,16 @@ class OtherSubscriptionReminderMail extends Mailable
     public function envelope(): Envelope
     {
         $daysLeft = $this->subscription->daysUntilEnd();
-        $action = $this->subscription->auto_renew ? 'renews' : 'ends';
+        $name = $this->subscription->name;
 
-        if ($daysLeft === 0) {
-            $subject = sprintf(
-                'Subscription %s today: %s',
-                $action === 'renews' ? 'renews' : 'ends',
-                $this->subscription->name
-            );
-        } elseif ($daysLeft === 1) {
-            $subject = sprintf('Subscription %s tomorrow: %s', $action, $this->subscription->name);
+        if ($daysLeft !== null && $daysLeft < 0) {
+            $overdueDays = abs((int) $daysLeft);
+            $subject = $overdueDays === 1
+                ? sprintf('Subscription overdue (1 day): %s', $name)
+                : sprintf('Subscription overdue (%d days): %s', $overdueDays, $name);
         } else {
-            $subject = sprintf(
-                'Subscription %s in %d days: %s',
-                $action,
-                max(0, (int) $daysLeft),
-                $this->subscription->name
-            );
+            $action = $this->subscription->auto_renew ? 'renews' : 'due';
+            $subject = sprintf('Subscription %s today: %s', $action, $name);
         }
 
         return new Envelope(subject: $subject.' — '.config('app.name'));

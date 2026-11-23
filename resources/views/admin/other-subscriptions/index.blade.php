@@ -9,7 +9,7 @@
         <div class="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
             <div>
                 <h1 class="text-xl sm:text-2xl font-bold text-gray-900 tracking-tight">Other Subscriptions</h1>
-                <p class="mt-1 text-sm text-gray-500">Track ChatGPT, Gemini, and other online subscriptions. Emails notify when they end or renew.</p>
+                <p class="mt-1 text-sm text-gray-500">Track ChatGPT, Gemini, and other online subscriptions. Reminder emails are sent only when due today or overdue.</p>
             </div>
             <div class="flex flex-wrap gap-2">
                 <a href="{{ url('/admin/linked-accounts') }}" class="inline-flex items-center px-3 py-2 sm:px-4 sm:py-2.5 border border-gray-200 rounded-lg text-sm font-medium text-gray-700 bg-white hover:bg-gray-50">
@@ -40,8 +40,9 @@
 
     <div class="mb-5 rounded-lg border border-indigo-100 bg-indigo-50 px-4 py-3 text-sm text-indigo-900">
         Reminder emails are managed in
-        <a href="{{ url('/admin/settings') }}" class="font-semibold underline hover:text-indigo-700">Admin → Settings</a>
-        under <span class="font-medium">Admin Notification Emails (Other Subscriptions)</span>.
+        <a href="{{ url('/admin/settings') }}" class="font-semibold underline hover:text-indigo-700">Admin → Settings → General</a>
+        under <span class="font-medium">Subscription Reminder Emails</span>
+        → <span class="font-medium">Admin Notification Emails (Other Subscriptions)</span>.
     </div>
 
     <div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">

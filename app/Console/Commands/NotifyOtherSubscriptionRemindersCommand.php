@@ -9,7 +9,7 @@ class NotifyOtherSubscriptionRemindersCommand extends Command
 {
     protected $signature = 'subscriptions:notify-other-expiring';
 
-    protected $description = 'Email configured admins when Other Subscriptions are ending or renewing soon';
+    protected $description = 'Email configured admins only when Other Subscriptions are due today or overdue';
 
     public function handle(): int
     {

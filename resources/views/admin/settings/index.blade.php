@@ -678,6 +678,137 @@
                             </div>
                         </div>
 
+                        <!-- Subscription reminder emails -->
+                        <div class="form-section">
+                            <div class="flex items-center space-x-3 mb-6">
+                                <div class="flex-shrink-0 bg-indigo-100 rounded-lg p-2">
+                                    <svg class="h-6 w-6 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"></path>
+                                    </svg>
+                                </div>
+                                <div>
+                                    <h3 class="text-lg font-semibold text-gray-900">Subscription Reminder Emails</h3>
+                                    <p class="text-sm text-gray-500">Who receives Other Subscriptions and Starlink billing due/overdue reminders.</p>
+                                </div>
+                            </div>
+
+                            <div class="space-y-6">
+                                <div>
+                                    <label for="other_subscription_notification_emails" class="block text-sm font-medium text-gray-700 mb-2">
+                                        Admin Notification Emails (Other Subscriptions)
+                                    </label>
+                                    <div id="other-subscription-email-list-container" class="space-y-2 mb-2">
+                                        @php
+                                            $oldOtherSubEmails = old('other_subscription_notification_emails');
+                                            if (is_array($oldOtherSubEmails)) {
+                                                $otherSubEmailArray = array_filter(array_map('trim', $oldOtherSubEmails));
+                                            } else {
+                                                $otherSubEmails = $oldOtherSubEmails ?? ($settings['other_subscription_notification_emails'] ?? '');
+                                                $otherSubEmailArray = !empty($otherSubEmails) ? explode(',', $otherSubEmails) : [''];
+                                                $otherSubEmailArray = array_map('trim', $otherSubEmailArray);
+                                                $otherSubEmailArray = array_filter($otherSubEmailArray);
+                                            }
+                                            if (empty($otherSubEmailArray)) {
+                                                $otherSubEmailArray = [''];
+                                            }
+                                        @endphp
+                                        @foreach($otherSubEmailArray as $index => $email)
+                                            <div class="other-subscription-email-input-group flex items-center space-x-2">
+                                                <input type="email"
+                                                       name="other_subscription_notification_emails[]"
+                                                       value="{{ $email }}"
+                                                       placeholder="admin@example.com"
+                                                       class="flex-1 px-4 py-3 border border-gray-300 rounded-lg shadow-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">
+                                                @if($index === 0)
+                                                    <button type="button"
+                                                            onclick="addOtherSubscriptionEmailField()"
+                                                            class="px-4 py-3 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                                                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path>
+                                                        </svg>
+                                                    </button>
+                                                @else
+                                                    <button type="button"
+                                                            onclick="removeOtherSubscriptionEmailField(this)"
+                                                            class="px-4 py-3 bg-red-600 text-white rounded-lg hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-red-500">
+                                                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                                                        </svg>
+                                                    </button>
+                                                @endif
+                                            </div>
+                                        @endforeach
+                                    </div>
+                                    <p class="text-xs text-gray-500">
+                                        Notified only when Other Subscriptions are due today or overdue. Leave empty to disable.
+                                    </p>
+                                </div>
+
+                                <div>
+                                    <label for="starlink_billing_notification_emails" class="block text-sm font-medium text-gray-700 mb-2">
+                                        Admin Notification Emails (Starlink Billing)
+                                    </label>
+                                    <div id="starlink-billing-email-list-container" class="space-y-2 mb-2">
+                                        @php
+                                            $oldStarlinkBillingEmails = old('starlink_billing_notification_emails');
+                                            if (is_array($oldStarlinkBillingEmails)) {
+                                                $starlinkBillingEmailArray = array_filter(array_map('trim', $oldStarlinkBillingEmails));
+                                            } else {
+                                                $starlinkBillingEmails = $oldStarlinkBillingEmails ?? ($settings['starlink_billing_notification_emails'] ?? '');
+                                                $starlinkBillingEmailArray = !empty($starlinkBillingEmails) ? explode(',', $starlinkBillingEmails) : [''];
+                                                $starlinkBillingEmailArray = array_map('trim', $starlinkBillingEmailArray);
+                                                $starlinkBillingEmailArray = array_filter($starlinkBillingEmailArray);
+                                            }
+                                            if (empty($starlinkBillingEmailArray)) {
+                                                $starlinkBillingEmailArray = [''];
+                                            }
+                                        @endphp
+                                        @foreach($starlinkBillingEmailArray as $index => $email)
+                                            <div class="starlink-billing-email-input-group flex items-center space-x-2">
+                                                <input type="email"
+                                                       name="starlink_billing_notification_emails[]"
+                                                       value="{{ $email }}"
+                                                       placeholder="admin@example.com"
+                                                       class="flex-1 px-4 py-3 border border-gray-300 rounded-lg shadow-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">
+                                                @if($index === 0)
+                                                    <button type="button"
+                                                            onclick="addStarlinkBillingEmailField()"
+                                                            class="px-4 py-3 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                                                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path>
+                                                        </svg>
+                                                    </button>
+                                                @else
+                                                    <button type="button"
+                                                            onclick="removeStarlinkBillingEmailField(this)"
+                                                            class="px-4 py-3 bg-red-600 text-white rounded-lg hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-red-500">
+                                                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                                                        </svg>
+                                                    </button>
+                                                @endif
+                                            </div>
+                                        @endforeach
+                                    </div>
+                                    <div class="mt-3 max-w-xs">
+                                        <label for="starlink_billing_notify_days_before" class="block text-sm font-medium text-gray-700 mb-2">
+                                            Remind before next billing (days)
+                                        </label>
+                                        <input type="number"
+                                               name="starlink_billing_notify_days_before"
+                                               id="starlink_billing_notify_days_before"
+                                               min="0"
+                                               max="90"
+                                               value="{{ old('starlink_billing_notify_days_before', $settings['starlink_billing_notify_days_before'] ?? 7) }}"
+                                               class="w-full px-4 py-3 border border-gray-300 rounded-lg shadow-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">
+                                    </div>
+                                    <p class="text-xs text-gray-500 mt-2">
+                                        Reminders for Starlink devices that are overdue or due within the days above. Each notice includes a PDF. Leave emails empty to disable.
+                                    </p>
+                                </div>
+                            </div>
+                        </div>
+
                         <!-- Payslip Signatories -->
                         <div class="form-section">
                             <div class="flex items-center space-x-3 mb-6">
@@ -936,121 +1067,6 @@
                                         @endforeach
                                     </div>
                                     <p class="text-xs text-gray-500">Email addresses to receive notifications when new hiring applications are submitted (comma-separated)</p>
-                                </div>
-
-                                <div class="md:col-span-2">
-                                    <label for="other_subscription_notification_emails" class="block text-sm font-medium text-gray-700 mb-2">
-                                        Admin Notification Emails (Other Subscriptions)
-                                    </label>
-                                    <div id="other-subscription-email-list-container" class="space-y-2 mb-2">
-                                        @php
-                                            $oldOtherSubEmails = old('other_subscription_notification_emails');
-                                            if (is_array($oldOtherSubEmails)) {
-                                                $otherSubEmailArray = array_filter(array_map('trim', $oldOtherSubEmails));
-                                            } else {
-                                                $otherSubEmails = $oldOtherSubEmails ?? ($settings['other_subscription_notification_emails'] ?? '');
-                                                $otherSubEmailArray = !empty($otherSubEmails) ? explode(',', $otherSubEmails) : [''];
-                                                $otherSubEmailArray = array_map('trim', $otherSubEmailArray);
-                                                $otherSubEmailArray = array_filter($otherSubEmailArray);
-                                            }
-                                            if (empty($otherSubEmailArray)) {
-                                                $otherSubEmailArray = [''];
-                                            }
-                                        @endphp
-                                        @foreach($otherSubEmailArray as $index => $email)
-                                            <div class="other-subscription-email-input-group flex items-center space-x-2">
-                                                <input type="email"
-                                                       name="other_subscription_notification_emails[]"
-                                                       value="{{ $email }}"
-                                                       placeholder="admin@example.com"
-                                                       class="flex-1 px-4 py-3 border border-gray-300 rounded-lg shadow-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">
-                                                @if($index === 0)
-                                                    <button type="button"
-                                                            onclick="addOtherSubscriptionEmailField()"
-                                                            class="px-4 py-3 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500">
-                                                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path>
-                                                        </svg>
-                                                    </button>
-                                                @else
-                                                    <button type="button"
-                                                            onclick="removeOtherSubscriptionEmailField(this)"
-                                                            class="px-4 py-3 bg-red-600 text-white rounded-lg hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-red-500">
-                                                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
-                                                        </svg>
-                                                    </button>
-                                                @endif
-                                            </div>
-                                        @endforeach
-                                    </div>
-                                    <p class="text-xs text-gray-500">
-                                        Email addresses notified when Other Subscriptions (ChatGPT, Gemini, etc.) are ending or will renew. Leave empty to disable.
-                                    </p>
-                                </div>
-
-                                <div class="md:col-span-2">
-                                    <label for="starlink_billing_notification_emails" class="block text-sm font-medium text-gray-700 mb-2">
-                                        Admin Notification Emails (Starlink Billing)
-                                    </label>
-                                    <div id="starlink-billing-email-list-container" class="space-y-2 mb-2">
-                                        @php
-                                            $oldStarlinkBillingEmails = old('starlink_billing_notification_emails');
-                                            if (is_array($oldStarlinkBillingEmails)) {
-                                                $starlinkBillingEmailArray = array_filter(array_map('trim', $oldStarlinkBillingEmails));
-                                            } else {
-                                                $starlinkBillingEmails = $oldStarlinkBillingEmails ?? ($settings['starlink_billing_notification_emails'] ?? '');
-                                                $starlinkBillingEmailArray = !empty($starlinkBillingEmails) ? explode(',', $starlinkBillingEmails) : [''];
-                                                $starlinkBillingEmailArray = array_map('trim', $starlinkBillingEmailArray);
-                                                $starlinkBillingEmailArray = array_filter($starlinkBillingEmailArray);
-                                            }
-                                            if (empty($starlinkBillingEmailArray)) {
-                                                $starlinkBillingEmailArray = [''];
-                                            }
-                                        @endphp
-                                        @foreach($starlinkBillingEmailArray as $index => $email)
-                                            <div class="starlink-billing-email-input-group flex items-center space-x-2">
-                                                <input type="email"
-                                                       name="starlink_billing_notification_emails[]"
-                                                       value="{{ $email }}"
-                                                       placeholder="admin@example.com"
-                                                       class="flex-1 px-4 py-3 border border-gray-300 rounded-lg shadow-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">
-                                                @if($index === 0)
-                                                    <button type="button"
-                                                            onclick="addStarlinkBillingEmailField()"
-                                                            class="px-4 py-3 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500">
-                                                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path>
-                                                        </svg>
-                                                    </button>
-                                                @else
-                                                    <button type="button"
-                                                            onclick="removeStarlinkBillingEmailField(this)"
-                                                            class="px-4 py-3 bg-red-600 text-white rounded-lg hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-red-500">
-                                                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
-                                                        </svg>
-                                                    </button>
-                                                @endif
-                                            </div>
-                                        @endforeach
-                                    </div>
-                                    <div class="mt-3 max-w-xs">
-                                        <label for="starlink_billing_notify_days_before" class="block text-sm font-medium text-gray-700 mb-2">
-                                            Remind before next billing (days)
-                                        </label>
-                                        <input type="number"
-                                               name="starlink_billing_notify_days_before"
-                                               id="starlink_billing_notify_days_before"
-                                               min="0"
-                                               max="90"
-                                               value="{{ old('starlink_billing_notify_days_before', $settings['starlink_billing_notify_days_before'] ?? 7) }}"
-                                               class="w-full px-4 py-3 border border-gray-300 rounded-lg shadow-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">
-                                    </div>
-                                    <p class="text-xs text-gray-500 mt-2">
-                                        Emails receive reminders for Starlink devices that are overdue or due within the days above.
-                                        Each notice includes a PDF for that device. Leave emails empty to disable.
-                                    </p>
                                 </div>
 
                                 <div>

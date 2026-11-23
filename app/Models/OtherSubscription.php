@@ -119,19 +119,27 @@ class OtherSubscription extends Model
         return $query->whereDate('ends_on', '<', now()->toDateString());
     }
 
+    public function scopeDueOrOverdue(Builder $query): Builder
+    {
+        return $query->whereDate('ends_on', '<=', now()->toDateString());
+    }
+
     public function scopeDueForReminder(Builder $query): Builder
     {
         $today = now()->startOfDay();
 
-        return $query->whereDate('ends_on', '>=', $today->toDateString())
+        return $query->dueOrOverdue()
             ->where(function (Builder $q) use ($today): void {
                 $q->whereNull('last_notified_for_ends_on')
                     ->orWhereColumn('last_notified_for_ends_on', '!=', 'ends_on')
                     ->orWhereNull('last_notified_at')
-                    ->orWhere('last_notified_at', '<', $today->copy()->subDay());
+                    ->orWhere('last_notified_at', '<', $today);
             });
     }
 
+    /**
+     * Reminders only for due today or overdue — not advance “ending soon” notices.
+     */
     public function shouldNotifyToday(): bool
     {
         if (! $this->ends_on) {
@@ -139,22 +147,51 @@ class OtherSubscription extends Model
         }
 
         $daysLeft = $this->daysUntilEnd();
-        if ($daysLeft === null || $daysLeft < 0) {
+        if ($daysLeft === null) {
             return false;
         }
 
-        $threshold = max(0, (int) ($this->notify_days_before ?? 7));
-        if ($daysLeft > $threshold) {
+        // Only due (0) or overdue (< 0). Nothing else.
+        if ($daysLeft > 0) {
             return false;
         }
 
-        // One reminder per end-date cycle (re-sends only if ends_on changes).
+        $today = now()->startOfDay();
+
+        if ($daysLeft === 0) {
+            // Due today: one reminder for this end date.
+            if ($this->last_notified_for_ends_on
+                && $this->last_notified_for_ends_on->equalTo($this->ends_on)
+                && $this->last_notified_at
+                && $this->last_notified_at->copy()->startOfDay()->gte($today)
+            ) {
+                return false;
+            }
+
+            return true;
+        }
+
+        // Overdue: at most one reminder per day while still past ends_on.
         if ($this->last_notified_for_ends_on
             && $this->last_notified_for_ends_on->equalTo($this->ends_on)
+            && $this->last_notified_at
+            && $this->last_notified_at->copy()->startOfDay()->gte($today)
         ) {
             return false;
         }
 
         return true;
+    }
+
+    public function isDueToday(): bool
+    {
+        return $this->daysUntilEnd() === 0;
+    }
+
+    public function isOverdueForReminder(): bool
+    {
+        $daysLeft = $this->daysUntilEnd();
+
+        return $daysLeft !== null && $daysLeft < 0;
     }
 }

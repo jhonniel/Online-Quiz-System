@@ -202,7 +202,7 @@
             <input type="number" name="notify_days_before" id="notify_days_before" required min="0" max="90" inputmode="numeric"
                    value="{{ old('notify_days_before', $subscription->notify_days_before ?? 7) }}"
                    class="{{ $fieldClass }}">
-            <p class="mt-1.5 text-xs text-gray-500">Email admins when the end date is within this many days.</p>
+            <p class="mt-1.5 text-xs text-gray-500">Used for on-screen “ending soon” hints. Reminder emails are sent only when due today or overdue.</p>
             @error('notify_days_before')
                 <p class="mt-1.5 text-sm text-red-600">{{ $message }}</p>
             @enderror

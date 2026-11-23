@@ -48,7 +48,7 @@ final class OtherSubscriptionNotifier
             self::SETTING_KEY,
             $normalized,
             'text',
-            'Email addresses notified when Other Subscriptions are ending or renewing'
+            'Email addresses notified only when Other Subscriptions are due today or overdue'
         );
     }
 
@@ -59,7 +59,6 @@ final class OtherSubscriptionNotifier
     {
         $emails = self::notificationEmails();
         $sent = 0;
-        $skipped = 0;
         $failed = 0;
 
         if ($emails === []) {
@@ -69,7 +68,7 @@ final class OtherSubscriptionNotifier
         MailConfigService::configure();
 
         $candidates = OtherSubscription::query()
-            ->active()
+            ->dueOrOverdue()
             ->orderBy('ends_on')
             ->get()
             ->filter(fn (OtherSubscription $subscription) => $subscription->shouldNotifyToday());
@@ -96,7 +95,7 @@ final class OtherSubscriptionNotifier
             }
         }
 
-        $skipped = max(0, OtherSubscription::query()->active()->count() - $sent - $failed);
+        $skipped = max(0, OtherSubscription::query()->dueOrOverdue()->count() - $sent - $failed);
 
         return compact('sent', 'skipped', 'failed');
     }
