@@ -33,8 +33,14 @@
                 <h2 style="margin: 0 0 8px 0; font-size: 16px; color: #111827;">Subscription details</h2>
                 <p style="margin: 0 0 12px 0;">
                     <strong>Name:</strong> {{ $subscription->name }}<br>
-                    @if($subscription->provider)
-                        <strong>Provider:</strong> {{ $subscription->provider }}<br>
+                    @if($subscription->client_name)
+                        <strong>Client name:</strong> {{ $subscription->client_name }}<br>
+                    @endif
+                    @if($subscription->client_email)
+                        <strong>Client email:</strong> {{ $subscription->client_email }}<br>
+                    @endif
+                    @if($subscription->providerDisplayName() !== '—')
+                        <strong>Provider:</strong> {{ $subscription->providerDisplayName() }}<br>
                     @endif
                     <strong>Billing type:</strong> {{ $subscription->billing_type_label }}<br>
                     <strong>Price:</strong> {{ $subscription->formatted_price }}<br>

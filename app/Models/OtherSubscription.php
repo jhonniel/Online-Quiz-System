@@ -17,6 +17,8 @@ class OtherSubscription extends Model
     protected $fillable = [
         'uuid',
         'name',
+        'client_name',
+        'client_email',
         'provider',
         'other_subscription_provider_id',
         'billing_type',

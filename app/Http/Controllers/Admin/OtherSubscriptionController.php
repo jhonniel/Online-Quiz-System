@@ -33,6 +33,8 @@ class OtherSubscriptionController extends Controller
             $term = '%'.$search.'%';
             $query->where(function ($q) use ($term, $search) {
                 $q->where('name', 'like', $term)
+                    ->orWhere('client_name', 'like', $term)
+                    ->orWhere('client_email', 'like', $term)
                     ->orWhere('provider', 'like', $term)
                     ->orWhere('billing_type', 'like', $term)
                     ->orWhere('currency', 'like', $term)

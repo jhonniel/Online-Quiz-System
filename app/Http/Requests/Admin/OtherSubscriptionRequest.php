@@ -19,6 +19,8 @@ class OtherSubscriptionRequest extends FormRequest
     {
         return [
             'name' => ['required', 'string', 'max:255'],
+            'client_name' => ['nullable', 'string', 'max:255'],
+            'client_email' => ['nullable', 'email', 'max:255'],
             'other_subscription_provider_id' => [
                 'nullable',
                 'integer',
@@ -71,6 +73,8 @@ class OtherSubscriptionRequest extends FormRequest
         $this->merge([
             'auto_renew' => $this->boolean('auto_renew'),
             'currency' => strtoupper(trim((string) ($this->input('currency') ?: 'PHP'))),
+            'client_name' => trim((string) $this->input('client_name', '')) ?: null,
+            'client_email' => strtolower(trim((string) $this->input('client_email', ''))) ?: null,
             'other_subscription_provider_id' => ($providerId === '' || $providerId === null || $providerId === 'new')
                 ? null
                 : $providerId,

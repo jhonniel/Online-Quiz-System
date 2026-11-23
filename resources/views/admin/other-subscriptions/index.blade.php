@@ -52,7 +52,7 @@
                     <p class="text-sm text-gray-500 mt-0.5">{{ $subscriptions->total() }} subscription{{ $subscriptions->total() !== 1 ? 's' : '' }}</p>
                 </div>
                 <form method="GET" action="{{ route('admin.other-subscriptions.index') }}" class="flex gap-2 w-full sm:w-auto sm:min-w-[280px]">
-                    <input type="text" name="search" value="{{ $search ?? '' }}" placeholder="Search name, provider, type…"
+                    <input type="text" name="search" value="{{ $search ?? '' }}" placeholder="Search name, client, email, provider…"
                            class="block w-full rounded-lg border border-gray-300 text-sm focus:ring-indigo-500 focus:border-indigo-500">
                     <button type="submit" class="px-4 py-2 rounded-lg text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700">Search</button>
                     @if(!empty($search))
@@ -82,6 +82,14 @@
                             <td class="px-4 sm:px-6 py-4">
                                 <p class="text-sm font-medium text-gray-900">{{ $subscription->name }}</p>
                                 <p class="text-xs text-gray-500">{{ $subscription->providerDisplayName() }}</p>
+                                @if($subscription->client_name || $subscription->client_email)
+                                    <p class="text-xs text-gray-500 mt-0.5">
+                                        {{ $subscription->client_name ?: '—' }}
+                                        @if($subscription->client_email)
+                                            <span class="text-gray-400">·</span> {{ $subscription->client_email }}
+                                        @endif
+                                    </p>
+                                @endif
                                 @if($subscription->auto_renew)
                                     <span class="mt-1 inline-flex items-center px-2 py-0.5 rounded text-[11px] font-medium bg-sky-50 text-sky-700">Auto renew</span>
                                 @endif
