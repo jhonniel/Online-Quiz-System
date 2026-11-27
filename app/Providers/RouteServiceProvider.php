@@ -34,6 +34,7 @@ class RouteServiceProvider extends ServiceProvider
     public function boot(): void
     {
         $this->configureRateLimiting();
+        $this->configureIntegerRoutePatterns();
 
         // Load routes FIRST before anything else
         $this->mapWebRoutes();
@@ -71,6 +72,77 @@ class RouteServiceProvider extends ServiceProvider
         Route::prefix('api')
             ->middleware('api')
             ->group(base_path('routes/api.php'));
+    }
+
+    /**
+     * Constrain integer primary-key route params so Postgres never receives
+     * non-numeric IDs (which would throw SQLSTATE 22P02 instead of a 404).
+     *
+     * Do not include slug/token/uuid/code params (room, token, uuid, code, type, path, topic, ticketNumber, feature).
+     */
+    protected function configureIntegerRoutePatterns(): void
+    {
+        $integerParams = [
+            'anonymousChatRoom',
+            'application',
+            'assignment',
+            'attachment',
+            'attempt',
+            'attemptId',
+            'banned_word',
+            'billingStatement',
+            'chatMessageMedia',
+            'confession_post',
+            'confession_topic',
+            'contactMessage',
+            'customBoard',
+            'customPriority',
+            'department',
+            'dtr',
+            'dtrHoliday',
+            'dtrTimeRequest',
+            'employee',
+            'employeeFileRequest',
+            'evaluation',
+            'feedback',
+            'file',
+            'fileRequest',
+            'forum',
+            'friend',
+            'friendId',
+            'friendshipId',
+            'groupChat',
+            'hiringPosition',
+            'id',
+            'index',
+            'invitation',
+            'key',
+            'leaveRequest',
+            'message',
+            'news',
+            'note',
+            'payslip',
+            'post',
+            'quiz',
+            'quizId',
+            'signature',
+            'studentNda',
+            'system_announcement',
+            'task',
+            'taskList',
+            'ticket',
+            'ticket_problem_type',
+            'ticket_report',
+            'travelTimeLocation',
+            'university',
+            'user',
+            'userId',
+            'userStory',
+        ];
+
+        foreach ($integerParams as $param) {
+            Route::pattern($param, '[0-9]+');
+        }
     }
 
     /**

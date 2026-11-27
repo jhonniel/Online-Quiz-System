@@ -3,6 +3,7 @@
 namespace App\Exceptions;
 
 use App\Models\ErrorLog;
+use Illuminate\Database\Eloquent\ModelNotFoundException;
 use Illuminate\Database\QueryException;
 use Illuminate\Foundation\Exceptions\Handler as ExceptionHandler;
 use Illuminate\Support\Facades\Auth;
@@ -10,6 +11,7 @@ use Illuminate\Support\Facades\Log;
 use Illuminate\Session\TokenMismatchException;
 use Illuminate\Validation\ValidationException;
 use Symfony\Component\HttpKernel\Exception\HttpExceptionInterface;
+use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 use Throwable;
 
 class Handler extends ExceptionHandler
@@ -40,7 +42,7 @@ class Handler extends ExceptionHandler
      */
     public function report(Throwable $e): void
     {
-        if ($this->shouldntReport($e)) {
+        if ($this->shouldntReport($e) || $this->isInvalidPostgresIdentifier($e)) {
             return;
         }
 
@@ -81,6 +83,12 @@ class Handler extends ExceptionHandler
                     ->with('error', 'Your session has expired. Please try again.')
                     ->withInput($request->except('password', 'password_confirmation', '_token'));
             }
+        }
+
+        // Postgres rejects non-numeric values for bigint/integer PKs (scanners / bad URLs).
+        // Treat as 404 instead of a 500 QueryException.
+        if ($this->isInvalidPostgresIdentifier($e)) {
+            $e = new NotFoundHttpException('Not found.', $e);
         }
 
         // Record 404/500 errors to DB for analytics page.
@@ -170,6 +178,29 @@ class Handler extends ExceptionHandler
         }
 
         return $message;
+    }
+
+    /**
+     * Postgres SQLSTATE 22P02 when a non-numeric / malformed value is bound to bigint/integer/uuid.
+     */
+    private function isInvalidPostgresIdentifier(Throwable $e): bool
+    {
+        if ($e instanceof ModelNotFoundException) {
+            return false;
+        }
+
+        if (! $e instanceof QueryException) {
+            return false;
+        }
+
+        $message = $e->getMessage();
+
+        return str_contains($message, 'SQLSTATE[22P02]')
+            && (
+                str_contains($message, 'invalid input syntax for type bigint')
+                || str_contains($message, 'invalid input syntax for type integer')
+                || str_contains($message, 'invalid input syntax for type uuid')
+            );
     }
 }
 

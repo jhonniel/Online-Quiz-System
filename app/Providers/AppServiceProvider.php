@@ -51,7 +51,11 @@ class AppServiceProvider extends ServiceProvider
 
         // Route model binding for DtrTimeRequest
         Route::bind('dtrTimeRequest', function ($value) {
-            return \App\Models\DtrTimeRequest::findOrFail($value);
+            if (! ctype_digit((string) $value)) {
+                abort(404);
+            }
+
+            return \App\Models\DtrTimeRequest::findOrFail((int) $value);
         });
     }
 
