@@ -349,11 +349,10 @@
                     if (showSkeleton) {
                         this.isLoading = true;
                     }
-                    fetch('{{ url('/admin/notifications/unread') }}', {
+                    fetch('{{ url('/admin/notifications/inbox') }}', {
                         method: 'GET',
                         headers: {
                             'Accept': 'application/json',
-                            'Content-Type': 'application/json',
                             'X-Requested-With': 'XMLHttpRequest'
                         },
                         credentials: 'same-origin'
@@ -385,12 +384,16 @@
                 },
                 
                 markAsRead(notificationId) {
-                    fetch(`/admin/notifications/${notificationId}/mark-read`, {
+                    fetch('{{ url('/admin/notifications/mark-read') }}', {
                         method: 'POST',
                         headers: {
+                            'Accept': 'application/json',
                             'Content-Type': 'application/json',
+                            'X-Requested-With': 'XMLHttpRequest',
                             'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content
-                        }
+                        },
+                        credentials: 'same-origin',
+                        body: JSON.stringify({ notification_id: notificationId })
                     })
                     .then(() => {
                         if (this.showNotifications) {
@@ -406,9 +409,12 @@
                     fetch('{{ url('/admin/notifications/mark-all-read') }}', {
                         method: 'POST',
                         headers: {
+                            'Accept': 'application/json',
                             'Content-Type': 'application/json',
+                            'X-Requested-With': 'XMLHttpRequest',
                             'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content
-                        }
+                        },
+                        credentials: 'same-origin'
                     })
                     .then(() => {
                         if (this.showNotifications) {

@@ -173,8 +173,28 @@ class NotificationController extends Controller
             ->with('success', "{$deletedCount} notification(s) deleted successfully!");
     }
 
-    public function markAllAsRead()
+    public function markAllAsRead(Request $request)
     {
+        // Header bell (AJAX): mark only the current user's notifications
+        if ($request->expectsJson() || $request->ajax()) {
+            $updatedCount = auth()->user()->unreadNotifications()->update([
+                'is_read' => true,
+                'read_at' => now(),
+            ]);
+
+            return response()->json([
+                'success' => true,
+                'message' => 'All notifications marked as read.',
+                'updated' => $updatedCount,
+            ]);
+        }
+
+        // Management page: requires communication permission (route also guards this for resource,
+        // but mark-all-read is shared with the personal inbox route).
+        if (! auth()->user()->hasAdminPermission('communication')) {
+            abort(403, 'Access denied. You do not have permission to manage notifications.');
+        }
+
         $updatedCount = Notification::unread()->update([
             'is_read' => true,
             'read_at' => now(),
@@ -212,24 +232,9 @@ class NotificationController extends Controller
 
     public function getUnread(Request $request)
     {
-        $notifications = Notification::with('user')
-            ->unread()
-            ->orderBy('created_at', 'desc')
-            ->limit(10)
-            ->get();
-
         $unreadCount = Notification::unread()->count();
 
-        // If this is an AJAX/API request (like from fetch), return JSON
-        if ($request->expectsJson() || $request->ajax()) {
-            return response()->json([
-                'notifications' => $notifications,
-                'unread_count' => $unreadCount
-            ]);
-        }
-
-        // Otherwise, return a view for browser requests
-        // Get all unread notifications for the view (not just limit 10)
+        // Management unread list (browser)
         $allUnreadNotifications = Notification::with('user')
             ->unread()
             ->orderBy('created_at', 'desc')
@@ -248,9 +253,36 @@ class NotificationController extends Controller
         return view('admin.notifications.unread', compact('allUnreadNotifications', 'stats', 'unreadCount'));
     }
 
+    /**
+     * Personal inbox for the admin header notification bell.
+     */
+    public function getMyUnread()
+    {
+        $user = auth()->user();
+
+        $notifications = $user->unreadNotifications()
+            ->orderBy('created_at', 'desc')
+            ->limit(10)
+            ->get()
+            ->map(fn (Notification $notification) => [
+                'id' => $notification->id,
+                'type' => $notification->type,
+                'title' => $notification->title,
+                'message' => $notification->message,
+                'is_read' => (bool) $notification->is_read,
+                'created_at' => optional($notification->created_at)->diffForHumans(),
+            ]);
+
+        return response()->json([
+            'notifications' => $notifications,
+            'unread_count' => $user->unreadNotifications()->count(),
+        ]);
+    }
+
     public function getUnreadCount()
     {
-        $unreadCount = Notification::unread()->count();
+        $unreadCount = auth()->user()->unreadNotifications()->count();
+
         return response()->json(['unread_count' => $unreadCount]);
     }
 
@@ -260,15 +292,23 @@ class NotificationController extends Controller
             'notification_id' => 'required|exists:notifications,id',
         ]);
 
-        $notification = Notification::findOrFail($request->notification_id);
-        $notification->update(['is_read' => true, 'read_at' => now()]);
+        $user = auth()->user();
 
-        // If this is an AJAX/API request, return JSON
+        // Personal inbox: only allow marking the current user's own notifications
         if ($request->expectsJson() || $request->ajax()) {
+            $notification = $user->notifications()->findOrFail($request->notification_id);
+            $notification->update(['is_read' => true, 'read_at' => now()]);
+
             return response()->json(['success' => true, 'message' => 'Notification marked as read.']);
         }
 
-        // Otherwise, redirect back with success message
+        if (! $user->hasAdminPermission('communication')) {
+            abort(403, 'Access denied. You do not have permission to manage notifications.');
+        }
+
+        $notification = Notification::findOrFail($request->notification_id);
+        $notification->update(['is_read' => true, 'read_at' => now()]);
+
         return redirect()->back()->with('success', 'Notification marked as read.');
     }
 }

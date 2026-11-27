@@ -782,17 +782,20 @@ Route::prefix('admin')->middleware(['auth', 'admin', 'admin.totp'])->group(funct
         Route::delete('confession/chat-rooms/{room}/messages/{message}', [ConfessionController::class, 'destroyChatMessage'])->name('admin.confession.chat-messages.destroy');
     });
 
+    // Personal notification inbox (header bell) — any authenticated admin panel user
+    Route::get('notifications/unread-count', [NotificationController::class, 'getUnreadCount'])->name('admin.notifications.unread-count');
+    Route::get('notifications/inbox', [NotificationController::class, 'getMyUnread'])->name('admin.notifications.inbox');
+    Route::post('notifications/mark-read', [NotificationController::class, 'markAsRead'])->name('admin.notifications.mark-read');
+    Route::post('notifications/mark-all-read', [NotificationController::class, 'markAllAsRead'])->name('admin.notifications.mark-all-read');
+
     // Communication
     Route::middleware(['admin.permission:communication'])->group(function () {
 
         // Notification Management
         Route::get('notifications/unread', [NotificationController::class, 'getUnread'])->name('admin.notifications.unread');
         Route::get('notifications/recent', [NotificationController::class, 'getRecent'])->name('admin.notifications.recent');
-        Route::get('notifications/unread-count', [NotificationController::class, 'getUnreadCount'])->name('admin.notifications.unread-count');
-        Route::post('notifications/mark-read', [NotificationController::class, 'markAsRead'])->name('admin.notifications.mark-read');
         Route::post('notifications/send-to-all', [NotificationController::class, 'sendToAll'])->name('admin.notifications.send-to-all');
         Route::post('notifications/bulk-delete', [NotificationController::class, 'bulkDelete'])->name('admin.notifications.bulk-delete');
-        Route::post('notifications/mark-all-read', [NotificationController::class, 'markAllAsRead'])->name('admin.notifications.mark-all-read');
         Route::get('notifications/stats', [NotificationController::class, 'getStats'])->name('admin.notifications.stats');
         Route::resource('notifications', NotificationController::class)->names('admin.notifications');
 
