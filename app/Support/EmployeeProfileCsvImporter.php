@@ -54,9 +54,15 @@ final class EmployeeProfileCsvImporter
                     continue;
                 }
 
-                $value = fn (string $key): string => trim((string) ($row[$columnMap[$key] ?? -1] ?? ''));
+                $value = function (string $key) use ($row, $columnMap): string {
+                    if (! array_key_exists($key, $columnMap)) {
+                        return '';
+                    }
 
-                $email = $value('email');
+                    return $this->cleanCsvCell((string) ($row[$columnMap[$key]] ?? ''));
+                };
+
+                $email = strtolower($value('email'));
                 $employeeName = $value('employee_name');
 
                 if ($email === '' && $employeeName === '') {
@@ -227,6 +233,9 @@ final class EmployeeProfileCsvImporter
 
     private function normalizeHeader(string $header): string
     {
+        // Excel/Google Sheets often save CSV with a UTF-8 BOM on the first header.
+        $header = preg_replace('/^\xEF\xBB\xBF/', '', $header) ?? $header;
+        $header = str_replace("\u{FEFF}", '', $header);
         $header = strtolower(trim($header));
         $header = str_replace([' ', '-'], '_', $header);
 
@@ -244,6 +253,14 @@ final class EmployeeProfileCsvImporter
         $header = preg_replace('/_+/', '_', $header) ?? $header;
 
         return $aliases[$header] ?? $header;
+    }
+
+    private function cleanCsvCell(string $value): string
+    {
+        $value = preg_replace('/^\xEF\xBB\xBF/', '', $value) ?? $value;
+        $value = str_replace("\u{FEFF}", '', $value);
+
+        return trim($value);
     }
 
     /**
