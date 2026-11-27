@@ -5,6 +5,7 @@ namespace App\Models;
 // use Illuminate\Contracts\Auth\MustVerifyEmail;
 use App\Services\MailConfigService;
 use App\Support\AdminPermissionAreas;
+use App\Support\UserRoles;
 use App\Support\UserThemeColor;
 use Carbon\Carbon;
 use Database\Factories\UserFactory;
@@ -500,6 +501,21 @@ class User extends Authenticatable
     public function isStaffMember(): bool
     {
         return in_array($this->role, ['employee', 'hr'], true);
+    }
+
+    /** Eligible for employee-side DTR import and management (includes working admins/HR). */
+    public function isEmployeeDtrSubject(): bool
+    {
+        return UserRoles::isEmployeeDtrRole($this->role);
+    }
+
+    /**
+     * @param  \Illuminate\Database\Eloquent\Builder<\App\Models\User>  $query
+     * @return \Illuminate\Database\Eloquent\Builder<\App\Models\User>
+     */
+    public function scopeEmployeeDtrSubjects($query)
+    {
+        return $query->whereIn('role', UserRoles::EMPLOYEE_DTR);
     }
 
     public function isApplicant()

@@ -24,8 +24,8 @@ class DtrController extends Controller
     {
         $user = Auth::user();
 
-        // Allow employees and students to access
-        if (!in_array($user->role, ['employee', 'student'])) {
+        // Employees, students, and working admin/HR accounts
+        if (! in_array($user->role, ['employee', 'student', 'admin', 'hr'], true)) {
             abort(403, 'Only employees and students can view DTR records.');
         }
 
@@ -485,7 +485,7 @@ class DtrController extends Controller
     {
         $user = Auth::user();
 
-        if (!in_array($user->role, ['employee', 'student'])) {
+        if (! in_array($user->role, ['employee', 'student', 'admin', 'hr'], true)) {
             abort(403, 'Only employees and students can export DTR records.');
         }
 

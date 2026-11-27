@@ -154,7 +154,7 @@
                         <div class="mt-2 text-sm text-blue-700">
                             <p class="mb-2">CSV columns (in order):</p>
                             <ul class="list-disc list-inside space-y-1">
-                                <li><strong>Employee Email</strong> - Must match an existing employee email</li>
+                                <li><strong>Employee Email</strong> - Must match an existing employee, admin, or HR account email</li>
                                 <li><strong>Date</strong> - Format: YYYY-MM-DD (e.g., 2024-12-01)</li>
                                 <li><strong>Hubstaff Hours</strong> - Base hours worked for that day in <strong>HH:MM</strong> format (e.g., 08:00, 07:30)</li>
                                 <li><strong>Added Time From Note</strong> - Extra hours to add in <strong>HH:MM</strong> format (e.g., 01:15, 00:00)</li>

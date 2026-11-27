@@ -19,6 +19,7 @@ use App\Support\DtrApprovedLeaveRemark;
 use App\Support\DtrHolidayCalendar;
 use App\Support\DtrRecordHours;
 use App\Support\RequestQueryInteger;
+use App\Support\UserRoles;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\DB;
@@ -48,8 +49,8 @@ class DtrController extends Controller
         }
 
         $query = Dtr::with('user')
-            ->whereHas('user', function($q) {
-                $q->where('role', 'employee');
+            ->whereHas('user', function ($q) {
+                $q->whereIn('role', UserRoles::EMPLOYEE_DTR);
             });
 
         // Apply department restrictions if user has Employee Management with restrictions
@@ -104,7 +105,7 @@ class DtrController extends Controller
         }
 
         // Get employees for filter dropdown (only employees, respecting department restrictions)
-        $employeesQuery = User::where('role', 'employee')
+        $employeesQuery = User::employeeDtrSubjects()
             ->where('is_active', true);
 
         // Apply department restrictions to employee list
@@ -632,7 +633,7 @@ class DtrController extends Controller
     {
         $user = auth()->user();
 
-        $employeesQuery = User::where('role', 'employee')
+        $employeesQuery = User::employeeDtrSubjects()
             ->where('is_active', true);
 
         // Apply department restrictions if user has Employee Management with restrictions
@@ -727,7 +728,7 @@ class DtrController extends Controller
         foreach ($userIds as $userId) {
             // Verify user is an employee
             $employee = User::where('id', $userId)
-                ->where('role', 'employee')
+                ->whereIn('role', UserRoles::EMPLOYEE_DTR)
                 ->first();
 
             if (!$employee) {
@@ -833,7 +834,7 @@ class DtrController extends Controller
      */
     public function edit(Dtr $dtr)
     {
-        $employees = User::where('role', 'employee')
+        $employees = User::employeeDtrSubjects()
             ->where('is_active', true)
             ->orderBy('name')
             ->get();
@@ -931,7 +932,7 @@ class DtrController extends Controller
         ]);
 
         $employee = User::where('id', $request->user_id)
-            ->where('role', 'employee')
+            ->whereIn('role', UserRoles::EMPLOYEE_DTR)
             ->first();
 
         if (! $employee) {
@@ -960,7 +961,7 @@ class DtrController extends Controller
             );
         }
 
-        $employees = User::where('role', 'employee')
+        $employees = User::employeeDtrSubjects()
             ->where('is_active', true)
             ->orderBy('name')
             ->get();
@@ -1024,7 +1025,7 @@ class DtrController extends Controller
         }
 
         $employee = User::where('id', $request->user_id)
-            ->where('role', 'employee')
+            ->whereIn('role', UserRoles::EMPLOYEE_DTR)
             ->first();
 
         if (! $employee) {
@@ -1138,7 +1139,7 @@ class DtrController extends Controller
 
         // Verify user is an employee
         $employee = User::where('id', $request->user_id)
-            ->where('role', 'employee')
+            ->whereIn('role', UserRoles::EMPLOYEE_DTR)
             ->first();
 
         if (!$employee) {
@@ -1333,7 +1334,7 @@ class DtrController extends Controller
     public function recalculateDeficits()
     {
         try {
-            $employees = User::where('role', 'employee')
+            $employees = User::employeeDtrSubjects()
                 ->where('is_active', true)
                 ->get();
 
@@ -1432,7 +1433,8 @@ class DtrController extends Controller
     public function import(Request $request)
     {
         $request->validate([
-            'csv_file' => 'required|file|mimes:csv,txt|max:5120', // 5MB max
+            // Validate by extension — CSV MIME types vary widely by browser/OS and often fail mimes:csv
+            'csv_file' => ['required', 'file', 'max:5120', 'extensions:csv,txt'],
         ]);
 
         try {
@@ -1467,7 +1469,10 @@ class DtrController extends Controller
                     // [Student|Employee] Email, Date (YYYY-MM-DD), Worked Hours (HH:MM),
                     // Added Time From Note (HH:MM), Activity Percentage (0-100), Remarks
                     // Total Hours, Overtime Hours, and Status are automatically calculated/determined by the system
-                    $email = trim($row[0] ?? '');
+                    $email = trim((string) ($row[0] ?? ''));
+                    // Strip UTF-8 BOM that Excel sometimes leaves on the first cell
+                    $email = preg_replace('/^\xEF\xBB\xBF/', '', $email) ?? $email;
+                    $email = trim($email);
                     $date = trim($row[1] ?? '');
                     $workedHours = trim($row[2] ?? '00:00');
                     $addedTimeFromNote = trim($row[3] ?? '00:00');
@@ -1486,10 +1491,14 @@ class DtrController extends Controller
                         continue;
                     }
 
-                    // Find user by email and role (student vs employee)
-                    $user = User::where('email', $email)
-                        ->where('role', $importType)
-                        ->first();
+                    // Find user by email (case-insensitive). Employee DTR also covers admin/hr who work hours.
+                    $userQuery = User::query()->whereRaw('LOWER(email) = ?', [mb_strtolower($email)]);
+                    if ($importType === 'student') {
+                        $userQuery->where('role', 'student');
+                    } else {
+                        $userQuery->whereIn('role', UserRoles::EMPLOYEE_DTR);
+                    }
+                    $user = $userQuery->first();
 
                     if (!$user) {
                         $errors[] = "{$importRoleLabel} not found: {$email}";
@@ -2757,7 +2766,7 @@ class DtrController extends Controller
             $overtimeRequests = LeaveRequest::where('type', 'overtime')
                 ->where('status', 'approved')
                 ->whereHas('user', function ($q) {
-                    $q->where('role', 'employee');
+                    $q->whereIn('role', UserRoles::EMPLOYEE_DTR);
                 })
                 ->whereDate('start_date', '<=', $parsedDateTo->toDateString())
                 ->where(function ($q) use ($parsedDateFrom) {
@@ -2868,7 +2877,7 @@ class DtrController extends Controller
 
         $query = Dtr::with('user')
             ->whereHas('user', function($q) {
-                $q->where('role', 'employee')
+                $q->whereIn('role', UserRoles::EMPLOYEE_DTR)
                     ->where('is_active', true);
             });
 
@@ -2899,7 +2908,7 @@ class DtrController extends Controller
         $exportEmployeeId = RequestQueryInteger::positiveInt($request, 'employee_id');
         if ($exportEmployeeId !== null) {
             $selectedEmployee = User::where('id', $exportEmployeeId)
-                ->where('role', 'employee')
+                ->whereIn('role', UserRoles::EMPLOYEE_DTR)
                 ->where('is_active', true)
                 ->first();
             if ($selectedEmployee) {
@@ -2935,7 +2944,7 @@ class DtrController extends Controller
 
         // Employees in current PDF scope (respecting restrictions and filters),
         // used to ensure all weekdays are present in the export.
-        $employeesQuery = User::where('role', 'employee')
+        $employeesQuery = User::employeeDtrSubjects()
             ->where('is_active', true);
 
         if ($user->canAccessEmployeeManagement()) {
@@ -3708,7 +3717,7 @@ class DtrController extends Controller
             abort(403);
         }
 
-        if (! $employee || $employee->role !== 'employee') {
+        if (! $employee || ! $employee->isEmployeeDtrSubject()) {
             abort(404, 'Employee DTR record not found.');
         }
 
