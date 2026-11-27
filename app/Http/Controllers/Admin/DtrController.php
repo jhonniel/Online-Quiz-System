@@ -3496,6 +3496,11 @@ class DtrController extends Controller
             $group['attendance_log_complete'] = $employeeDeficitMinutes <= 0;
             $group['attendance_log_deficit_formatted'] = $group['total_deficit_formatted'];
 
+            // Uncapped original hours (includes time over 08:00/day) — PDF "All time" for full-access admins
+            $group['all_time_formatted'] = \App\Support\DtrEmployeeAttendance::formatMinutesAsHours(
+                \App\Support\DtrEmployeeAttendance::sumUncappedMinutesForRecords($group['records'] ?? [])
+            );
+
             // Calculate balance overtime for this employee: Overtime - Deficit (from completed weeks only)
             // Negative balance means deficit exceeds overtime
             $employeeBalanceOvertimeHours = $employeeOvertimeFromCompletedWeeks - $employeeDeficitHours;
@@ -3593,6 +3598,7 @@ class DtrController extends Controller
             'travelRequestMap' => $travelRequestMap,
             'dtrMapByEmployeeAndDate' => $dtrMapByEmployeeAndDate,
             'excludeWeekends' => $excludeWeekends,
+            'showAllTime' => $user->isSuperAdmin(),
         ];
 
         $pdf = Pdf::loadView('admin.dtr.export-pdf', $data)->setPaper('a4', 'landscape');

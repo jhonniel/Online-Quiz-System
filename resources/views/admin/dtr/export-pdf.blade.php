@@ -57,22 +57,36 @@
             </div>
             <div class="employee-email">{{ $employeeGroup['employee']->email }}@if($employeeGroup['employee']->department) • {{ $employeeGroup['employee']->department->name }}@endif</div>
             <div class="muted" style="margin-top: 2px;">
-                Total Hours: {{ $employeeGroup['total_hours_formatted'] }} •
-                Total Deficit: <span style="color: #DC2626;">{{ $employeeGroup['total_deficit_formatted'] }}</span> •
-                Records: {{ count($employeeGroup['records']) }}
+                <table style="width: 100%; border-collapse: collapse;">
+                    <tr>
+                        <td style="border: none; padding: 0; font-size: 9px; color: #6B7280;">
+                            Total Hours: {{ $employeeGroup['total_hours_formatted'] }} •
+                            Total Deficit: <span style="color: #DC2626;">{{ $employeeGroup['total_deficit_formatted'] }}</span> •
+                            Records: {{ count($employeeGroup['records']) }}
+                        </td>
+                        @if(!empty($showAllTime))
+                            <td style="border: none; padding: 0; text-align: right; font-size: 9px; font-weight: bold; color: #111827; white-space: nowrap;">
+                                All time: {{ $employeeGroup['all_time_formatted'] ?? '00:00' }}
+                            </td>
+                        @endif
+                    </tr>
+                </table>
             </div>
         </div>
         <table class="table">
             <thead>
                 <tr>
-                    <th style="width: 14%;">Date</th>
-                    <th style="width: 9%;">Day</th>
-                    <th style="width: 14%;" class="right">Hubstaff Hours</th>
-                    <th style="width: 12%;" class="right">Added Time</th>
+                    <th style="width: {{ !empty($showAllTime) ? '12%' : '14%' }};">Date</th>
+                    <th style="width: 8%;">Day</th>
+                    <th style="width: {{ !empty($showAllTime) ? '12%' : '14%' }};" class="right">Hubstaff Hours</th>
+                    <th style="width: 11%;" class="right">Added Time</th>
                     <th style="width: 10%;" class="right">Leave/Offset</th>
-                    <th style="width: 12%;" class="right">Total Hours</th>
-                    <th style="width: 12%;" class="center">Status</th>
-                    <th style="width: 23%;">Remarks</th>
+                    <th style="width: 11%;" class="right">Total Hours</th>
+                    <th style="width: 11%;" class="center">Status</th>
+                    <th style="width: {{ !empty($showAllTime) ? '15%' : '23%' }};">Remarks</th>
+                    @if(!empty($showAllTime))
+                        <th style="width: 10%;" class="right">All time</th>
+                    @endif
                 </tr>
             </thead>
             <tbody>
@@ -98,6 +112,8 @@
 
                         $totalFormatted = \App\Support\DtrEmployeeAttendance::formatTotalHoursColumn($dtr);
                         $totalMinutes = (int) round(\App\Support\DtrEmployeeAttendance::displayedTotalHoursForColumn($dtr) * 60);
+                        $allTimeMinutes = (int) round(\App\Support\DtrEmployeeAttendance::displayedDailyTotal($dtr) * 60);
+                        $allTimeFormatted = \App\Support\DtrEmployeeAttendance::formatMinutesAsHours($allTimeMinutes);
 
                         $dateKey = $dtr->date->format('Y-m-d');
                         $employeeId = $dtr->user_id;
@@ -140,18 +156,22 @@
                             $extraFormatted = '00:00';
                             $leaveFormatted = '00:00';
                             $totalFormatted = '00:00';
+                            $allTimeFormatted = '00:00';
                             $workedMinutes = 0;
                             $extraMinutes = 0;
                             $leaveMinutes = 0;
                             $totalMinutes = 0;
+                            $allTimeMinutes = 0;
                         } elseif (strtoupper((string) ($statusLabel ?? '')) === 'HOLIDAY') {
                             // Holidays count as a full 8-hour day in PDF totals/display.
                             $workedFormatted = '08:00';
                             $extraFormatted = '00:00';
                             $totalFormatted = '08:00';
+                            $allTimeFormatted = '08:00';
                             $workedMinutes = 480;
                             $extraMinutes = 0;
                             $totalMinutes = 480;
+                            $allTimeMinutes = 480;
                         }
                     @endphp
                     <tr>
@@ -175,6 +195,9 @@
                         </td>
                         <td class="center"@if($statusLabel === 'Under Time') style="color: #DC2626; font-weight: bold;"@endif>{{ $statusLabel }}</td>
                         <td>{!! $remarksDisplayHtml !!}</td>
+                        @if(!empty($showAllTime))
+                            <td class="right">{{ $allTimeMinutes > 0 ? $allTimeFormatted : '00:00' }}</td>
+                        @endif
                     </tr>
                 @endforeach
             </tbody>
@@ -269,14 +292,17 @@
             <table class="table">
                 <thead>
                     <tr>
-                        <th style="width: 14%;">Date</th>
-                        <th style="width: 9%;">Day</th>
-                        <th style="width: 14%;" class="right">Hubstaff Hours</th>
-                        <th style="width: 12%;" class="right">Added Time</th>
+                        <th style="width: {{ !empty($showAllTime) ? '12%' : '14%' }};">Date</th>
+                        <th style="width: 8%;">Day</th>
+                        <th style="width: {{ !empty($showAllTime) ? '12%' : '14%' }};" class="right">Hubstaff Hours</th>
+                        <th style="width: 11%;" class="right">Added Time</th>
                         <th style="width: 10%;" class="right">Leave/Offset</th>
-                        <th style="width: 12%;" class="right">Total Hours</th>
-                        <th style="width: 12%;" class="center">Status</th>
-                        <th style="width: 23%;">Remarks</th>
+                        <th style="width: 11%;" class="right">Total Hours</th>
+                        <th style="width: 11%;" class="center">Status</th>
+                        <th style="width: {{ !empty($showAllTime) ? '15%' : '23%' }};">Remarks</th>
+                        @if(!empty($showAllTime))
+                            <th style="width: 10%;" class="right">All time</th>
+                        @endif
                     </tr>
                 </thead>
                 <tbody>
@@ -341,6 +367,9 @@
                             <td class="right">{{ $totalFormatted }}</td>
                             <td class="center">{{ ($leave->type ?? '') === 'absent' ? 'Absent' : 'Completed' }}</td>
                             <td>{!! \App\Support\DtrApprovedLeaveRemark::pdfRemarkLabelHtml((string) ($leave->type ?? ''), $leaveTypeLabel) !!}</td>
+                            @if(!empty($showAllTime))
+                                <td class="right">{{ $totalFormatted }}</td>
+                            @endif
                         </tr>
                     @endforeach
                 </tbody>
@@ -356,14 +385,17 @@
             <table class="table">
                 <thead>
                     <tr>
-                        <th style="width: 14%;">Date</th>
-                        <th style="width: 9%;">Day</th>
-                        <th style="width: 14%;" class="right">Hubstaff Hours</th>
-                        <th style="width: 12%;" class="right">Added Time</th>
+                        <th style="width: {{ !empty($showAllTime) ? '12%' : '14%' }};">Date</th>
+                        <th style="width: 8%;">Day</th>
+                        <th style="width: {{ !empty($showAllTime) ? '12%' : '14%' }};" class="right">Hubstaff Hours</th>
+                        <th style="width: 11%;" class="right">Added Time</th>
                         <th style="width: 10%;" class="right">Leave/Offset</th>
-                        <th style="width: 12%;" class="right">Total Hours</th>
-                        <th style="width: 12%;" class="center">Status</th>
-                        <th style="width: 23%;">Remarks</th>
+                        <th style="width: 11%;" class="right">Total Hours</th>
+                        <th style="width: 11%;" class="center">Status</th>
+                        <th style="width: {{ !empty($showAllTime) ? '15%' : '23%' }};">Remarks</th>
+                        @if(!empty($showAllTime))
+                            <th style="width: 10%;" class="right">All time</th>
+                        @endif
                     </tr>
                 </thead>
                 <tbody>
@@ -411,6 +443,9 @@
                             <td class="right">{{ $totalFormatted }}</td>
                             <td class="center">Travel</td>
                             <td>{!! \App\Support\DtrApprovedLeaveRemark::pdfFixedLabelHtml('Travel Leave', 'travel') !!}</td>
+                            @if(!empty($showAllTime))
+                                <td class="right">{{ $totalFormatted }}</td>
+                            @endif
                         </tr>
                     @endforeach
                 </tbody>

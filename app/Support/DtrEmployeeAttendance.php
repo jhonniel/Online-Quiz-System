@@ -386,6 +386,30 @@ final class DtrEmployeeAttendance
     }
 
     /**
+     * Uncapped original day totals (Hubstaff + Added + Leave/Offset), including time over 08:00.
+     * Used for the admin-only "All time" PDF counter.
+     */
+    public static function sumUncappedHoursForRecords(iterable $records): float
+    {
+        return self::sumUncappedMinutesForRecords($records) / 60.0;
+    }
+
+    public static function sumUncappedMinutesForRecords(iterable $records): int
+    {
+        $sumMinutes = 0;
+
+        foreach ($records as $dtr) {
+            if (! $dtr instanceof Dtr) {
+                continue;
+            }
+
+            $sumMinutes += (int) round(self::displayedDailyTotal($dtr) * 60);
+        }
+
+        return $sumMinutes;
+    }
+
+    /**
      * Sum of {@see effectiveDailyTotal()} for each record on or before $today.
      */
     public static function sumCountableHoursForRecords(iterable $records, ?Carbon $today = null): float
